@@ -1,0 +1,8 @@
+project
+.pydevproject
+.settings/*
+*.pyc
+*~
+.eclipse_user_dict.txt
+.project
+playground/*
