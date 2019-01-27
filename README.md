@@ -61,6 +61,7 @@ The command user interface is a composition of options:
 The configuration is kept in the INI file *bluetooth.cfg* in the root directory.
 The default content of the file please see below:
 > [bluetube]
+> ; a comment
 > downloader=youtube-dl
 > sender=bluetooth-send
 > diviceID=YOUR_RECEIVER_DEVICE_ID
@@ -74,7 +75,7 @@ The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
 +   *--mark-watched* - videos watched (YouTube only). Make the author know you watch his/her videos.
-+   *--dateafter DATE* - download only videos uploaded on or after this date (i.e. inclusive)
++   *--dateafter DATE* - download only videos uploaded on or after this date (i.e. inclusive); the format of the date is *%Y%m%d* e.g 19700101.
 
 If video requested:
 
@@ -146,8 +147,9 @@ If a command fails it returns -1 to OS. Overwise - 0.
 [Markdown](https://daringfireball.net/projects/markdown/).
 
 
-Glossary
+0 Glossary
 --------
+0.1. Bluetooth.
 SDP - Service Discovery Protocol.
 
 TODO

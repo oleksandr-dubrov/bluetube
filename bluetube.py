@@ -3,7 +3,7 @@
 
 __version__ = '2.1'
 __author__ = 'OD'
-__license__ = 'GNU GPL'
+__license__ = 'GNU GPLv2'
 
 
 #########################################################################
@@ -23,7 +23,7 @@ from ConfigParser import SafeConfigParser
 try:
 	import feedparser
 except ImportError:
-	print '''No feedparser in your environment. Run next command to install it:\n	pip install feedparser'''
+	print('''No feedparser in your environment. Run next command to install it:\n	pip install feedparser''')
 	sys.exit(-1)
 
 
@@ -39,11 +39,11 @@ class CommandExecutor(object):
 		call_env = os.environ
 		return_code = 0
 		try:
-			print 'RUN: {}'.format(args)
+			print('RUN: {}'.format(args))
 			return_code = subprocess.call(args, env=call_env, cwd=cwd)
 		except OSError as e:
 			return_code = e.errno
-			print e.strerror
+			print(e.strerror)
 		return return_code
 
 	def does_command_exist(self, name):
@@ -63,14 +63,14 @@ class Feeds(object):
 		elif mode == 'rw':
 			self.db = Feeds._create_rw_connector()
 		else:
-			print 'the access mode should be either "rw" or "r"'
+			print('the access mode should be either "rw" or "r"')
 
 	def __del__(self):
 		if self.db:
 			try:
 				self.db.close()
 			except ValueError as e:
-				print 'Probably your changes were lost. Try again'
+				print('Probably your changes were lost. Try again')
 				raise e
 
 	@staticmethod
@@ -148,9 +148,10 @@ class Bluetube(object):
 
 	CONFIG_FILE = 'bluetooth.cfg'
 	DEFAULT_CONFIGS = u'''[bluetube]
+; Configurations for bluetube
 downloader=youtube-dl
 sender=blueman-sendto
-diviceID=YOUR_RECEIVER_DEVICE_ID
+deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
 
 	def __init__(self):
@@ -166,10 +167,10 @@ diviceID=YOUR_RECEIVER_DEVICE_ID
 			title = f.feed.title
 			author = f.feed.author
 			if feeds.has_channel(author, title):
-				print u'The channel {} by {} has already existed'.format(title, author)
+				print(u'The channel {} by {} has already existed'.format(title, author))
 			else:
 				feeds.add_channel(author, title, feed_url, out_format)
-				print u'{} by {} added successfully.'.format(title, author)
+				print(u'{} by {} added successfully.'.format(title, author))
 			return 0
 		return -1
 
@@ -178,12 +179,12 @@ diviceID=YOUR_RECEIVER_DEVICE_ID
 		feeds = Feeds('r')
 		all_channels = feeds.get_all_channels()
 		for a in all_channels:
-			print a['author']
+			print(a['author'])
 			for c in a['channels']:
 				o = u'{}{}'.format(u' ' * len(a['author']), c['title'])
 				if c['last_update']:
 					o = u'{} ({})'.format(o, c['last_update'])
-				print o
+				print(o)
 
 	def remove_channel(self, author, title):
 		''' remove a channel be given title '''
@@ -191,7 +192,7 @@ diviceID=YOUR_RECEIVER_DEVICE_ID
 		if feeds.has_channel(author, title):
 			feeds.remove_channel(author, title)
 		else:
-			print u'{} by {} not found'.format(title, author)
+			print(u'{} by {} not found'.format(title, author))
 		
 	def run(self):
 		''' The main method. It does everything.'''
@@ -207,8 +208,10 @@ diviceID=YOUR_RECEIVER_DEVICE_ID
 				for ch in channels:
 					if self._download(downloader, ch, download_dir):
 						self._send(sender, download_dir)
-					return 0
+					else:
+						print('Failed to downloed this channel: \n\t{}'.format(ch.channel.title))
 				self._return_download_dir(download_dir)
+				return 0
 		return -1
 
 	def _get_configs(self):
@@ -217,8 +220,8 @@ diviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def _check_config_file(self):
 		if self.configs == None:
-			print u'''No configuration file was found.\n
-You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS)
+			print(u'''No configuration file was found.\n
+You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
 			return False
 		return True
 
@@ -226,14 +229,14 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 		if self.executor.does_command_exist(downloader):
 			return True
 		else:
-			print u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader)
+			print(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
 			return False
 
 	def _check_sender(self, sender):
 		if self.executor.does_command_exist(sender):
 			return True
 		else:
-			print u'ERROR: The tool for sending files via bluetooth "{}" is not found in PATH'.format(sender)
+			print(u'ERROR: The tool for sending files via bluetooth "{}" is not found in PATH'.format(sender))
 			return False
 
 	def _get_type(self, out_format):
@@ -242,17 +245,16 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 		elif out_format in ['v', 'video']:
 			return 'video'
 		else:
-			print 'ERROR: unexpected output type. Should be v (or video) or a (audio) separated by SPACE'
+			print('ERROR: unexpected output type. Should be v (or video) or a (audio) separated by SPACE')
 		return None
 
 	def _get_feed_url(self, url):
-		p_str = '^https://www\.youtube\.com/watch\?v=.+&list=(.+)$'
-		p = re.compile(p_str)
+		p = re.compile('^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
 		m = p.match(url);
 		if m:
 			return 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'.format(m.group(1))
 		else:
-			print u'ERROR: misformatted url of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX'
+			print(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
 			return None
 
 	def _yes_or_no(self, question):
@@ -266,7 +268,7 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 			elif i in no:
 				return False
 			else:
-				print u'Type {} for "yes" or {} for "no".'.format(yes, no)
+				print(u'Type {} for "yes" or {} for "no".'.format(yes, no))
 
 	def _get_channels_with_urls(self):
 		'''get URLs from the RSS that the user will selected for every channel'''
@@ -274,16 +276,16 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 		all_channels = feeds.get_all_channels()
 		channels = []
 		for chs in all_channels:
-			print chs['author']
+			print(chs['author'])
 			ind1 = u' ' * len(chs['author'])
 			urls = []
 			for ch in chs['channels']:
-				print u'{ind}{tit}'.format(ind=ind1, tit=ch['title'])
+				print(u'{ind}{tit}'.format(ind=ind1, tit=ch['title']))
 				ind2 = len(ch['title']) / 2 * u' '
 				f = feedparser.parse(ch['url'])
 				for e in f.entries:
-					print u'{ind}{tit}'.format(ind=ind1+ind2,
-												tit=e['title'])
+					print(u'{ind}{tit}'.format(ind=ind1+ind2,
+												tit=e['title']))
 					if self._yes_or_no('(d)ownload or (r)eject'):
 						urls.append(e['link'])
 				channels.append({'channel': ch, 'urls': urls})
@@ -295,7 +297,7 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 					'--mark-watched',
 					'--dateafter {}'.format(channel['channel']['last_update']
 											if channel['channel']['last_update']
-											else '1970/01/01'), # the beginning of the epoch
+											else '19700101'), # the beginning of the epoch
 					)
 			out_format = channel['channel']['out_format']
 			if out_format == 'audio':
@@ -312,29 +314,34 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 			self.executor.call(args, cwd=download_dir)
 			return True
 		else:
-			print 'ERROR: No downloader.'
+			print('ERROR: No downloader.')
 			return False
 
 	def _send(self, sender, bluetube_dir):
 		'''Send all files in the given directory one by one.
 		If a file filed to be sent try to send it again.'''
 		files = os.listdir(bluetube_dir)
-		options = ('--device={}'.format(self.configs.get('bluetube', 'diviceID')),)
+		options = [sender, '--device={}'.format(self.configs.get('bluetube', 'deviceID'))]
+		# sent each file separately to re-send only the file that failed
 		for f in files:
 			attempts = 3
-			args = options + f
-			status = True
-			while attempts and not status:
-				status = self.executor.call(args)
-				print 'WARNING: failed to send file.'
-				attempts -= 1
-			
+			options.append(f)
+			status = -1
+			while attempts and status:
+				status = self.executor.call(options, cwd=bluetube_dir)
+				if status:
+					print('WARNING: failed to send file.')
+					attempts -= 1
+			if attempts > 0:
+				os.remove(os.path.join(bluetube_dir, f))
+				return 0
+			return -1
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
 		download_dir = os.path.join(home, 'Downloads')
 		if not os.path.isdir(download_dir):
-			print 'no directory for downloads, it will be created now'
+			print('no directory for downloads, it will be created now')
 			os.mkdir(download_dir)
 		bluetube_dir = os.path.join(download_dir, 'bluetube')
 		if not os.path.isdir(bluetube_dir):
@@ -346,7 +353,7 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 			try:
 				os.rmdir(bluetube_dir)
 			except OSError:
-				print 'The directory {} is not empty. Cannot delete it.'
+				print('The directory {} is not empty. Cannot delete it.')
 
 
 # ============================================================================ #	
@@ -372,7 +379,7 @@ if __name__ == '__main__':
 		bluetube.list_channels()
 	elif args.remove:
 		if not args.author and not args.channel:
-			print u'ERROR: specify the author and the channel\'s name'
+			print(u'ERROR: specify the author and the channel\'s name')
 			sys.exit(-1)
 		bluetube.remove_channel(args.author, args.remove)
 	else:
