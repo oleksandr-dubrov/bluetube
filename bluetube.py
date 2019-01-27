@@ -146,7 +146,7 @@ class Feeds(object):
 class Bluetube(object):
 	''' The main class of the script. '''
 
-	CONFIG_FILE = 'bluetooth.cfg'
+	CONFIG_FILE = 'bluetube.cfg'
 	DEFAULT_CONFIGS = u'''[bluetube]
 ; Configurations for bluetube
 downloader=youtube-dl
@@ -360,19 +360,24 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 
 
 if __name__ == '__main__':
+
 	parser = argparse.ArgumentParser(description='The script downloads youtube video as video or audio and sends to a bluetooth device.')
-	add = parser.add_mutually_exclusive_group()
-	lst = parser.add_mutually_exclusive_group()
-	remove = parser.add_mutually_exclusive_group()
-	add.add_argument('-add', '-a', help='add a URL to youtube channel', type=unicode)
-	add.add_argument('-t', dest='type', help='a type of a file you want to get - (v)ideo (default) or (a)udio', choices=['a', 'v'], default='v')
-	lst.add_argument('-list', '-l', help='list all channels', action='store_true')
-	remove.add_argument('-remove', '-r', help='remove the channel by its name', type=unicode)
-	remove.add_argument('-au', dest='author', help='an author (required when -remove)', type=unicode)
+	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+	subparsers = parser.add_subparsers(help='add or remove a channel')
+
+	add_parser = subparsers.add_parser('add', help='add a URL to youtube channel')
+	add_parser.add_argument('-t', dest='type', help='a type of a file you want to get - (v)ideo (default) or (a)udio', choices=['a', 'v'], default='v')
+	add_parser.add_argument('URL', help='URL of a youtube channel to add')
+
+	remove_parser = subparsers.add_parser('remove', help='remove the channel by its name')
+	remove_parser.add_argument('author', help='an channel\'s author to remove', type=unicode)
+
+	list_parser = subparsers.add_parser('list', help='list all channels')
 
 	bluetube = Bluetube()
-	args = parser.parse_args()
-	if args.add:
+	print sys.argv[1:]
+	args = parser.parse_args(sys.argv[1:])
+	if args.command == 'add':
 		if bluetube.add_rss(args.add, args.type):
 			sys.exit(-1)
 	elif args.list:
