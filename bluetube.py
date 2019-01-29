@@ -360,32 +360,24 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 
 
 if __name__ == '__main__':
-
 	parser = argparse.ArgumentParser(description='The script downloads youtube video as video or audio and sends to a bluetooth device.')
+	me_group = parser.add_mutually_exclusive_group()
+
+	me_group.add_argument('--add', '-a', help='add a URL to youtube channel', type=unicode)
+	parser.add_argument('-t', dest='type', help='a type of a file you want to get (for --add)', choices=['a', 'v'], default='v')
+	me_group.add_argument('--list', '-l', help='list all channels', action='store_true')
+	me_group.add_argument('--remove', '-r', nargs=2, help='remove a channel by names of the author and the channel', type=unicode)
+
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-	subparsers = parser.add_subparsers(help='add or remove a channel')
-
-	add_parser = subparsers.add_parser('add', help='add a URL to youtube channel')
-	add_parser.add_argument('-t', dest='type', help='a type of a file you want to get - (v)ideo (default) or (a)udio', choices=['a', 'v'], default='v')
-	add_parser.add_argument('URL', help='URL of a youtube channel to add')
-
-	remove_parser = subparsers.add_parser('remove', help='remove the channel by its name')
-	remove_parser.add_argument('author', help='an channel\'s author to remove', type=unicode)
-
-	list_parser = subparsers.add_parser('list', help='list all channels')
 
 	bluetube = Bluetube()
-	print sys.argv[1:]
-	args = parser.parse_args(sys.argv[1:])
-	if args.command == 'add':
+	args = parser.parse_args()
+	if args.add:
 		if bluetube.add_rss(args.add, args.type):
 			sys.exit(-1)
 	elif args.list:
 		bluetube.list_channels()
 	elif args.remove:
-		if not args.author and not args.channel:
-			print(u'ERROR: specify the author and the channel\'s name')
-			sys.exit(-1)
-		bluetube.remove_channel(args.author, args.remove)
+		bluetube.remove_channel(args.remover[0], args.remove[1])
 	else:
 		bluetube.run()
