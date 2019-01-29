@@ -156,3 +156,5 @@ TODO
 ----
 1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
   Recommend the user to install *ffmpeg*.
+2. Use PyOBEX instead of external tool. Try to improve the library. See [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/abcfb31c3609c7408e47c10ae30d46438e35018f/PyOBEX/client.py?at=default&fileviewer=file-view-default)
+

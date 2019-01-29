@@ -3,7 +3,11 @@
 
 __version__ = '2.1'
 __author__ = 'OD'
-__license__ = 'GNU GPLv2'
+__license__ = '''This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+'''
 
 
 #########################################################################
@@ -54,7 +58,7 @@ class CommandExecutor(object):
 class Feeds(object):
 	'''Manages a RSS feeds in the shelve database'''
 
-	DATABASE_FILE = 'bluetooth.dat'
+	DATABASE_FILE = 'bluetube.dat'
 
 	def __init__(self, mode):
 		self.db = None
@@ -147,10 +151,12 @@ class Bluetube(object):
 	''' The main class of the script. '''
 
 	CONFIG_FILE = 'bluetube.cfg'
-	DEFAULT_CONFIGS = u'''[bluetube]
-; Configurations for bluetube
+	DEFAULT_CONFIGS = u'''; Configurations for bluetube
+[bluetube]
 downloader=youtube-dl
-sender=blueman-sendto
+; specify your bluetooth sender;
+; on GNU it might be blueman-sendto or bluemantooth-sendto
+sender=bluetooth-sendto
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
 
@@ -209,7 +215,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 					if self._download(downloader, ch, download_dir):
 						self._send(sender, download_dir)
 					else:
-						print('Failed to downloed this channel: \n\t{}'.format(ch.channel.title))
+						print(u'Failed to downloed this channel: \n\t{}'.format(ch['channel']['title']))
 				self._return_download_dir(download_dir)
 				return 0
 		return -1
@@ -220,8 +226,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def _check_config_file(self):
 		if self.configs == None:
-			print(u'''No configuration file was found.\n
-You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
+			print(u'''Configuration file is not found.\n
+You must create {} with the content below manually in the script directory:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
 			return False
 		return True
 
@@ -233,7 +239,9 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 			return False
 
 	def _check_sender(self, sender):
-		if self.executor.does_command_exist(sender):
+		''' Neither bluetooth-sendto nor blueman-sendto has --version,
+		So, call --version but expect error code other than -1'''
+		if not self.executor.call((sender, '--version')) == -1:
 			return True
 		else:
 			print(u'ERROR: The tool for sending files via bluetooth "{}" is not found in PATH'.format(sender))
@@ -295,24 +303,23 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 		if downloader == 'youtube-dl':
 			options = ('--ignore-config',
 					'--mark-watched',
-					'--dateafter {}'.format(channel['channel']['last_update']
+					'--dateafter={}'.format(channel['channel']['last_update']
 											if channel['channel']['last_update']
 											else '19700101'), # the beginning of the epoch
 					)
 			out_format = channel['channel']['out_format']
 			if out_format == 'audio':
 				spec_options = ('--extract-audio',
-								'--audio-format mp3',
-								'--audio-quality 9' # 9 means worse
+								'--audio-format=mp3',
+								'--audio-quality=9' # 9 means worse
 								)
 			elif out_format == 'video':
-				spec_options = ('--format 3gp',)
+				spec_options = ('--format=3gp',)
 			else:
 				assert 0, 'unexpected output format; should be either "v" or "a"'
 
 			args = (downloader,) + options + spec_options + tuple(channel['urls'])
-			self.executor.call(args, cwd=download_dir)
-			return True
+			return not self.executor.call(args, cwd=download_dir)
 		else:
 			print('ERROR: No downloader.')
 			return False
@@ -334,8 +341,8 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 					attempts -= 1
 			if attempts > 0:
 				os.remove(os.path.join(bluetube_dir, f))
-				return 0
-			return -1
+				return 0 # TODO: does this function should return
+			return -1 # TODO: does this function should return
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
@@ -353,7 +360,7 @@ You must create {} with the content below manually:\n{}\n'''.format(Bluetube.CON
 			try:
 				os.rmdir(bluetube_dir)
 			except OSError:
-				print('The directory {} is not empty. Cannot delete it.')
+				print('The working directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
 
 
 # ============================================================================ #	
@@ -366,18 +373,19 @@ if __name__ == '__main__':
 	me_group.add_argument('--add', '-a', help='add a URL to youtube channel', type=unicode)
 	parser.add_argument('-t', dest='type', help='a type of a file you want to get (for --add)', choices=['a', 'v'], default='v')
 	me_group.add_argument('--list', '-l', help='list all channels', action='store_true')
-	me_group.add_argument('--remove', '-r', nargs=2, help='remove a channel by names of the author and the channel', type=unicode)
+	me_group.add_argument('--remove', '-r', nargs=2, help='remove a channel by names of the author and the channel', type=lambda s: unicode(s, 'utf8'))
 
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
 	bluetube = Bluetube()
 	args = parser.parse_args()
 	if args.add:
-		if bluetube.add_rss(args.add, args.type):
+		if bluetube.add_channel(args.add, args.type):
 			sys.exit(-1)
 	elif args.list:
 		bluetube.list_channels()
 	elif args.remove:
-		bluetube.remove_channel(args.remover[0], args.remove[1])
+		bluetube.remove_channel(args.remove[0].strip(), args.remove[1].strip())
 	else:
 		bluetube.run()
+	print('Done')
