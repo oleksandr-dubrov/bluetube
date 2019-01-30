@@ -22,6 +22,8 @@ import subprocess
 import sys
 import re
 from ConfigParser import SafeConfigParser
+from bluetooth import find_service  # @UnresolvedImport
+from PyOBEX.client import Client  # @UnresolvedImport
 
 
 try:
@@ -147,6 +149,58 @@ class Feeds(object):
 		self.db.sync()
 
 
+class Bluetooth(Client):
+	'''Sends files to the given device'''
+
+	CHUNK_SIZE = 1048576 * 10
+
+	def __init__(self, device_id, bluetube_dir):
+		self.found = self._find_device(device_id)
+		if self.found:
+			print("Connecting to \"%s\" on %s" % (self.name, self.host))
+			super(Bluetooth, self).__init__(self.host, self.port)
+			self.bluetube_dir = bluetube_dir
+		else:
+			print('Device {} is not found.'.format(device_id))
+
+	def _find_device(self, device_id):
+		service_matches = find_service(address = device_id)
+		if len(service_matches) == 0:
+			print("Couldn't find the service.")
+			return False
+
+		for s in service_matches:
+			if s['name'] == 'OBEX Object Push':
+				first_match = s
+				break
+		self.name = first_match["name"]
+		self.host = first_match["host"]
+		self.port = first_match["port"]
+		return True
+
+	@staticmethod
+	def _callback(resp):
+		print(resp)
+	
+	def send(self, filenames):
+		assert self.found, 'Device is not found. Create a new Bluetooth.'
+		self.connect()
+		for fm in filenames:
+			size = os.path.getsize(fm)
+			with open(os.path.join(self.bluetube_dir, fm)) as f:
+				while size:
+					if size < Bluetooth.CHUNK_SIZE:
+						resp = self.put(fm, f.read(), callback=self._callback)
+						print(resp)
+						size = 0
+					else:
+						resp = self.put(fm, f.read(Bluetooth.CHUNK_SIZE), callback=self._callback)
+						print(resp)
+						size = size - Bluetooth.CHUNK_SIZE
+
+		self.disconnect()
+
+
 class Bluetube(object):
 	''' The main class of the script. '''
 
@@ -208,16 +262,18 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
 			sender = self.configs.get('bluetube', 'sender')
-			if self._check_downloader(downloader) and self._check_sender(sender):
-				channels = self._get_channels_with_urls()
-				download_dir = self._fetch_download_dir()
-				for ch in channels:
-					if self._download(downloader, ch, download_dir):
-						self._send(sender, download_dir)
-					else:
-						print(u'Failed to downloed this channel: \n\t{}'.format(ch['channel']['title']))
-				self._return_download_dir(download_dir)
-				return 0
+			download_dir = self._fetch_download_dir()
+			sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
+			if sender.found:
+				if self._check_downloader(downloader) and self._check_sender(sender):
+					channels = self._get_channels_with_urls()
+					for ch in channels:
+						if self._download(downloader, ch, download_dir):
+							self._send(sender, download_dir)
+						else:
+							print(u'Failed to downloed this channel: \n\t{}'.format(ch['channel']['title']))
+					self._return_download_dir(download_dir)
+					return 0
 		return -1
 
 	def _get_configs(self):
@@ -324,25 +380,10 @@ You must create {} with the content below manually in the script directory:\n{}\
 			print('ERROR: No downloader.')
 			return False
 
-	def _send(self, sender, bluetube_dir):
-		'''Send all files in the given directory one by one.
-		If a file filed to be sent try to send it again.'''
-		files = os.listdir(bluetube_dir)
-		options = [sender, '--device={}'.format(self.configs.get('bluetube', 'deviceID'))]
-		# sent each file separately to re-send only the file that failed
-		for f in files:
-			attempts = 3
-			options.append(f)
-			status = -1
-			while attempts and status:
-				status = self.executor.call(options, cwd=bluetube_dir)
-				if status:
-					print('WARNING: failed to send file.')
-					attempts -= 1
-			if attempts > 0:
-				os.remove(os.path.join(bluetube_dir, f))
-				return 0 # TODO: does this function should return
-			return -1 # TODO: does this function should return
+	def _send(self, sender, download_dir):
+		'''Send all files in the given directory'''
+		files = os.listdir(download_dir)
+		sender.send(files)
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
