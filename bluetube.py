@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__version__ = '2.1'
+__version__ = '1.0'
 __author__ = 'OD'
 __license__ = '''This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,20 +22,22 @@ import subprocess
 import sys
 import re
 from ConfigParser import SafeConfigParser
-from bluetooth import find_service  # @UnresolvedImport
-from PyOBEX.client import Client  # @UnresolvedImport
-
-
 try:
+	from bluetooth import find_service, lookup_name  # @UnresolvedImport
+	from PyOBEX.client import Client  # @UnresolvedImport
+	from PyOBEX import headers
+	from PyOBEX import requests
+	from PyOBEX import responses
 	import feedparser
 except ImportError:
-	print('''No feedparser in your environment. Run the next command to install it:\n	pip install feedparser''')
+	print('''Dependencies is not satisfied.
+	Run pip install -r dependencies.txt''')
 	sys.exit(-1)
 
 
 class CommandExecutor(object):
 	'''This class run the commands in the shell'''
-	
+
 	def __init__(self):
 		pass
 		
@@ -152,14 +154,13 @@ class Feeds(object):
 class Bluetooth(Client):
 	'''Sends files to the given device'''
 
-	CHUNK_SIZE = 1048576 * 10
-
 	def __init__(self, device_id, bluetube_dir):
 		self.found = self._find_device(device_id)
 		if self.found:
 			print("Connecting to \"%s\" on %s" % (self.name, self.host))
-			super(Bluetooth, self).__init__(self.host, self.port)
+			Client.__init__(self, self.host, self.port) # Client is old style class, so don't use super
 			self.bluetube_dir = bluetube_dir
+			self.in_progress = False
 		else:
 			print('Device {} is not found.'.format(device_id))
 
@@ -173,32 +174,86 @@ class Bluetooth(Client):
 			if s['name'] == 'OBEX Object Push':
 				first_match = s
 				break
-		self.name = first_match["name"]
+
+		self.name = lookup_name(device_id)
 		self.host = first_match["host"]
 		self.port = first_match["port"]
 		return True
 
-	@staticmethod
-	def _callback(resp):
-		print(resp)
+	def _callback(self, resp):
+		if resp:
+			if self.in_progress:
+				sys.stdout.write('.')
+			else:
+				sys.stdout.write('Sending to {}...'.format(self.name))
+				self.in_progress = True
+
+	def _put(self, name, file_data, header_list = ()):  # @UnusedVariable
+		'''Modify the method from the base class
+		to allow getting data from the file stream.'''
+
+		header_list = [
+			headers.Name(name),
+			headers.Length(os.path.getsize(file_data))
+			]
+
+		max_length = self.remote_info.max_packet_length
+		request = requests.Put()
+
+		response = self._send_headers(request, header_list, max_length)
+		yield response
+
+		if not isinstance(response, responses.Continue):
+			return
+
+		optimum_size = max_length - 3 - 3
+
+		i = 0
+		size = os.path.getsize(file_data)
+		while i < size:
+
+			data = self.file_data_stream.read(optimum_size)
+			i += len(data)
+			if i < size:
+				request = requests.Put()
+				request.add_header(headers.Body(data, False), max_length)
+				self.socket.sendall(request.encode())
+
+				response = self.response_handler.decode(self.socket)
+				yield response
+
+				if not isinstance(response, responses.Continue):
+					return
+			else:
+				request = requests.Put_Final()
+				request.add_header(headers.End_Of_Body(data, False), max_length)
+				self.socket.sendall(request.encode())
+
+				response = self.response_handler.decode(self.socket)
+				yield response
+
+				if not isinstance(response, responses.Success):
+					return
 	
 	def send(self, filenames):
+		'''Sends files to the bluetooth device.
+		Returns file names that has been sent.'''
 		assert self.found, 'Device is not found. Create a new Bluetooth.'
+		sent = []
 		self.connect()
 		for fm in filenames:
-			size = os.path.getsize(fm)
-			with open(os.path.join(self.bluetube_dir, fm)) as f:
-				while size:
-					if size < Bluetooth.CHUNK_SIZE:
-						resp = self.put(fm, f.read(), callback=self._callback)
-						print(resp)
-						size = 0
-					else:
-						resp = self.put(fm, f.read(Bluetooth.CHUNK_SIZE), callback=self._callback)
-						print(resp)
-						size = size - Bluetooth.CHUNK_SIZE
-
+			full_path = os.path.join(self.bluetube_dir, fm)
+			self.file_data_stream = open(full_path, 'rb')
+			resp = self.put(fm.decode('utf-8'), full_path, callback=self._callback)
+			if resp:
+				print(resp)
+			else:
+				print('\n{} sent.'.format(fm))
+				sent.append(full_path)
+			self.in_progress = False
+			self.file_data_stream.close()
 		self.disconnect()
+		return sent
 
 
 class Bluetube(object):
@@ -264,8 +319,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			sender = self.configs.get('bluetube', 'sender')
 			download_dir = self._fetch_download_dir()
 			sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
-			if sender.found:
-				if self._check_downloader(downloader) and self._check_sender(sender):
+			if sender.found and self._check_downloader(downloader):
 					channels = self._get_channels_with_urls()
 					for ch in channels:
 						if self._download(downloader, ch, download_dir):
@@ -292,15 +346,6 @@ You must create {} with the content below manually in the script directory:\n{}\
 			return True
 		else:
 			print(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
-			return False
-
-	def _check_sender(self, sender):
-		''' Neither bluetooth-sendto nor blueman-sendto has --version,
-		So, call --version but expect error code other than -1'''
-		if not self.executor.call((sender, '--version')) == -1:
-			return True
-		else:
-			print(u'ERROR: The tool for sending files via bluetooth "{}" is not found in PATH'.format(sender))
 			return False
 
 	def _get_type(self, out_format):
@@ -383,7 +428,9 @@ You must create {} with the content below manually in the script directory:\n{}\
 	def _send(self, sender, download_dir):
 		'''Send all files in the given directory'''
 		files = os.listdir(download_dir)
-		sender.send(files)
+		sent = sender.send(files)
+		for f in sent:
+			os.remove(f)
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
@@ -391,7 +438,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		if not os.path.isdir(download_dir):
 			print('no directory for downloads, it will be created now')
 			os.mkdir(download_dir)
-		bluetube_dir = os.path.join(download_dir, 'bluetube')
+		bluetube_dir = os.path.join(download_dir, 'bluetube.tmp')
 		if not os.path.isdir(bluetube_dir):
 			os.mkdir(bluetube_dir)
 		return bluetube_dir
@@ -410,6 +457,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description='The script downloads youtube video as video or audio and sends to a bluetooth device.')
+	parser.epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth.'
 	me_group = parser.add_mutually_exclusive_group()
 
 	me_group.add_argument('--add', '-a', help='add a URL to youtube channel', type=unicode)
