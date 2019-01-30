@@ -27,7 +27,7 @@ from ConfigParser import SafeConfigParser
 try:
 	import feedparser
 except ImportError:
-	print('''No feedparser in your environment. Run next command to install it:\n	pip install feedparser''')
+	print('''No feedparser in your environment. Run the next command to install it:\n	pip install feedparser''')
 	sys.exit(-1)
 
 
@@ -167,11 +167,11 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		''' add a new channels to RSS feeds '''
 		out_format = self._get_type(out_format)
 		feed_url = self._get_feed_url(url)
-		feeds = Feeds('rw')
 		if out_format and feed_url:
 			f = feedparser.parse(feed_url)
 			title = f.feed.title
 			author = f.feed.author
+			feeds = Feeds('rw')
 			if feeds.has_channel(author, title):
 				print(u'The channel {} by {} has already existed'.format(title, author))
 			else:
@@ -367,6 +367,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 
 if __name__ == '__main__':
+
 	parser = argparse.ArgumentParser(description='The script downloads youtube video as video or audio and sends to a bluetooth device.')
 	me_group = parser.add_mutually_exclusive_group()
 
@@ -380,7 +381,7 @@ if __name__ == '__main__':
 	bluetube = Bluetube()
 	args = parser.parse_args()
 	if args.add:
-		if bluetube.add_channel(args.add, args.type):
+		if not bluetube.add_channel(args.add, args.type):
 			sys.exit(-1)
 	elif args.list:
 		bluetube.list_channels()

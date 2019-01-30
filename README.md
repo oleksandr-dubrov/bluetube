@@ -135,7 +135,7 @@ run the tests.
 
 9 Error handling.
 -----------------
-If a command fails it returns -1 to OS. Overwise - 0.
+If a command fails it returns -1 to OS. Otherwise - 0.
 
 
 **See also.**
@@ -146,6 +146,16 @@ If a command fails it returns -1 to OS. Overwise - 0.
 
 [Markdown](https://daringfireball.net/projects/markdown/).
 
+
+0 Troubleshooting
+-----------------
+On Windows if you see
+>   UnicodeEncodeError: 'charmap' codec can't encode characters in position 
+it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*.
+First, it should be installed:
+> pip install install win-unicode-console
+Once the package is installed, you should run the script like this:
+> python -mrun bluetube.py
 
 0 Glossary
 --------
