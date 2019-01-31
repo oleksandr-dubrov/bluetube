@@ -1,21 +1,114 @@
 BLUETUBE
 ========
 
-Bluetube is a script that downloads videos from youtube by URLs get from RSS and send them to a bluetooth device.
+
+Bluetube is a script that downloads videos from Youtube by URLs get from RSS and sends them to a bluetooth device.
+The script downloads media to `~/Downloads/bluetube.tmp`. If there is no such path it will be created. After success sending the `bluetube` directory 
+is removed. If some file failed to be sent then the file is not removed and stays in the 
+directory.
+
 
 1 Motivation.
 -------------
-1.1. I don't want to be always logged in youtube to avoid surveillance and "informational bubble".
-That is why I use RSS feed that can get updates on youtube channels anonymously.
+1.1. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
+That is why I use RSS feed that can get updates on Youtube channels anonymously.
 
-1.2. I don't want to watch videos on youtube site to save my time. It is always temptation that I keep watching other recommended videos over and over.
+1.2. I don't want to watch videos on Youtube site to save my time. It is always temptation that I keep watching other recommended videos over and over.
 So, the script will download selected videos and if it is needed converts it to audio.
 
 1.3. The script will send the video or audio files to my bluetooth device. In my case it is Nokia N73 under Symbian S60 v9.1.
-If the transfer is done successfully the the script should removed the files.
+If the transfer is done successfully the the script should remove the files.
 
-2 How to get the feed.
-----------------------
+
+2 Preconditions.
+----------------
+In order to use the script, you must have the next installed.
+
+Python packages:
++   _feedparser_
++   _PyOBEX_
++   _PyBluez_
+
+GNU packages:
++   [_youtube-dl_] (https://rg3.github.io/youtube-dl/).
++   ffmpeg - for converting files in desirable  format.
+
+*youtube-dl* and *a bluetooth-send tool* can be configured in the INI configuration file in the root directory of the script.
+
+*bluetube.cfg* must be provided together with the script.
+
+
+3 Installing.
+--------------
+In order to install *bluetube* to a specified directory you can run the next command:
+>./install *directory_to_install_in*
+
+
+4 Configurations.
+------------------
+The configuration is kept in the INI file ***bluetooth.cfg*** in the root directory.
+The content of the file please see below:
+
+    ; Configurations for bluetube.
+    [bluetube]
+    downloader=youtube-dl
+    ; enter your device ID in the line below
+    deviceID=YOUR_RECEIVER_DEVICE_ID
+
+If *bluetooth.cfg* was not found, then please create it manually.
+
+
+5 Run.
+------
+In order to run the script you can start the *bash* script:
+
+    ./bluetube
+
+Alternatively, you can start the Python script directly:
+
+    python bluetube.py
+
+
+6 Command user interface.
+-------------------------
+The command user interface is a composition of options:
+
+	usage: bluetube.py [-h] [--add ADD] [-t {a,v}] [--list]
+                   [--remove REMOVE REMOVE] [--version]
+	
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  --add ADD, -a ADD     add a URL to youtube channel
+	  -t {a,v}              a type of a file you want to get (for --add)
+	  --list, -l            list all channels
+	  --remove REMOVE REMOVE, -r REMOVE REMOVE
+                            remove a channel by names of the author and the
+                            channel
+	  --version             show program's version number and exit
+
+If no option specified the script shows feeds to choose, downloads and sends
+via bluetooth.
+
+
+7 Tests.
+--------
+There are some unit tests provided to verify that the script is not broken.
+I don't have a goal to rich good code coverage, so passed tests don't guarantee the 
+correct work of the script. In order to get more information reed the test's output.
+Run test from *tests* directory:
+
+    python test_bluetube.py
+
+The tests are base on *unittests* and *mock*. Don't forget to install *mock* before 
+run the tests.
+
+8 Development.
+-------------
+
+This section contains information of the script internals.
+
+8.1 How to get the feed.
+------------------------
 Let's look at the URL below:
 
 `https://www.youtube.com/watch?v=TcA4hhX81cg&list=PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_.`
@@ -23,53 +116,10 @@ Let's look at the URL below:
 The list ID that follows `&list=` is `PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_`.
 This ID should be placed in `https://www.youtube.com/feeds/videos.xml?playlist_id=YOURPLAYLISTIDHERE` instead of `YOURPLAYLISTIDHERE`.
 
-**Note.** Sometimes youtube changes its rules and the URL might become not valid. In this case, the script must be fixed.
+**Note.** Sometimes Youtube changes its rules and the URL might become not valid. In this case, the script must be fixed.
 
-3 Command user interface.
----------------------
-The command user interface is a composition of options:
-
-		usage: bluetube.py [-h] [-add ADD | -t {a,v}] [-list]
-	                   [-remove REMOVE | -au AUTHOR]
-		optional arguments:
-		  -h, --help            show this help message and exit
-		  -add ADD, -a ADD      add a URL to youtube channel
-		  -t {a,v}              a type of a file you want to get - (v)ideo (default)
-	                        or (a)udio
-		  -list, -l             list all channels
-		  -remove REMOVE, -r REMOVE
-	                        remove the channel by its name
-		  -au AUTHOR            an author (required when -remove)
-		
-		   no option            run the main flow - show feeds, download, send via bluetooth.
-
-4 Preconditions.
------------------
-
-**Note.** In order to use the script, you must have the next installed:
-
-+	_feedparser_ - the python package
-+	_youtube-dl_ - the GNU package (https://rg3.github.io/youtube-dl/)
-+	_bluetooth-send_ or other tool that sends files via bluetooth and accept the target divice ID and file names.
-
-*youtube-dl* and *a bluetooth-send tool* can be configured in the INI configuration file in the root directory of the script.
-
-*bluetube.cfg* must be provided together with the script.
-
-5 Configurations.
-------------------
-The configuration is kept in the INI file *bluetooth.cfg* in the root directory.
-The default content of the file please see below:
-> [bluetube]
-> ; a comment
-> downloader=youtube-dl
-> sender=bluetooth-send
-> diviceID=YOUR_RECEIVER_DEVICE_ID
-
-If *bluetooth.cfg* was not found, then please create it manually.
-
-6 Commands.
-------------
+8.2 Commands.
+-------------
 *youtube-dl* downloads vidoes from youtube.
 The tool receives the next options for any requested output format:
 
@@ -87,10 +137,9 @@ If audio is requested:
 +    *--audio-format FORMAT* - specify audio format.
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
-The script downloads media to `~/Downloads/bluetube`. If there is no such path it will be created. After success sending the `bluetube` is removed.
 
-7 Data structure.
-------------------
+8.3 Data structure.
+-------------------
 The data are stored in *shelve* DB in the root directory.
 The structure is represented in JSON.
 Underlining DB doesn't support unicode, so all keys must be strings.
@@ -104,7 +153,7 @@ Underlining DB doesn't support unicode, so all keys must be strings.
     				    "title": "the name of an entity",
     				    "url": "url of the entity",
     				    "last_update": "2019.01.01",
-                      "out_format": "a" or "v" 
+                        "out_format": "a" or "v" 
     			     },
     			     {
     			         ...
@@ -121,24 +170,14 @@ Underlining DB doesn't support unicode, so all keys must be strings.
         ]
 	}
 
-8 Tests.
---------
-There are some unit tests provided to verify that the script is not broken.
-I don't have a goal to rich good code coverage, so passed tests don't guarantee the 
-correct work of the script. In order to get more information reed the test's output.
-Run test from *tests* directory:
 
-    python test_bluetube.py
-
-The tests are base on *unittests* and *mock*. Don't forget to install *mock* before 
-run the tests.
-
-9 Error handling.
------------------
-If a command fails it returns -1 to OS. Otherwise - 0.
+8.4 Error handling.
+-------------------
+If a method fails it returns -1. Otherwise - 0.
 
 
-**See also.**
+8.5 Links.
+----------
 
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
@@ -146,30 +185,25 @@ If a command fails it returns -1 to OS. Otherwise - 0.
 
 [Markdown](https://daringfireball.net/projects/markdown/).
 
-10 Bluetooth
+[INI](https://en.wikipedia.org/wiki/INI_file)
+
+
+9 Bluetooth.
 ------------
 The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
 For more information see [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
 
-11 Installing.
---------------
-In order to install *bluetube* to a specified directory you can run the next command:
->./install
 
-0 Troubleshooting
------------------
+10 Troubleshooting
+------------------
 On Windows if you see
->   UnicodeEncodeError: 'charmap' codec can't encode characters in position 
+    UnicodeEncodeError: 'charmap' codec can't encode characters in position 
 it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*.
 First, it should be installed:
-> pip install install win-unicode-console
+    pip install install win-unicode-console
 Once the package is installed, you should run the script like this:
-> python -mrun bluetube.py
+    python -mrun bluetube.py
 
-0 Glossary
---------
-0.1. Bluetooth.
-SDP - Service Discovery Protocol.
 
 TODO
 ----
@@ -178,4 +212,4 @@ TODO
 2. Change mode for files
 > bluetube.py and bluetube -> read-only
 > install.sh -> read-only and executable
-
+3. Configurations should keep a bt device name rather than id.

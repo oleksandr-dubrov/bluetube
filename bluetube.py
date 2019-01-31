@@ -260,12 +260,10 @@ class Bluetube(object):
 	''' The main class of the script. '''
 
 	CONFIG_FILE = 'bluetube.cfg'
-	DEFAULT_CONFIGS = u'''; Configurations for bluetube
+	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
 [bluetube]
 downloader=youtube-dl
-; specify your bluetooth sender;
-; on GNU it might be blueman-sendto or bluemantooth-sendto
-sender=bluetooth-sendto
+; enter your device ID in the line below
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
 
@@ -316,7 +314,6 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
-			sender = self.configs.get('bluetube', 'sender')
 			download_dir = self._fetch_download_dir()
 			sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 			if sender.found and self._check_downloader(downloader):
