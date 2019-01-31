@@ -23,7 +23,7 @@ import sys
 import re
 from ConfigParser import SafeConfigParser
 try:
-	from bluetooth import find_service, lookup_name  # @UnresolvedImport
+	import bluetooth  # @UnresolvedImport
 	from PyOBEX.client import Client  # @UnresolvedImport
 	from PyOBEX import headers
 	from PyOBEX import requests
@@ -165,7 +165,7 @@ class Bluetooth(Client):
 			print('Device {} is not found.'.format(device_id))
 
 	def _find_device(self, device_id):
-		service_matches = find_service(address = device_id)
+		service_matches = bluetooth.find_service(address = device_id)
 		if len(service_matches) == 0:
 			print("Couldn't find the service.")
 			return False
@@ -175,7 +175,7 @@ class Bluetooth(Client):
 				first_match = s
 				break
 
-		self.name = lookup_name(device_id)
+		self.name = bluetooth.lookup_name(device_id)
 		self.host = first_match["host"]
 		self.port = first_match["port"]
 		return True
@@ -448,7 +448,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			try:
 				os.rmdir(bluetube_dir)
 			except OSError:
-				print('The working directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
+				print('The download directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
 
 
 # ============================================================================ #	

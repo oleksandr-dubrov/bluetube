@@ -56,6 +56,12 @@ class TestBluetube(unittest.TestCase):
 			os.remove(Feeds.DATABASE_FILE)
 		if os.path.isfile(Bluetube.CONFIG_FILE) and os.path.exists(Bluetube.CONFIG_FILE):
 			os.remove(Bluetube.CONFIG_FILE)
+		download_dir = os.path.join(os.getcwd(), 'Downloads')
+		if os.path.exists(download_dir):
+			try:
+				os.rmdir(download_dir)
+			except OSError:
+				print('The download directory {} is not empty. Some test doesn\'t remove downloaded files.'.format(download_dir))
 
 	@patch('bluetube.feedparser.parse')
 	def test_add_list_remove(self, mocked_feed):
@@ -87,7 +93,6 @@ class TestBluetube(unittest.TestCase):
 # 
 		print('REMOVE ONE CHANNAL THAT DOES EXIST')
 		self.SUT.remove_channel(u'Вольнов Talks', u'Все видео канала')
-		
 
 		print('REMOVE A NON-EXISTAING CHANNAL')
 		self.SUT.remove_channel(u'author', u'name')
@@ -98,28 +103,37 @@ class TestBluetube(unittest.TestCase):
 		print('SHOW ALL CHANNELS AGAIN')
 		self.SUT.list_channels()
 
-	@patch('bluetube.subprocess.call')
-	def test_run_precondition_fails(self, mocked_call):
-		'''1st - no configs
-		   2nd - no youtube-dl 
-		   3rd - no blutooth-send'''
+	@patch('bluetube.bluetooth.find_service')
+	def test_run_precondition_fails(self, mocked_find_service):
+		'''1st - no configurations
+		   2nd - no remote bluetooth device'''
 		
 		self.assertTrue(self.SUT.run(), 'No configuration file, the case should fail')
 		
 		self._create_a_configuration_file()
+		mocked_find_service.retutn_value = []
 		
-		mocked_call.side_effect = [OSError(-1, 'no youtube-dl'),
-								OSError(0, ''),
-								OSError(-1, 'no bluetooth-send')]
-		self.assertTrue(self.SUT.run(), 'No youtube-dl in the PATH, the case should fail')
-		self.assertTrue(self.SUT.run(), 'No bluetooth-send in the PATH, the case should fail')
-		print('DONE')
+		self.assertTrue(self.SUT.run(), 'no remote bluetooth device, the case should fail')
 
-
+	@patch('os.path.expanduser')
+	@patch('PyOBEX.client.Client.disconnect')
+	@patch('PyOBEX.client.Client.connect')
+	@patch('PyOBEX.client.Client.put')
+	@patch('bluetube.bluetooth.lookup_name')
+	@patch('bluetube.bluetooth.find_service')
 	@patch('bluetube.raw_input')
 	@patch('bluetube.feedparser.parse')
 	@patch('bluetube.subprocess.call')
-	def test_run(self, mocked_call, mocked_feed_parse, mocked_raw_input):
+	def test_run(self,  # @DontTrace
+				mocked_call,
+				mocked_feed_parse,
+				mocked_raw_input,
+				mocked_find_service,
+				mocked_lookup_name,
+				mocked_client_put,
+				mocked_client_connect,  # @UnusedVariable
+				mocked_client_disconnect,  # @UnusedVariable
+				mocked_expanduser):
 
 		mocked_call.side_effect = TestBluetube.good_side_effect
 
@@ -131,6 +145,11 @@ class TestBluetube(unittest.TestCase):
 		mocked_feed_parse.side_effect = [TestBluetube.FakeFeed(u"Вацко Live", u"Вацко Light"),
 										TestBluetube.FakeFeed(u"Вацко Live", u"Вацко Light", entries)]
 		mocked_raw_input.side_effect = ['y', 'n']
+		mocked_find_service.return_value = [{'name': 'OBEX Object Push', 'host': 'host', 'port': 1}]
+		mocked_lookup_name.return_value = 'Symbian S60'
+		mocked_client_put.return_value = False
+		mocked_expanduser.return_value = os.getcwd()
+
 		self._create_a_configuration_file()
 
 		print('ADDING CHANNELS')
