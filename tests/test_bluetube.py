@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath('..'))
 import unittest
 from bluetube import Bluetube
 from bluetube import Feeds
-from mock import patch
+from mock import patch  # @UnresolvedImport
 
 
 class TestBluetube(unittest.TestCase):
