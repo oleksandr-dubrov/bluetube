@@ -146,6 +146,15 @@ If a command fails it returns -1 to OS. Otherwise - 0.
 
 [Markdown](https://daringfireball.net/projects/markdown/).
 
+10 Bluetooth
+------------
+The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
+For more information see [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
+
+11 Installing.
+--------------
+In order to install *bluetube* to a specified directory you can run the next command:
+>./install
 
 0 Troubleshooting
 -----------------
@@ -166,5 +175,7 @@ TODO
 ----
 1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
   Recommend the user to install *ffmpeg*.
-2. Use PyOBEX instead of external tool. Try to improve the library. See [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/abcfb31c3609c7408e47c10ae30d46438e35018f/PyOBEX/client.py?at=default&fileviewer=file-view-default)
+2. Change mode for files
+> bluetube.py and bluetube -> read-only
+> install.sh -> read-only and executable
 
