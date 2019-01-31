@@ -1,0 +1,4 @@
+#!/bin/bash
+# Runner script for bluetube.py
+
+python bluetube.py $@
