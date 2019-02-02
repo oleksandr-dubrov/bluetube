@@ -107,8 +107,9 @@ run the tests.
 
 This section contains information of the script internals.
 
-8.1 How to get the feed.
-------------------------
+### 8.1 How to get the feed.
+
+#### 8.1.1 Get RSS feed from the list (currently implemented).
 Let's look at the URL below:
 
 `https://www.youtube.com/watch?v=TcA4hhX81cg&list=PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_.`
@@ -116,10 +117,14 @@ Let's look at the URL below:
 The list ID that follows `&list=` is `PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_`.
 This ID should be placed in `https://www.youtube.com/feeds/videos.xml?playlist_id=YOURPLAYLISTIDHERE` instead of `YOURPLAYLISTIDHERE`.
 
+#### 8.1.2 Get RSS feed from the channel.
+Replace CHANNELID in the link below with a Youtube channel ID. The channel ID can be found in the address bar of your browser
+
+`https://www.youtube.com/feeds/videos.xml?channel_id=CHANNELID`
+
 **Note.** Sometimes Youtube changes its rules and the URL might become not valid. In this case, the script must be fixed.
 
-8.2 Commands.
--------------
+### 8.2 Commands.
 *youtube-dl* downloads vidoes from youtube.
 The tool receives the next options for any requested output format:
 
@@ -138,8 +143,7 @@ If audio is requested:
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
 
-8.3 Data structure.
--------------------
+### 8.3 Data structure.
 The data are stored in *shelve* DB in the root directory.
 The structure is represented in JSON.
 Underlining DB doesn't support unicode, so all keys must be strings.
@@ -171,14 +175,11 @@ Underlining DB doesn't support unicode, so all keys must be strings.
 	}
 
 
-8.4 Error handling.
--------------------
+### 8.4 Error handling.
 If a method fails it returns -1. Otherwise - 0.
 
 
-8.5 Links.
-----------
-
+### 8.5 Links.
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
 [YouTube-dl](https://rg3.github.io/youtube-dl/).
@@ -213,3 +214,25 @@ TODO
 > bluetube.py and bluetube -> read-only
 > install.sh -> read-only and executable
 3. Configurations should keep a bt device name rather than id.
+4. Print color output.
+	class bcolors:
+	
+		BOLD = "\033[1m"
+	    HEADER = '\033[95m'
+	    OKBLUE = '\033[94m'
+	    OKGREEN = '\033[92m'
+	    WARNING = '\033[93m'
+	    FAIL = '\033[91m'
+	    ENDC = '\033[0m'
+
+    def disable(self):
+        self.HEADER = ''
+        self.OKBLUE = ''
+        self.OKGREEN = ''
+        self.WARNING = ''
+        self.FAIL = ''
+        self.ENDC = ''
+
+print bcolors.WARNING + "Warning: No active frommets remain. Continue?"  + bcolors.ENDC
+
+5. Make clear distinction between *lists* and *channels*.
