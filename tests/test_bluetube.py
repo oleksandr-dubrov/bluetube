@@ -3,6 +3,7 @@
 
 import os
 import sys
+import time
 sys.path.insert(0, os.path.abspath('..'))
 
 import unittest
@@ -29,7 +30,7 @@ class TestBluetube(unittest.TestCase):
 	@staticmethod
 	def good_side_effect(*args, **kwargs):
 		if '--version' in args[0]:
-			pass
+			print('--version')
 		elif 'youtube-dl' in args[0][0]:
 			assert os.path.exists(kwargs['cwd']) and os.path.isdir(kwargs['cwd']), \
 				'{} directory is not found'.format(kwargs['cwd'])
@@ -103,16 +104,18 @@ class TestBluetube(unittest.TestCase):
 		print('SHOW ALL CHANNELS AGAIN')
 		self.SUT.list_channels()
 
+	@patch('bluetube.Bluetube._get_channels_with_urls')
 	@patch('bluetube.bluetooth.find_service')
-	def test_run_precondition_fails(self, mocked_find_service):
+	def test_run_precondition_fails(self, mocked_find_service, mocked_get_urls):
 		'''1st - no configurations
 		   2nd - no remote bluetooth device'''
-		
+
 		self.assertTrue(self.SUT.run(), 'No configuration file, the case should fail')
-		
+
 		self._create_a_configuration_file()
-		mocked_find_service.retutn_value = []
-		
+		mocked_find_service.return_value = []
+		mocked_get_urls.return_value = ['url']
+
 		self.assertTrue(self.SUT.run(), 'no remote bluetooth device, the case should fail')
 
 	@patch('os.path.expanduser')
@@ -138,9 +141,13 @@ class TestBluetube(unittest.TestCase):
 		mocked_call.side_effect = TestBluetube.good_side_effect
 
 		entries = [{'title': u'Маркевич — як помирали Металіст та Дніпро',
-					'link' : 'https://www.youtube.com/watch?v=1'},
+					'link' : 'https://www.youtube.com/watch?v=1',
+					'published_parsed': time.localtime(),
+					'summary': u'summary 1'},
 					{'title': u'Сабо - як відривалися радянські футболісти та про Динамо за лаштунками',
-					'link': 'https://www.youtube.com/watch?v=2'}
+					'link': 'https://www.youtube.com/watch?v=2',
+					'published_parsed': time.localtime(),
+					'summary': u'summary 2'}
 				]
 		mocked_feed_parse.side_effect = [TestBluetube.FakeFeed(u"Вацко Live", u"Вацко Light"),
 										TestBluetube.FakeFeed(u"Вацко Live", u"Вацко Light", entries)]

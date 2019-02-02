@@ -210,8 +210,5 @@ TODO
 ----
 1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
   Recommend the user to install *ffmpeg*.
-2. Change mode for files
-> bluetube.py and bluetube -> read-only
-> install.sh -> read-only and executable
 3. Configurations should keep a bt device name rather than id.
 5. Make clear distinction between *lists* and *channels*.

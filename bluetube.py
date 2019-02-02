@@ -364,16 +364,15 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
 			if self._check_downloader(downloader):
-				self._run(downloader)
-				return 0
+				return self._run(downloader)
 		return -1
 
 	def _run(self, downloader):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
 		channels = self._get_channels_with_urls(feeds)
-		if len(channels):
-			sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
+		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
+		if len(channels) and sender.found:
 			for ch in channels:
 				if self._download(downloader, ch, download_dir):
 					feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
@@ -381,8 +380,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 				else:
 					Bcolors.error(u'Failed to download this channel: \n\t{}'.format(ch['channel']['title']))
 			self._return_download_dir(download_dir)
+			return 0
 		else:
 			Bcolors.warn('No channels in the list. Use --add to add a channel.')
+			return -1
 
 	def _get_configs(self):
 		parser = SafeConfigParser()

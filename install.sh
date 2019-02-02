@@ -10,11 +10,10 @@ if [ -z "$1" ]
 fi
 
 DIRECTORY=$1/bluetube
-echo Installing Bluetube to $DIRECTORY
+echo Installing Bluetube to $DIRECTORY ...
 
 FILES=( \
 bluetube.py \
-bluetube.cfg \
 bluetube.dat \
 dependencies.txt \
 README.md \
@@ -32,9 +31,15 @@ echo "$RUNNER" > $DIRECTORY/bluetube
 chmod u+x "$DIRECTORY/bluetube"
 
 for (( i=0; i<${#FILES[@]}; i++)); do
-    echo Coping ${FILES[${i}]} ...
+    echo Coping ${FILES[${i}]}.
     cp ${FILES[${i}]} "$DIRECTORY"
 done
+
+echo "Setting access modes..."
+chmod 771 $DIRECTORY/bluetube
+chmod 400 $DIRECTORY/bluetube.py
+chmod 400 $DIRECTORY/dependencies.txt
+chmod 400 $DIRECTORY/README.md
 
 echo Done
 exit 0
