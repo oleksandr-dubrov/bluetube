@@ -36,7 +36,7 @@ for (( i=0; i<${#FILES[@]}; i++)); do
 done
 
 echo "Setting access modes..."
-chmod 771 $DIRECTORY/bluetube
+chmod 774 $DIRECTORY/bluetube
 chmod 400 $DIRECTORY/bluetube.py
 chmod 400 $DIRECTORY/dependencies.txt
 chmod 400 $DIRECTORY/README.md

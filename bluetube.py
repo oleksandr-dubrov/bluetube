@@ -372,15 +372,18 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		download_dir = self._fetch_download_dir()
 		channels = self._get_channels_with_urls(feeds)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
-		if len(channels) and sender.found:
-			for ch in channels:
-				if self._download(downloader, ch, download_dir):
-					feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
-					self._send(sender, download_dir)
-				else:
-					Bcolors.error(u'Failed to download this channel: \n\t{}'.format(ch['channel']['title']))
-			self._return_download_dir(download_dir)
-			return 0
+		if len(channels):
+			if sender.found:
+				for ch in channels:
+					if self._download(downloader, ch, download_dir):
+						feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
+						self._send(sender, download_dir)
+					else:
+						Bcolors.error(u'Failed to download this channel: \n\t{}'.format(ch['channel']['title']))
+				self._return_download_dir(download_dir)
+				return 0
+			else:
+				return -1
 		else:
 			Bcolors.warn('No channels in the list. Use --add to add a channel.')
 			return -1

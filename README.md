@@ -24,14 +24,15 @@ If the transfer is done successfully the the script should remove the files.
 ----------------
 In order to use the script, you must have the next installed.
 
+GNU packages:
++	libbluetooth-dev - for bluetooth Python package.
++   [_youtube-dl_] (https://rg3.github.io/youtube-dl/).
++   ffmpeg - for converting files in desirable  format.
+
 Python packages:
 +   _feedparser_
 +   _PyOBEX_
 +   _PyBluez_
-
-GNU packages:
-+   [_youtube-dl_] (https://rg3.github.io/youtube-dl/).
-+   ffmpeg - for converting files in desirable  format.
 
 *youtube-dl* and *a bluetooth-send tool* can be configured in the INI configuration file in the root directory of the script.
 
