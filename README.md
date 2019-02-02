@@ -214,25 +214,4 @@ TODO
 > bluetube.py and bluetube -> read-only
 > install.sh -> read-only and executable
 3. Configurations should keep a bt device name rather than id.
-4. Print color output.
-	class bcolors:
-	
-		BOLD = "\033[1m"
-	    HEADER = '\033[95m'
-	    OKBLUE = '\033[94m'
-	    OKGREEN = '\033[92m'
-	    WARNING = '\033[93m'
-	    FAIL = '\033[91m'
-	    ENDC = '\033[0m'
-
-    def disable(self):
-        self.HEADER = ''
-        self.OKBLUE = ''
-        self.OKGREEN = ''
-        self.WARNING = ''
-        self.FAIL = ''
-        self.ENDC = ''
-
-print bcolors.WARNING + "Warning: No active frommets remain. Continue?"  + bcolors.ENDC
-
 5. Make clear distinction between *lists* and *channels*.

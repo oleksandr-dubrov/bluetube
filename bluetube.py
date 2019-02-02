@@ -37,6 +37,37 @@ except ImportError:
 	sys.exit(-1)
 
 
+class Bcolors:
+	BOLD = '\033[1m'
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+
+	def disable(self):
+		Bcolors.BOLD = ''
+		Bcolors.HEADER = ''
+		Bcolors.OKBLUE = ''
+		Bcolors.OKGREEN = ''
+		Bcolors.WARNING = ''
+		Bcolors.FAIL = ''
+		Bcolors.ENDC = ''
+
+	@staticmethod
+	def warn(txt):
+		print(u'{}{}{}'.format(Bcolors.WARNING, txt, Bcolors.ENDC))
+
+	@staticmethod
+	def error(txt):
+		print(u'{}{}{}'.format(Bcolors.FAIL, txt, Bcolors.ENDC))
+
+	@staticmethod
+	def intense(txt):
+		print(u'{}{}{}'.format(Bcolors.BOLD, txt, Bcolors.ENDC))
+
+
 class CommandExecutor(object):
 	'''This class run the commands in the shell'''
 
@@ -77,24 +108,24 @@ class Feeds(object):
 		elif mode == 'rw':
 			self.db = Feeds._create_rw_connector()
 		else:
-			print('the access mode should be either "rw" or "r"')
+			assert 0, 'the access mode should be either "rw" or "r"'
 
 	def __del__(self):
 		if self.db:
 			try:
 				self.db.close()
 			except ValueError as e:
-				print('Probably your changes were lost. Try again')
+				Bcolors.error('Probably your changes were lost. Try again')
 				raise e
 
 	@staticmethod
 	def _create_rw_connector():
-		'''create db connector in read/write mode'''
+		'''create DB connector in read/write mode'''
 		return shelve.open(Feeds.DATABASE_FILE, flag='c', writeback=False)
 
 	@staticmethod
 	def _create_ro_connector():
-		'''create db connector in read-only mode'''
+		'''create DB connector in read-only mode'''
 		return shelve.open(Feeds.DATABASE_FILE, flag='r')
 	
 	def get_authors(self):
@@ -172,17 +203,17 @@ class Bluetooth(Client):
 	def __init__(self, device_id, bluetube_dir):
 		self.found = self._find_device(device_id)
 		if self.found:
-			print("Connecting to \"%s\" on %s" % (self.name, self.host))
+			print("Checking connection to \"%s\" on %s" % (self.name, self.host))
 			Client.__init__(self, self.host, self.port) # Client is old style class, so don't use super
 			self.bluetube_dir = bluetube_dir
 			self.in_progress = False
 		else:
-			print('Device {} is not found.'.format(device_id))
+			Bcolors.error('Device {} is not found.'.format(device_id))
 
 	def _find_device(self, device_id):
 		service_matches = bluetooth.find_service(address = device_id)
 		if len(service_matches) == 0:
-			print("Couldn't find the service.")
+			Bcolors.error("Couldn't find the service.")
 			return False
 
 		for s in service_matches:
@@ -202,6 +233,7 @@ class Bluetooth(Client):
 			else:
 				sys.stdout.write('Sending to {}...'.format(self.name))
 				self.in_progress = True
+			sys.stdout.flush()
 
 	def _put(self, name, file_data, header_list = ()):  # @UnusedVariable
 		'''Modify the method from the base class
@@ -295,10 +327,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			author = f.feed.author
 			feeds = Feeds()
 			if feeds.has_channel(author, title):
-				print(u'The channel {} by {} has already existed'.format(title, author))
+				Bcolors.error(u'The channel {} by {} has already been existed'.format(title, author))
 			else:
 				feeds.add_channel(author, title, feed_url, out_format)
-				print(u'{} by {} added successfully.'.format(title, author))
+				Bcolors.intense(u'{} by {} added successfully.'.format(title, author))
 			return 0
 		return -1
 
@@ -311,11 +343,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 				print(a['author'])
 				for c in a['channels']:
 					o = u'{}{}'.format(u' ' * len(a['author']), c['title'])
-					if c['last_update']:
-						o = u'{} ({})'.format(o, c['last_update'])
+					o = u'{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(c['last_update'])))
 					print(o)
 		else:
-			print('The list of channel is empty. Use --add to add a channel.')
+			Bcolors.warn('The list of channel is empty. Use --add to add a channel.')
 
 	def remove_channel(self, author, title):
 		''' remove a channel be given title '''
@@ -323,7 +354,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if feeds.has_channel(author, title):
 			feeds.remove_channel(author, title)
 		else:
-			print(u'{} by {} not found'.format(title, author))
+			Bcolors.error(u'{} by {} not found'.format(title, author))
 		
 	def run(self):
 		''' The main method. It does everything.'''
@@ -348,10 +379,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 					feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
 					self._send(sender, download_dir)
 				else:
-					print(u'Failed to downloed this channel: \n\t{}'.format(ch['channel']['title']))
+					Bcolors.error(u'Failed to download this channel: \n\t{}'.format(ch['channel']['title']))
 			self._return_download_dir(download_dir)
 		else:
-			print('No channels in the list. Use --add to add a channel.')
+			Bcolors.warn('No channels in the list. Use --add to add a channel.')
 
 	def _get_configs(self):
 		parser = SafeConfigParser()
@@ -359,7 +390,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def _check_config_file(self):
 		if self.configs == None:
-			print(u'''Configuration file is not found.\n
+			Bcolors.warn(u'''Configuration file is not found.\n
 You must create {} with the content below manually in the script directory:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
 			return False
 		return True
@@ -368,7 +399,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		if self.executor.does_command_exist(downloader):
 			return True
 		else:
-			print(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
+			Bcolors.error(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
 			return False
 
 	def _get_type(self, out_format):
@@ -377,7 +408,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		elif out_format in ['v', 'video']:
 			return 'video'
 		else:
-			print('ERROR: unexpected output type. Should be v (or video) or a (audio) separated by SPACE')
+			Bcolors.error('ERROR: unexpected output type. Should be v (or video) or a (audio) separated by SPACE')
 		return None
 
 	def _get_feed_url(self, url):
@@ -386,7 +417,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		if m:
 			return 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'.format(m.group(1))
 		else:
-			print(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
+			Bcolors.error(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
 			return None
 
 	def _ask(self, link, summary=None):
@@ -395,9 +426,9 @@ You must create {} with the content below manually in the script directory:\n{}\
 		r = [u'r', u'R', u'к', u'К', u'n', u'N', u'т', u'Т', u'no', u'NO'] # r for reject
 		s = [u's', u'S', u'і', u'І']
 		open_browser = [u'b', u'B', u'и', u'И']
-		question = '(d)ownload | (r)eject | open in (b)rowser'
+		question = '{b}d{e}ownload | {b}r{e}eject | open in {b}b{e}rowser'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
 		if summary:
-			question = question + ' | (s)ummary'
+			question = question + ' | {b}s{e}ummary'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
 		
 		while True:
 			i = raw_input('{}\n'.format(question))
@@ -411,8 +442,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 				print('Opening the link in the default browser...')
 				webbrowser.open(link, new=2)
 			else:
-				print(u'{} to download, {} for reject, {} to get a summary (if any), {} to open in a browser.'
-						.format(d[0], r[0], s[0], open_browser[0]))
+				Bcolors.error(u'{}{} to download, {} for reject, {} to get a summary (if any), {} to open in a browser.{}'
+						.format(Bcolors.FAIL, d[0], r[0], s[0], open_browser[0], Bcolors.ENDC))
 
 	def _get_channels_with_urls(self, feeds):
 		'''get URLs from the RSS that the user will selected for every channel'''
@@ -421,36 +452,40 @@ You must create {} with the content below manually in the script directory:\n{}\
 		for chs in all_channels:
 			print(chs['author'])
 			ind1 = u' ' * len(chs['author'])
-			urls = []
 			for ch in chs['channels']:
-				new_last_update = last_update = ch['last_update']
-				print(u'{ind}{tit}'.format(ind=ind1, tit=ch['title']))
-				ind2 = len(ch['title']) / 2 * u' '
-				f = feedparser.parse(ch['url'])
-				for e in f.entries:
-					pub = e['published_parsed']
-					params = {'ind': ind1+ind2,
-							'tit': e['title'],
-							'h': pub.tm_hour,
-							'min': pub.tm_min,
-							'd': pub.tm_mday,
-							'mon': pub.tm_mon}
+				channels.append(self._process_channel(chs['author'], ch, ind1))
 
-					e_update = time.mktime(e['published_parsed'])
-					if last_update < e_update:
-						print(u'{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params))
-
-						if self._ask(e['link'], summary=e['summary']):
-							urls.append(e['link'])
-							if new_last_update < e_update:
-								new_last_update = e_update
-
-				channels.append({'author': chs['author'],
-								'channel': ch,
-								'urls': urls,
-								'published_parsed': new_last_update})
 		return channels
-	
+
+	def _process_channel(self, author, ch, ind):
+		urls = []
+		new_last_update = last_update = ch['last_update']
+		print(u'{ind}{tit}'.format(ind=ind, tit=ch['title']))
+		ind2 = len(ch['title']) / 2 * u' '
+		f = feedparser.parse(ch['url'])
+		for e in f.entries:
+			pub = e['published_parsed']
+			params = {'ind': ind+ind2,
+					'tit': e['title'],
+					'h': pub.tm_hour,
+					'min': pub.tm_min,
+					'd': pub.tm_mday,
+					'mon': pub.tm_mon}
+
+			e_update = time.mktime(e['published_parsed'])
+			if last_update < e_update:
+				print(u'{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params))
+
+				if self._ask(e['link'], summary=e['summary']):
+					urls.append(e['link'])
+					if new_last_update < e_update:
+						new_last_update = e_update
+
+		return {'author': author,
+				'channel': ch,
+				'urls': urls,
+				'published_parsed': new_last_update}
+
 	def _download(self, downloader, channel, download_dir):
 		if downloader == 'youtube-dl':
 			options = ('--ignore-config',
@@ -469,7 +504,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			args = (downloader,) + options + spec_options + tuple(channel['urls'])
 			return not self.executor.call(args, cwd=download_dir)
 		else:
-			print('ERROR: No downloader.')
+			Bcolors.error('ERROR: No downloader.')
 			return False
 
 	def _send(self, sender, download_dir):
@@ -484,7 +519,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		home = os.path.expanduser('~')
 		download_dir = os.path.join(home, 'Downloads')
 		if not os.path.isdir(download_dir):
-			print('no directory for downloads, it will be created now')
+			Bcolors.warn('no directory for downloads, it will be created now')
 			os.mkdir(download_dir)
 		bluetube_dir = os.path.join(download_dir, 'bluetube.tmp')
 		if not os.path.isdir(bluetube_dir):
@@ -496,7 +531,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			try:
 				os.rmdir(bluetube_dir)
 			except OSError:
-				print('The download directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
+				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
 
 
 # ============================================================================ #	
