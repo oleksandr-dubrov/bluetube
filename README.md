@@ -152,7 +152,7 @@ Underlining DB doesn't support unicode, so all keys must be strings.
     			     {
     				    "title": "the name of an entity",
     				    "url": "url of the entity",
-    				    "last_update": "2019.01.01",
+    				    "last_update": 1548951984,
                         "out_format": "a" or "v" 
     			     },
     			     {

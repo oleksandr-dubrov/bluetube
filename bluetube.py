@@ -21,6 +21,8 @@ import shelve
 import subprocess
 import sys
 import re
+import webbrowser
+import time
 from ConfigParser import SafeConfigParser
 try:
 	import bluetooth  # @UnresolvedImport
@@ -64,7 +66,7 @@ class Feeds(object):
 
 	DATABASE_FILE = 'bluetube.dat'
 
-	def __init__(self, mode):
+	def __init__(self, mode='rw'):
 		self.db = None
 		if mode == 'r':
 			self.db = Feeds._create_ro_connector()
@@ -149,6 +151,15 @@ class Feeds(object):
 			self.db['feeds'] = []
 		self.db['feeds'] = feeds
 		self.db.sync()
+
+	def update_last_update(self, author, channel, published_parsed):
+		feeds = self.get_all_channels()
+		for a in feeds:
+			if a['author'] == author:
+				for ch in a['channels']:
+					if ch['title'] == channel:
+						ch['last_update'] = published_parsed
+		self.write_to_db(feeds)
 
 
 class Bluetooth(Client):
@@ -278,7 +289,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			f = feedparser.parse(feed_url)
 			title = f.feed.title
 			author = f.feed.author
-			feeds = Feeds('rw')
+			feeds = Feeds()
 			if feeds.has_channel(author, title):
 				print(u'The channel {} by {} has already existed'.format(title, author))
 			else:
@@ -301,7 +312,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def remove_channel(self, author, title):
 		''' remove a channel be given title '''
-		feeds = Feeds('rw')
+		feeds = Feeds()
 		if feeds.has_channel(author, title):
 			feeds.remove_channel(author, title)
 		else:
@@ -313,13 +324,15 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		self.executor = CommandExecutor()
 		
 		if self._check_config_file():
+			feeds = Feeds()
 			downloader = self.configs.get('bluetube', 'downloader')
 			download_dir = self._fetch_download_dir()
 			sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
-			if sender.found and self._check_downloader(downloader):
-					channels = self._get_channels_with_urls()
+			if self._check_downloader(downloader):
+					channels = self._get_channels_with_urls(feeds)
 					for ch in channels:
 						if self._download(downloader, ch, download_dir):
+							feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
 							self._send(sender, download_dir)
 						else:
 							print(u'Failed to downloed this channel: \n\t{}'.format(ch['channel']['title']))
@@ -343,7 +356,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			return True
 		else:
 			print(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
-			return False
+			return True
 
 	def _get_type(self, out_format):
 		if out_format in ['a', 'audio']:
@@ -363,22 +376,23 @@ You must create {} with the content below manually in the script directory:\n{}\
 			print(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
 			return None
 
-	def _yes_or_no(self, question):
+	def _ask(self, question):
 		'''ask if perform something'''
 		yes = [u'd', u'D', u'В', u'в', u'Y', u'y', u'Н', u'н', u'yes', u'YES'] # d for download
 		no = [u'r', u'R', u'к', u'К', u'n', u'N', u'т', u'Т', u'no', u'NO'] # r for reject
+		summary = [u's', u'S', u'і', u'І']
+		...
 		while True:
 			i = raw_input('{}\n'.format(question))
 			if i in yes:
-				return True
+				yeild True
 			elif i in no:
 				return False
 			else:
 				print(u'Type {} for "yes" or {} for "no".'.format(yes, no))
 
-	def _get_channels_with_urls(self):
+	def _get_channels_with_urls(self, feeds):
 		'''get URLs from the RSS that the user will selected for every channel'''
-		feeds = Feeds('r')
 		all_channels = feeds.get_all_channels()
 		channels = []
 		for chs in all_channels:
@@ -386,15 +400,33 @@ You must create {} with the content below manually in the script directory:\n{}\
 			ind1 = u' ' * len(chs['author'])
 			urls = []
 			for ch in chs['channels']:
+				last_update = ch['last_update']
 				print(u'{ind}{tit}'.format(ind=ind1, tit=ch['title']))
 				ind2 = len(ch['title']) / 2 * u' '
 				f = feedparser.parse(ch['url'])
 				for e in f.entries:
-					print(u'{ind}{tit}'.format(ind=ind1+ind2,
-												tit=e['title']))
-					if self._yes_or_no('(d)ownload or (r)eject'):
-						urls.append(e['link'])
-				channels.append({'channel': ch, 'urls': urls})
+					pub = e['published_parsed']
+					params = {'ind': ind1+ind2,
+							'tit': e['title'],
+							'h': pub.tm_hour,
+							'min': pub.tm_min,
+							'd': pub.tm_mday,
+							'mon': pub.tm_mon}
+					print(u'{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params))
+					if e['summary']:
+						print e['summary']
+					# webbrowser.open(e['link'], new=2)
+					#if self._yes_or_no('(d)ownload or (r)eject'):
+					urls.append(e['link'])
+
+					e_update = time.mktime(e['published_parsed'])
+					if not last_update or last_update < e_update:
+						last_update = e_update
+
+				channels.append({'author': chs['author'],
+								'channel': ch,
+								'urls': urls,
+								'published_parsed': last_update})
 		return channels
 	
 	def _download(self, downloader, channel, download_dir):
@@ -424,10 +456,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 	def _send(self, sender, download_dir):
 		'''Send all files in the given directory'''
-		files = os.listdir(download_dir)
-		sent = sender.send(files)
-		for f in sent:
-			os.remove(f)
+		if sender.found:
+			files = os.listdir(download_dir)
+			sent = sender.send(files)
+			for f in sent:
+				os.remove(f)
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
