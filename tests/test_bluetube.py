@@ -77,34 +77,34 @@ class TestBluetube(unittest.TestCase):
 		url3 = 'https://www.youtube.com/watch?v=2y3gqxklW04&list=PLU8zrvU8pCeXhM_32znSFmCBFuswP5_Cv'
 
 		print('ADDING CHANNELS')
-		ret = self.SUT.add_channel(url1, 'a')
-		self.assertFalse(ret, 'add channel 1 failed')
+		ret = self.SUT.add_playlist(url1, 'a')
+		self.assertFalse(ret, 'add playlist 1 failed')
 
-		ret = self.SUT.add_channel(url1, 'a')
-		self.assertFalse(ret, 'add channel 1 for the second time failed')
+		ret = self.SUT.add_playlist(url1, 'a')
+		self.assertFalse(ret, 'add playlist 1 for the second time failed')
 
-		ret = self.SUT.add_channel(url2, 'v')
-		self.assertFalse(ret, 'add channel 2 failed')
+		ret = self.SUT.add_playlist(url2, 'v')
+		self.assertFalse(ret, 'add playlist 2 failed')
 
-		ret = self.SUT.add_channel(url3, 'v')
-		self.assertFalse(ret, 'add channel 3 failed')
+		ret = self.SUT.add_playlist(url3, 'v')
+		self.assertFalse(ret, 'add playlist 3 failed')
 
 		print('SHOW ALL CHANNELS')
-		self.SUT.list_channels()
+		self.SUT.list_playlists()
 # 
 		print('REMOVE ONE CHANNAL THAT DOES EXIST')
-		self.SUT.remove_channel(u'Вольнов Talks', u'Все видео канала')
+		self.SUT.remove_playlist(u'Вольнов Talks', u'Все видео канала')
 
 		print('REMOVE A NON-EXISTAING CHANNAL')
-		self.SUT.remove_channel(u'author', u'name')
+		self.SUT.remove_playlist(u'author', u'name')
 
 		print('REMOVE ANOTHER CHANNAL THAT DOES EXIST')
-		self.SUT.remove_channel(u'Евгений Вольнов', u'Настенька')
+		self.SUT.remove_playlist(u'Евгений Вольнов', u'Настенька')
 
 		print('SHOW ALL CHANNELS AGAIN')
-		self.SUT.list_channels()
+		self.SUT.list_playlists()
 
-	@patch('bluetube.Bluetube._get_channels_with_urls')
+	@patch('bluetube.Bluetube._get_playlists_with_urls')
 	@patch('bluetube.bluetooth.find_service')
 	def test_run_precondition_fails(self, mocked_find_service, mocked_get_urls):
 		'''1st - no configurations
@@ -161,8 +161,8 @@ class TestBluetube(unittest.TestCase):
 
 		print('ADDING CHANNELS')
 		# use real URL in order to pass the validation
-		ret = self.SUT.add_channel('https://www.youtube.com/watch?v=VTC8gj01s6g&list=PL17KOAV8JBN_uE7v4qgQxLX7kno4G9HyQ', 'a')
-		self.assertFalse(ret, 'add channel failed')
+		ret = self.SUT.add_playlist('https://www.youtube.com/watch?v=VTC8gj01s6g&list=PL17KOAV8JBN_uE7v4qgQxLX7kno4G9HyQ', 'a')
+		self.assertFalse(ret, 'add playlist failed')
 		
 		ret = self.SUT.run()
 		self.assertFalse(ret, 'run failed')

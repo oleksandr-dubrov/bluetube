@@ -133,49 +133,49 @@ class Feeds(object):
 			return [a['author'] for a in self.db['feeds']]
 		return []
 
-	def get_channels(self, author):
+	def get_playlists(self, author):
 		authors = self.get_authors()
 		if authors:
 			for au in self.db['feeds']:
 				if au['author'] == author:
-					return [ch['title'] for ch in au['channels']]
+					return [ch['title'] for ch in au['playlists']]
 		return []
 
-	def has_channel(self, author, channel):
-		if channel in self.get_channels(author):
+	def has_playlist(self, author, playlist):
+		if playlist in self.get_playlists(author):
 			return True
 		return False
 
-	def add_channel(self, author, title, url, out_format):
-		feeds = self.get_all_channels()
+	def add_playlist(self, author, title, url, out_format):
+		feeds = self.get_all_playlists()
 
-		# create a channel 
-		channel = {"title": title,
+		# create a playlist 
+		playlist = {"title": title,
 					"url": url,
 					"last_update" : 0,
 					"out_format": out_format}
 
-		# insert the channel into the author
+		# insert the playlist into the author
 		if author not in [f['author'] for f in feeds]:
-			feeds.append({'author': author, 'channels': []})
+			feeds.append({'author': author, 'playlists': []})
 		for f in feeds:
 			if f['author'] == author:
-				f['channels'].append(channel)
+				f['playlists'].append(playlist)
 				break
 
 		self.write_to_db(feeds)
 
-	def get_all_channels(self):
+	def get_all_playlists(self):
 		return self.db.get('feeds', [])
 
-	def remove_channel(self, author, title):
-		feeds = self.get_all_channels()
+	def remove_playlist(self, author, title):
+		feeds = self.get_all_playlists()
 		for idx in range(len(feeds)):
 			if feeds[idx]['author'] == author:
-				for jdx in range(len(feeds[idx]['channels'])):
-					if feeds[idx]['channels'][jdx]['title'] == title:
-						del feeds[idx]['channels'][jdx]
-					if len(feeds[idx]['channels']) == 0:
+				for jdx in range(len(feeds[idx]['playlists'])):
+					if feeds[idx]['playlists'][jdx]['title'] == title:
+						del feeds[idx]['playlists'][jdx]
+					if len(feeds[idx]['playlists']) == 0:
 						del feeds[idx]
 					break
 				break
@@ -187,12 +187,12 @@ class Feeds(object):
 		self.db['feeds'] = feeds
 		self.db.sync()
 
-	def update_last_update(self, author, channel, published_parsed):
-		feeds = self.get_all_channels()
+	def update_last_update(self, author, playlist, published_parsed):
+		feeds = self.get_all_playlists()
 		for a in feeds:
 			if a['author'] == author:
-				for ch in a['channels']:
-					if ch['title'] == channel['title']:
+				for ch in a['playlists']:
+					if ch['title'] == playlist['title']:
 						ch['last_update'] = published_parsed
 		self.write_to_db(feeds)
 
@@ -281,7 +281,7 @@ class Bluetooth(Client):
 
 				if not isinstance(response, responses.Success):
 					return
-	
+
 	def send(self, filenames):
 		'''Sends files to the bluetooth device.
 		Returns file names that has been sent.'''
@@ -317,8 +317,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 	def __init__(self):
 		pass
 
-	def add_channel(self, url, out_format):
-		''' add a new channels to RSS feeds '''
+	def add_playlist(self, url, out_format):
+		''' add a new playlists to RSS feeds '''
 		out_format = self._get_type(out_format)
 		feed_url = self._get_feed_url(url)
 		if out_format and feed_url:
@@ -326,41 +326,41 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			title = f.feed.title
 			author = f.feed.author
 			feeds = Feeds()
-			if feeds.has_channel(author, title):
-				Bcolors.error(u'The channel {} by {} has already been existed'.format(title, author))
+			if feeds.has_playlist(author, title):
+				Bcolors.error(u'The playlist {} by {} has already been existed'.format(title, author))
 			else:
-				feeds.add_channel(author, title, feed_url, out_format)
+				feeds.add_playlist(author, title, feed_url, out_format)
 				Bcolors.intense(u'{} by {} added successfully.'.format(title, author))
 			return 0
 		return -1
 
-	def list_channels(self):
-		''' list all channels in RSS feeds '''
+	def list_playlists(self):
+		''' list all playlists in RSS feeds '''
 		feeds = Feeds('r')
-		all_channels = feeds.get_all_channels()
-		if len(all_channels):
-			for a in all_channels:
+		all_playlists = feeds.get_all_playlists()
+		if len(all_playlists):
+			for a in all_playlists:
 				print(a['author'])
-				for c in a['channels']:
+				for c in a['playlists']:
 					o = u'{}{}'.format(u' ' * len(a['author']), c['title'])
 					o = u'{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(c['last_update'])))
 					print(o)
 		else:
-			Bcolors.warn('The list of channel is empty. Use --add to add a channel.')
+			Bcolors.warn('The list of playlist is empty. Use --add to add a playlist.')
 
-	def remove_channel(self, author, title):
-		''' remove a channel be given title '''
+	def remove_playlist(self, author, title):
+		''' remove a playlist be given title '''
 		feeds = Feeds()
-		if feeds.has_channel(author, title):
-			feeds.remove_channel(author, title)
+		if feeds.has_playlist(author, title):
+			feeds.remove_playlist(author, title)
 		else:
 			Bcolors.error(u'{} by {} not found'.format(title, author))
-		
+
 	def run(self):
 		''' The main method. It does everything.'''
 		self.configs = self._get_configs()
 		self.executor = CommandExecutor()
-		
+
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
 			if self._check_downloader(downloader):
@@ -370,22 +370,22 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 	def _run(self, downloader):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
-		channels = self._get_channels_with_urls(feeds)
+		playlists = self._get_playlists_with_urls(feeds)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
-		if len(channels):
+		if len(playlists):
 			if sender.found:
-				for ch in channels:
+				for ch in playlists:
 					if self._download(downloader, ch, download_dir):
-						feeds.update_last_update(ch['author'], ch['channel'], ch['published_parsed'])
+						feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
 						self._send(sender, download_dir)
 					else:
-						Bcolors.error(u'Failed to download this channel: \n\t{}'.format(ch['channel']['title']))
+						Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
 				self._return_download_dir(download_dir)
 				return 0
 			else:
 				return -1
 		else:
-			Bcolors.warn('No channels in the list. Use --add to add a channel.')
+			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
 
 	def _get_configs(self):
@@ -433,7 +433,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 		question = '{b}d{e}ownload | {b}r{e}eject | open in {b}b{e}rowser'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
 		if summary:
 			question = question + ' | {b}s{e}ummary'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
-		
+
 		while True:
 			i = raw_input('{}\n'.format(question))
 			if i in d:
@@ -449,19 +449,19 @@ You must create {} with the content below manually in the script directory:\n{}\
 				Bcolors.error(u'{}{} to download, {} for reject, {} to get a summary (if any), {} to open in a browser.{}'
 						.format(Bcolors.FAIL, d[0], r[0], s[0], open_browser[0], Bcolors.ENDC))
 
-	def _get_channels_with_urls(self, feeds):
-		'''get URLs from the RSS that the user will selected for every channel'''
-		all_channels = feeds.get_all_channels()
-		channels = []
-		for chs in all_channels:
+	def _get_playlists_with_urls(self, feeds):
+		'''get URLs from the RSS that the user will selected for every playlist'''
+		all_playlists = feeds.get_all_playlists()
+		playlists = []
+		for chs in all_playlists:
 			print(chs['author'])
 			ind1 = u' ' * len(chs['author'])
-			for ch in chs['channels']:
-				channels.append(self._process_channel(chs['author'], ch, ind1))
+			for ch in chs['playlists']:
+				playlists.append(self._process_playlist(chs['author'], ch, ind1))
 
-		return channels
+		return playlists
 
-	def _process_channel(self, author, ch, ind):
+	def _process_playlist(self, author, ch, ind):
 		urls = []
 		new_last_update = last_update = ch['last_update']
 		print(u'{ind}{tit}'.format(ind=ind, tit=ch['title']))
@@ -486,15 +486,15 @@ You must create {} with the content below manually in the script directory:\n{}\
 						new_last_update = e_update
 
 		return {'author': author,
-				'channel': ch,
+				'playlist': ch,
 				'urls': urls,
 				'published_parsed': new_last_update}
 
-	def _download(self, downloader, channel, download_dir):
+	def _download(self, downloader, playlist, download_dir):
 		if downloader == 'youtube-dl':
 			options = ('--ignore-config',
 					'--mark-watched',)
-			out_format = channel['channel']['out_format']
+			out_format = playlist['playlist']['out_format']
 			if out_format == 'audio':
 				spec_options = ('--extract-audio',
 								'--audio-format=mp3',
@@ -505,7 +505,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			else:
 				assert 0, 'unexpected output format; should be either "v" or "a"'
 
-			args = (downloader,) + options + spec_options + tuple(channel['urls'])
+			args = (downloader,) + options + spec_options + tuple(playlist['urls'])
 			return not self.executor.call(args, cwd=download_dir)
 		else:
 			Bcolors.error('ERROR: No downloader.')
@@ -538,7 +538,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
 
 
-# ============================================================================ #	
+# ============================================================================ #
 
 
 if __name__ == '__main__':
@@ -547,22 +547,22 @@ if __name__ == '__main__':
 	parser.epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth.'
 	me_group = parser.add_mutually_exclusive_group()
 
-	me_group.add_argument('--add', '-a', help='add a URL to youtube channel', type=unicode)
+	me_group.add_argument('--add', '-a', help='add a URL to youtube playlist', type=unicode)
 	parser.add_argument('-t', dest='type', help='a type of a file you want to get (for --add)', choices=['a', 'v'], default='v')
-	me_group.add_argument('--list', '-l', help='list all channels', action='store_true')
-	me_group.add_argument('--remove', '-r', nargs=2, help='remove a channel by names of the author and the channel', type=lambda s: unicode(s, 'utf8'))
+	me_group.add_argument('--list', '-l', help='list all playlists', action='store_true')
+	me_group.add_argument('--remove', '-r', nargs=2, help='remove a playlist by names of the author and the playlist', type=lambda s: unicode(s, 'utf8'))
 
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
 	bluetube = Bluetube()
 	args = parser.parse_args()
 	if args.add:
-		if not bluetube.add_channel(args.add, args.type):
+		if not bluetube.add_playlist(args.add, args.type):
 			sys.exit(-1)
 	elif args.list:
-		bluetube.list_channels()
+		bluetube.list_playlists()
 	elif args.remove:
-		bluetube.remove_channel(args.remove[0].strip(), args.remove[1].strip())
+		bluetube.remove_playlist(args.remove[0].strip(), args.remove[1].strip())
 	else:
 		bluetube.run()
 	print('Done')

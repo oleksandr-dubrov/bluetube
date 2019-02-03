@@ -11,7 +11,7 @@ directory.
 1 Motivation.
 -------------
 1.1. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
-That is why I use RSS feed that can get updates on Youtube channels anonymously.
+That is why I use RSS feed that can get updates on Youtube playlists anonymously.
 
 1.2. I don't want to watch videos on Youtube site to save my time. It is always temptation that I keep watching other recommended videos over and over.
 So, the script will download selected videos and if it is needed converts it to audio.
@@ -79,12 +79,12 @@ The command user interface is a composition of options:
 	
 	optional arguments:
 	  -h, --help            show this help message and exit
-	  --add ADD, -a ADD     add a URL to youtube channel
+	  --add ADD, -a ADD     add a URL to youtube playlist
 	  -t {a,v}              a type of a file you want to get (for --add)
-	  --list, -l            list all channels
+	  --list, -l            list all playlists
 	  --remove REMOVE REMOVE, -r REMOVE REMOVE
-                            remove a channel by names of the author and the
-                            channel
+                            remove a playlist by names of the author and the
+                            playlist
 	  --version             show program's version number and exit
 
 If no option specified the script shows feeds to choose, downloads and sends
@@ -153,7 +153,7 @@ Underlining DB doesn't support unicode, so all keys must be strings.
         feeds: [
             {
                 "author": "author1":
-                "channels: [
+                "playlists: [
     			     {
     				    "title": "the name of an entity",
     				    "url": "url of the entity",
@@ -167,7 +167,7 @@ Underlining DB doesn't support unicode, so all keys must be strings.
             },
             {
                 "author": "author1":
-		         "channels: [
+		         "playlists: [
 			      ...
 		          ],
 		      ...
@@ -212,4 +212,3 @@ TODO
 1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
   Recommend the user to install *ffmpeg*.
 3. Configurations should keep a bt device name rather than id.
-5. Make clear distinction between *lists* and *channels*.
