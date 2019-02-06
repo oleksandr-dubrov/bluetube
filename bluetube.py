@@ -17,13 +17,14 @@ the Free Software Foundation; either version 2 of the License, or
 
 import argparse
 import os
+import re
 import shelve
 import subprocess
 import sys
-import re
-import webbrowser
 import time
+import webbrowser
 from ConfigParser import SafeConfigParser
+
 try:
 	import bluetooth  # @UnresolvedImport
 	from PyOBEX.client import Client  # @UnresolvedImport
