@@ -38,6 +38,9 @@ except ImportError:
 	sys.exit(-1)
 
 
+CUR_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
 class Bcolors:
 	BOLD = '\033[1m'
 	HEADER = '\033[95m'
@@ -100,7 +103,7 @@ class CommandExecutor(object):
 class Feeds(object):
 	'''Manages a RSS feeds in the shelve database'''
 
-	DATABASE_FILE = 'bluetube.dat'
+	DATABASE_FILE = os.path.join(CUR_DIR, 'bluetube.dat')
 
 	def __init__(self, mode='rw'):
 		self.db = None
@@ -315,7 +318,7 @@ class Bluetooth(Client):
 class Bluetube(object):
 	''' The main class of the script. '''
 
-	CONFIG_FILE = 'bluetube.cfg'
+	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
 	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
 [bluetube]
 downloader=youtube-dl
@@ -381,11 +384,14 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if len(playlists):
 			if sender.found:
 				for ch in playlists:
-					if self._download(downloader, ch, download_dir):
-						feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
-						self._send(sender, download_dir)
+					if len(ch['urls']):
+						if self._download(downloader, ch, download_dir):
+							feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
+							self._send(sender, download_dir)
+						else:
+							Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
 					else:
-						Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
+						Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
 				self._return_download_dir(download_dir)
 				return 0
 			else:
@@ -451,7 +457,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 			elif i in r:
 				return False
 			elif i in s:
-				print('Summary:\n{}'.format(summary))
+				print(u'Summary:\n{}'.format(summary))
 			elif i in open_browser:
 				print('Opening the link in the default browser...')
 				webbrowser.open(link, new=2)
@@ -514,7 +520,6 @@ You must create {} with the content below manually in the script directory:\n{}\
 				spec_options = ('--format=3gp',)
 			else:
 				assert 0, 'unexpected output format; should be either "v" or "a"'
-
 			args = (downloader,) + options + spec_options + tuple(playlist['urls'])
 			return not self.executor.call(args, cwd=download_dir)
 		else:
