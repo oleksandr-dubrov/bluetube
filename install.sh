@@ -21,6 +21,9 @@ README.md \
 
 if [ ! -d "$DIRECTORY" ]; then
   mkdir "$DIRECTORY"
+else
+   echo "The bluetube exists in this location. Remove it."
+   exit -1
 fi
 
 RUNNER1=$'#!/bin/bash\n# Runner script for bluetube.py\npython2 '
