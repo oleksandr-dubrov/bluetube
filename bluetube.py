@@ -126,8 +126,16 @@ class Feeds(object):
 	@staticmethod
 	def _create_ro_connector():
 		'''create DB connector in read-only mode'''
+		if not os.path.isfile(Feeds.DATABASE_FILE):
+			Feeds._create_empty_db()
 		return shelve.open(Feeds.DATABASE_FILE, flag='r')
-	
+
+	@staticmethod
+	def _create_empty_db():
+		db = Feeds._create_rw_connector()
+		db['feeds'] = []
+		db.sync()
+
 	def get_authors(self):
 		if 'feeds' in self.db:
 			return [a['author'] for a in self.db['feeds']]
@@ -314,9 +322,6 @@ downloader=youtube-dl
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
 
-	def __init__(self):
-		pass
-
 	def add_playlist(self, url, out_format):
 		''' add a new playlists to RSS feeds '''
 		out_format = self._get_type(out_format)
@@ -421,6 +426,10 @@ You must create {} with the content below manually in the script directory:\n{}\
 		if m:
 			return 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'.format(m.group(1))
 		else:
+			p = re.compile('^https://www\.youtube\.com/channel/(.+)$')
+			m = p.match(url);
+			if m:
+				return 'https://www.youtube.com/feeds/videos.xml?channel_id={}'.format(m.group(1))
 			Bcolors.error(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
 			return None
 

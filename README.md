@@ -110,7 +110,7 @@ This section contains information of the script internals.
 
 ### 8.1 How to get the feed.
 
-#### 8.1.1 Get RSS feed from the list (currently implemented).
+#### 8.1.1 Get RSS feed from the list.
 Let's look at the URL below:
 
 `https://www.youtube.com/watch?v=TcA4hhX81cg&list=PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_.`
