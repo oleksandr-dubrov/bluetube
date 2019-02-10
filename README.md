@@ -44,6 +44,8 @@ Python packages:
 In order to install *bluetube* to a specified directory you can run the next command:
 >./install *directory_to_install_in*
 
+If *bluetube* is present in the specified directory then the files will be rewritten.
+
 
 4 Configurations.
 ------------------

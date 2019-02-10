@@ -1,7 +1,9 @@
 #!/bin/bash
 
+
 # The script installs all needed files of Bluetube
 # to the specified directory.
+
 
 if [ -z "$1" ]
   then
@@ -9,21 +11,24 @@ if [ -z "$1" ]
     exit -1
 fi
 
+
+if [ ! -d "$1" ]; then
+   echo $1 does not exist!
+   exit -1
+fi
+
+
 DIRECTORY=$1/bluetube
 echo Installing Bluetube to $DIRECTORY ...
 
 FILES=( \
 bluetube.py \
-bluetube.dat \
 dependencies.txt \
 README.md \
 )
 
 if [ ! -d "$DIRECTORY" ]; then
   mkdir "$DIRECTORY"
-else
-   echo "The bluetube exists in this location. Remove it."
-   exit -1
 fi
 
 RUNNER1=$'#!/bin/bash\n# Runner script for bluetube.py\npython2 '
@@ -35,7 +40,7 @@ chmod u+x "$DIRECTORY/bluetube"
 
 for (( i=0; i<${#FILES[@]}; i++)); do
     echo Coping ${FILES[${i}]}.
-    cp ${FILES[${i}]} "$DIRECTORY"
+    cp -f ${FILES[${i}]} "$DIRECTORY"
 done
 
 echo "Setting access modes..."
