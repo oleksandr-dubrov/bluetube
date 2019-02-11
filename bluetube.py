@@ -516,7 +516,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 	def _download(self, downloader, playlist, download_dir):
 		if downloader == 'youtube-dl':
 			options = ('--ignore-config',
-					'--mark-watched',)
+						'--ignore-errors',
+						'--mark-watched',)
 			out_format = playlist['playlist']['out_format']
 			if out_format == 'audio':
 				spec_options = ('--extract-audio',

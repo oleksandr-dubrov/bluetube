@@ -132,6 +132,7 @@ Replace CHANNELID in the link below with a Youtube channel ID. The channel ID ca
 The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
++   *--ignore-errors* - continue on download errors, for example to skip unavailable videos in a playlist
 +   *--mark-watched* - videos watched (YouTube only). Make the author know you watch his/her videos.
 +   *--dateafter DATE* - download only videos uploaded on or after this date (i.e. inclusive); the format of the date is *%Y%m%d* e.g 19700101.
 
