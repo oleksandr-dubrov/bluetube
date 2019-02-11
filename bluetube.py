@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 __version__ = '1.0'
 __author__ = 'OD'
 __license__ = '''This program is free software; you can redistribute it and/or modify
@@ -19,6 +20,7 @@ import argparse
 import os
 import re
 import shelve
+import socket
 import subprocess
 import sys
 import time
@@ -303,14 +305,19 @@ class Bluetooth(Client):
 		for fm in filenames:
 			full_path = os.path.join(self.bluetube_dir, fm)
 			self.file_data_stream = open(full_path, 'rb')
-			resp = self.put(fm.decode('utf-8'), full_path, callback=self._callback)
-			if resp:
-				print(resp)
-			else:
-				print('\n{} sent.'.format(fm))
-				sent.append(full_path)
-			self.in_progress = False
-			self.file_data_stream.close()
+			try:
+				resp = self.put(fm.decode('utf-8'), full_path, callback=self._callback)
+				if resp:
+					print(resp)
+				else:
+					print('\n{} sent.'.format(fm))
+					sent.append(full_path)
+			except socket.error as e:
+				Bcolors.error(str(e))
+				Bcolors.error('{} didn\'t sent'.format(full_path))
+			finally:
+				self.in_progress = False
+				self.file_data_stream.close()
 		self.disconnect()
 		return sent
 
