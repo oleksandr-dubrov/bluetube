@@ -75,8 +75,8 @@ class Bcolors:
 class CommandExecutor(object):
 	'''This class run the commands in the shell'''
 
-	def __init__(self):
-		self._verbose = False
+	def __init__(self, verbose):
+		self._verbose = verbose
 		
 	def call(self, args, cwd=None, suppress_output=False):
 		if cwd == None:
@@ -365,10 +365,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		else:
 			Bcolors.error(u'{} by {} not found'.format(title, author))
 
-	def run(self):
+	def run(self, verbose):
 		''' The main method. It does everything.'''
 		self.configs = self._get_configs()
-		self.executor = CommandExecutor()
+		self.executor = CommandExecutor(verbose)
 
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
@@ -567,6 +567,7 @@ if __name__ == '__main__':
 	me_group.add_argument('--list', '-l', help='list all playlists', action='store_true')
 	me_group.add_argument('--remove', '-r', nargs=2, help='remove a playlist by names of the author and the playlist', type=lambda s: unicode(s, 'utf8'))
 
+	parser.add_argument('--verbose', '-v', action='store_true', help='print more information')
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
 	bluetube = Bluetube()
@@ -579,5 +580,5 @@ if __name__ == '__main__':
 	elif args.remove:
 		bluetube.remove_playlist(args.remove[0].strip(), args.remove[1].strip())
 	else:
-		bluetube.run()
+		bluetube.run(args.verbose)
 	print('Done')
