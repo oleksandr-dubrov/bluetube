@@ -302,7 +302,11 @@ class Bluetooth(Client):
 		assert self.found, 'Device is not found. Create a new Bluetooth.'
 		sent = []
 		self.connect()
+		self.socket.settimeout(5.0)
 		for fm in filenames:
+			if fm.endswith('.part'):
+				# ignore partially downloaded files
+				continue
 			full_path = os.path.join(self.bluetube_dir, fm)
 			self.file_data_stream = open(full_path, 'rb')
 			try:
@@ -310,14 +314,18 @@ class Bluetooth(Client):
 				if resp:
 					print(resp)
 				else:
-					print('\n{} sent.'.format(fm))
+					print(u'\n{} sent.'.format(fm.decode('utf-8')))
 					sent.append(full_path)
 			except socket.error as e:
 				Bcolors.error(str(e))
-				Bcolors.error('{} didn\'t sent'.format(full_path))
+				Bcolors.error(u'{} didn\'t send'.format(fm.decode('utf-8')))
+			except KeyboardInterrupt:
+				Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
+								.format(fm.decode('utf-8')))
 			finally:
 				self.in_progress = False
 				self.file_data_stream.close()
+		# TODO: disconnect can throw socket.timeout
 		self.disconnect()
 		return sent
 
@@ -394,9 +402,9 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 					if len(ch['urls']):
 						if self._download(downloader, ch, download_dir):
 							feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
-							self._send(sender, download_dir)
 						else:
 							Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
+						self._send(sender, download_dir)
 					else:
 						Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
 				self._return_download_dir(download_dir)
@@ -444,7 +452,9 @@ You must create {} with the content below manually in the script directory:\n{}\
 			m = p.match(url);
 			if m:
 				return 'https://www.youtube.com/feeds/videos.xml?channel_id={}'.format(m.group(1))
-			Bcolors.error(u'ERROR: misformatted URL of a youtube list provided./n Should be https://www.youtube.com/watch?v=XXX&list=XXX')
+			Bcolors.error(u'ERROR: misformatted URL of a youtube list provided.\n\
+	Should be https://www.youtube.com/watch?v=XXX&list=XXX for a playlist,\n\
+	or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.')
 			return None
 
 	def _ask(self, link, summary=None):
@@ -538,7 +548,10 @@ You must create {} with the content below manually in the script directory:\n{}\
 		'''Send all files in the given directory'''
 		if sender.found:
 			files = os.listdir(download_dir)
-			sent = sender.send(files)
+			try:
+				sent = sender.send(files)
+			except socket.timeout as e:
+				Bcolors.error(e)
 			for f in sent:
 				os.remove(f)
 

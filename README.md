@@ -215,3 +215,5 @@ TODO
 1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
   Recommend the user to install *ffmpeg*.
 3. Configurations should keep a bt device name rather than id.
+4. Print the name of file that is being sent.
+5. 
