@@ -212,8 +212,11 @@ Once the package is installed, you should run the script like this:
 
 TODO
 ----
-1. Check if *ffmpeg* (or avconv and ffprobe or avprobe) is in PATH. If not, inform the user that no conversion is available.
-  Recommend the user to install *ffmpeg*.
+1. Add options only to download or only to send.
 3. Configurations should keep a bt device name rather than id.
 4. Print the name of file that is being sent.
-5. 
+5. Use /tmp for bluetube.tmp
+6. make last update time in feed update.
+6. Add option to ignore last time update.
+7. add more prints to verbose
+

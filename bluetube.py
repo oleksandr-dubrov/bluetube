@@ -214,11 +214,14 @@ class Feeds(object):
 class Bluetooth(Client):
 	'''Sends files to the given device'''
 
+	SOCKETTIMEOUT = 120.0
+
 	def __init__(self, device_id, bluetube_dir):
 		self.found = self._find_device(device_id)
 		if self.found:
 			print("Checking connection to \"%s\" on %s" % (self.name, self.host))
-			Client.__init__(self, self.host, self.port) # Client is old style class, so don't use super
+			# Client is old style class, so don't use super
+			Client.__init__(self, self.host, self.port)
 			self.bluetube_dir = bluetube_dir
 			self.in_progress = False
 		else:
@@ -301,13 +304,14 @@ class Bluetooth(Client):
 		Returns file names that has been sent.'''
 		assert self.found, 'Device is not found. Create a new Bluetooth.'
 		sent = []
-		self.connect()
-		self.socket.settimeout(5.0)
 		for fm in filenames:
-			if fm.endswith('.part'):
-				# ignore partially downloaded files
-				continue
 			full_path = os.path.join(self.bluetube_dir, fm)
+			if full_path.endswith('.part') or full_path.endswith('.ytdl'):
+				# ignore but put them to send:
+				#		partially downloaded files
+				#		youtube-dl service files
+				sent.append(full_path)
+				continue
 			self.file_data_stream = open(full_path, 'rb')
 			try:
 				resp = self.put(fm.decode('utf-8'), full_path, callback=self._callback)
@@ -319,16 +323,40 @@ class Bluetooth(Client):
 			except socket.error as e:
 				Bcolors.error(str(e))
 				Bcolors.error(u'{} didn\'t send'.format(fm.decode('utf-8')))
+				print('Trying to reconnect...')
+				# TODO: do I really need disconnect in case of a socket error
+				#self.disconnect()
+				time.sleep(60.0)
+				if not self.connect():
+					break
 			except KeyboardInterrupt:
 				Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
 								.format(fm.decode('utf-8')))
 			finally:
 				self.in_progress = False
 				self.file_data_stream.close()
-		# TODO: disconnect can throw socket.timeout
-		self.disconnect()
 		return sent
 
+	def connect(self):
+		status = False
+		try:
+			resp = Client.connect(self)
+			self.socket.settimeout(Bluetooth.SOCKETTIMEOUT)
+			print(resp)
+			status = True
+		except socket.error as e:
+			Bcolors.error(str(e))
+			Bcolors.warn('Some files will not be sent, try to run "bluetube -s" to send remaining files')
+		return status
+
+	def disconnect(self):
+		try:
+			resp = Client.disconnect(self)
+			print(resp)
+		except socket.errno as e:
+			Bcolors.error(str(e))
+			Bcolors.warn('Wait a minute.')
+			time.sleep(60.0)
 
 class Bluetube(object):
 	''' The main class of the script. '''
@@ -398,22 +426,26 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
 			if sender.found:
-				for ch in playlists:
-					if len(ch['urls']):
-						if self._download(downloader, ch, download_dir):
-							feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
-						else:
-							Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
-						self._send(sender, download_dir)
-					else:
-						Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
-				self._return_download_dir(download_dir)
-				return 0
+				return self._download_and_send_playlist(feeds, downloader, sender, playlists, download_dir)
 			else:
 				return -1
 		else:
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
+
+	def _download_and_send_playlist(self, feeds, downloader, sender,
+									playlists, download_dir):
+		for ch in playlists:
+			if len(ch['urls']):
+				if self._download(downloader, ch, download_dir):
+					feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
+				else:
+					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
+				self._send(sender, download_dir)
+			else:
+				Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
+		self._return_download_dir(download_dir)
+		return 0
 
 	def _get_configs(self):
 		parser = SafeConfigParser()
@@ -548,12 +580,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 		'''Send all files in the given directory'''
 		if sender.found:
 			files = os.listdir(download_dir)
-			try:
+			if sender.connect():
 				sent = sender.send(files)
-			except socket.timeout as e:
-				Bcolors.error(e)
-			for f in sent:
-				os.remove(f)
+				sender.disconnect()
+				for f in sent:
+					os.remove(f)
 
 	def _fetch_download_dir(self):
 		home = os.path.expanduser('~')
