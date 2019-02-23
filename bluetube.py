@@ -478,8 +478,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 		return None
 
 	def _get_feed_url(self, url):
-		p = re.compile('^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
-		m = p.match(url);
+		p1 = re.compile('^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
+		p2 = re.compile('^https://www\.youtube\.com/playlist\?list=(.+)$')
+		m = p1.match(url);
+		if not m:
+			m = p2.match(url)
 		if m:
 			return 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'.format(m.group(1))
 		else:

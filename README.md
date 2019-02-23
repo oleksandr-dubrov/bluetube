@@ -218,5 +218,3 @@ TODO
 6. make last update time in feed update.
 6. Add option to ignore last time update.
 7. add more prints to verbose
-8. Make available also this URL format "https://www.youtube.com/playlist?list=PL9o6bQUWYNvLV7m3tATsU1Fodjy7ZGxXM" 
-
