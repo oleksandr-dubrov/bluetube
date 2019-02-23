@@ -324,11 +324,14 @@ class Bluetooth(Client):
 				Bcolors.error(str(e))
 				Bcolors.error(u'{} didn\'t send'.format(fm.decode('utf-8')))
 				print('Trying to reconnect...')
-				# TODO: do I really need disconnect in case of a socket error
-				#self.disconnect()
-				time.sleep(60.0)
+				self.socket.shutdown(socket.SHUT_RDWR)
+				self.socket.close()
+				del self.socket
+				time.sleep(10.0)
 				if not self.connect():
 					break
+				else:
+					self.send([fm, ])
 			except KeyboardInterrupt:
 				Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
 								.format(fm.decode('utf-8')))

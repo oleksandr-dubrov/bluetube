@@ -34,7 +34,7 @@ Python packages:
 +   _PyOBEX_
 +   _PyBluez_
 
-*youtube-dl* and *a bluetooth-send tool* can be configured in the INI configuration file in the root directory of the script.
+Before using this script the user must paired the device with the PC.
 
 *bluetube.cfg* must be provided together with the script.
 
@@ -102,8 +102,7 @@ Run test from *tests* directory:
 
     python test_bluetube.py
 
-The tests are base on *unittests* and *mock*. Don't forget to install *mock* before 
-run the tests.
+The tests are base on *unittests* and *mock*. Don't forget to install *mock* before run the tests.
 
 8 Development.
 -------------
@@ -219,4 +218,5 @@ TODO
 6. make last update time in feed update.
 6. Add option to ignore last time update.
 7. add more prints to verbose
+8. Make available also this URL format "https://www.youtube.com/playlist?list=PL9o6bQUWYNvLV7m3tATsU1Fodjy7ZGxXM" 
 
