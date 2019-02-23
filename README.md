@@ -3,7 +3,7 @@ BLUETUBE
 
 
 Bluetube is a script that downloads videos from Youtube by URLs get from RSS and sends them to a bluetooth device.
-The script downloads media to `~/Downloads/bluetube.tmp`. If there is no such path it will be created. After success sending the `bluetube` directory 
+The script downloads media to `/tmp/bluetube`. If there is no such path it will be created. After success sending the `bluetube` directory 
 is removed. If some file failed to be sent then the file is not removed and stays in the 
 directory.
 
@@ -211,10 +211,9 @@ Once the package is installed, you should run the script like this:
 
 TODO
 ----
-1. Add options only to download or only to send.
-3. Configurations should keep a bt device name rather than id.
-4. Print the name of file that is being sent.
 5. Use /tmp for bluetube.tmp
 6. make last update time in feed update.
+
+1. Add options only to download or only to send.
+3. Configurations should keep a BT device name rather than id.
 6. Add option to ignore last time update.
-7. add more prints to verbose

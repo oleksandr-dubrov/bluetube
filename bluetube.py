@@ -243,12 +243,12 @@ class Bluetooth(Client):
 		self.port = first_match["port"]
 		return True
 
-	def _callback(self, resp):
+	def _callback(self, resp, filename):
 		if resp:
 			if self.in_progress:
 				sys.stdout.write('.')
 			else:
-				sys.stdout.write('Sending to {}...'.format(self.name))
+				sys.stdout.write('Sending "{}" to {}...'.format(filename, self.name))
 				self.in_progress = True
 			sys.stdout.flush()
 
@@ -314,9 +314,11 @@ class Bluetooth(Client):
 				continue
 			self.file_data_stream = open(full_path, 'rb')
 			try:
-				resp = self.put(fm.decode('utf-8'), full_path, callback=self._callback)
+				resp = self.put(fm.decode('utf-8'),
+								full_path,
+								callback=lambda resp : self._callback(resp, fm))
 				if resp:
-					print(resp)
+					pass  # print(resp)
 				else:
 					print(u'\n{} sent.'.format(fm.decode('utf-8')))
 					sent.append(full_path)
@@ -360,6 +362,7 @@ class Bluetooth(Client):
 			Bcolors.error(str(e))
 			Bcolors.warn('Wait a minute.')
 			time.sleep(60.0)
+
 
 class Bluetube(object):
 	''' The main class of the script. '''
@@ -419,33 +422,40 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
 			if self._check_downloader(downloader):
-				return self._run(downloader)
+				return self._run(downloader, verbose)
 		return -1
 
-	def _run(self, downloader):
+	def _run(self, downloader, verbose):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
-			if sender.found:
-				return self._download_and_send_playlist(feeds, downloader, sender, playlists, download_dir)
-			else:
-				return -1
+			return self._download_and_send_playlist(feeds,
+													downloader,
+													sender,
+													playlists,
+													download_dir,
+													verbose)
 		else:
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
 
 	def _download_and_send_playlist(self, feeds, downloader, sender,
-									playlists, download_dir):
+									playlists, download_dir, verbose):
+		if sender.found:
+			Bcolors.warn('Your bluetooth device is not accessible.')
+			Bcolors.warn('The script will download files only.')
+			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		for ch in playlists:
 			if len(ch['urls']):
 				if self._download(downloader, ch, download_dir):
 					feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
 				else:
 					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
-				self._send(sender, download_dir)
-			else:
+				if sender.found:
+					self._send(sender, download_dir)
+			elif verbose:
 				Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
 		self._return_download_dir(download_dir)
 		return 0
