@@ -87,6 +87,7 @@ The command user interface is a composition of options:
 	  --remove REMOVE REMOVE, -r REMOVE REMOVE
                             remove a playlist by names of the author and the
                             playlist
+	  --show_all, -s        show all available feed items despite last update time
 	  --version             show program's version number and exit
 
 If no option specified the script shows feeds to choose, downloads and sends
@@ -211,8 +212,5 @@ Once the package is installed, you should run the script like this:
 
 TODO
 ----
-6. make last update time in feed update.
-6. Add option to ignore last time update.
-
 1. Add options only to download or only to send.
 3. Configurations should keep a BT device name rather than id.

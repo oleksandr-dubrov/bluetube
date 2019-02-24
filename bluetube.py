@@ -415,7 +415,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		else:
 			Bcolors.error(u'{} by {} not found'.format(title, author))
 
-	def run(self, verbose):
+	def run(self, verbose, show_all):
 		''' The main method. It does everything.'''
 		self.configs = self._get_configs()
 		self.executor = CommandExecutor(verbose)
@@ -423,17 +423,16 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if self._check_config_file():
 			downloader = self.configs.get('bluetube', 'downloader')
 			if self._check_downloader(downloader):
-				return self._run(downloader, verbose)
+				return self._run(downloader, verbose, show_all)
 		return -1
 
-	def _run(self, downloader, verbose):
+	def _run(self, downloader, verbose, show_all):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
-		playlists = self._get_playlists_with_urls(feeds)
+		playlists = self._get_playlists_with_urls(feeds, show_all)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
-			return self._download_and_send_playlist(feeds,
-													downloader,
+			return self._download_and_send_playlist(downloader,
 													sender,
 													playlists,
 													download_dir,
@@ -442,7 +441,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
 
-	def _download_and_send_playlist(self, feeds, downloader, sender,
+	def _download_and_send_playlist(self, downloader, sender,
 									playlists, download_dir, verbose):
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
@@ -450,9 +449,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		for ch in playlists:
 			if len(ch['urls']):
-				if self._download(downloader, ch, download_dir):
-					feeds.update_last_update(ch['author'], ch['playlist'], ch['published_parsed'])
-				else:
+				if not self._download(downloader, ch, download_dir):
 					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
 				if sender.found:
 					self._send(sender, download_dir)
@@ -531,7 +528,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 				Bcolors.error(u'{}{} to download, {} for reject, {} to get a summary (if any), {} to open in a browser.{}'
 						.format(Bcolors.FAIL, d[0], r[0], s[0], open_browser[0], Bcolors.ENDC))
 
-	def _get_playlists_with_urls(self, feeds):
+	def _get_playlists_with_urls(self, feeds, show_all):
 		'''get URLs from the RSS that the user will selected for every playlist'''
 		all_playlists = feeds.get_all_playlists()
 		playlists = []
@@ -539,11 +536,14 @@ You must create {} with the content below manually in the script directory:\n{}\
 			print(chs['author'])
 			ind1 = u' ' * len(chs['author'])
 			for ch in chs['playlists']:
-				playlists.append(self._process_playlist(chs['author'], ch, ind1))
-
+				processed_pl = self._process_playlist(chs['author'], ch, ind1, show_all)
+				feeds.update_last_update(processed_pl['author'],
+										processed_pl['playlist'],
+										processed_pl['published_parsed'])
+				playlists.append(processed_pl)
 		return playlists
 
-	def _process_playlist(self, author, ch, ind):
+	def _process_playlist(self, author, ch, ind, show_all):
 		urls = []
 		new_last_update = last_update = ch['last_update']
 		print(u'{ind}{tit}'.format(ind=ind, tit=ch['title']))
@@ -559,13 +559,13 @@ You must create {} with the content below manually in the script directory:\n{}\
 					'mon': pub.tm_mon}
 
 			e_update = time.mktime(e['published_parsed'])
-			if last_update < e_update:
+			if last_update < e_update or show_all:
 				print(u'{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params))
 
 				if self._ask(e['link'], summary=e['summary']):
 					urls.append(e['link'])
-					if new_last_update < e_update:
-						new_last_update = e_update
+				if new_last_update < e_update:
+					new_last_update = e_update
 
 		return {'author': author,
 				'playlist': ch,
@@ -631,6 +631,7 @@ if __name__ == '__main__':
 	me_group.add_argument('--list', '-l', help='list all playlists', action='store_true')
 	me_group.add_argument('--remove', '-r', nargs=2, help='remove a playlist by names of the author and the playlist', type=lambda s: unicode(s, 'utf8'))
 
+	parser.add_argument('--show_all', '-s', action='store_true', help='show all available feed items despite last update time')
 	parser.add_argument('--verbose', '-v', action='store_true', help='print more information')
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
@@ -644,5 +645,5 @@ if __name__ == '__main__':
 	elif args.remove:
 		bluetube.remove_playlist(args.remove[0].strip(), args.remove[1].strip())
 	else:
-		bluetube.run(args.verbose)
+		bluetube.run(args.verbose, args.show_all)
 	print('Done')
