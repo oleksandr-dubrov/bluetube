@@ -352,7 +352,7 @@ class Bluetooth(Client):
 			status = True
 		except socket.error as e:
 			Bcolors.error(str(e))
-			Bcolors.warn('Some files will not be sent, try to run "bluetube -s" to send remaining files')
+			Bcolors.warn('Some files will not be sent.')
 		return status
 
 	def disconnect(self):
@@ -415,7 +415,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		else:
 			Bcolors.error(u'{} by {} not found'.format(title, author))
 
-	def run(self, verbose, show_all):
+	def run(self, verbose=False, show_all=False):
 		''' The main method. It does everything.'''
 		self.configs = self._get_configs()
 		self.executor = CommandExecutor(verbose)
