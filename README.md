@@ -211,9 +211,8 @@ Once the package is installed, you should run the script like this:
 
 TODO
 ----
-5. Use /tmp for bluetube.tmp
 6. make last update time in feed update.
+6. Add option to ignore last time update.
 
 1. Add options only to download or only to send.
 3. Configurations should keep a BT device name rather than id.
-6. Add option to ignore last time update.

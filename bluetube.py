@@ -23,6 +23,7 @@ import shelve
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import webbrowser
 from ConfigParser import SafeConfigParser
@@ -443,9 +444,9 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def _download_and_send_playlist(self, feeds, downloader, sender,
 									playlists, download_dir, verbose):
-		if sender.found:
+		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
-			Bcolors.warn('The script will download files only.')
+			Bcolors.warn('The script will download files to /tmp directory.')
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		for ch in playlists:
 			if len(ch['urls']):
@@ -603,12 +604,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 					os.remove(f)
 
 	def _fetch_download_dir(self):
-		home = os.path.expanduser('~')
-		download_dir = os.path.join(home, 'Downloads')
-		if not os.path.isdir(download_dir):
-			Bcolors.warn('no directory for downloads, it will be created now')
-			os.mkdir(download_dir)
-		bluetube_dir = os.path.join(download_dir, 'bluetube.tmp')
+		bluetube_dir = os.path.join(tempfile.gettempdir(), 'bluetube')
 		if not os.path.isdir(bluetube_dir):
 			os.mkdir(bluetube_dir)
 		return bluetube_dir
