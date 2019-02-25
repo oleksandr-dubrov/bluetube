@@ -249,7 +249,11 @@ class Bluetooth(Client):
 			if self.in_progress:
 				sys.stdout.write('.')
 			else:
-				sys.stdout.write('Sending "{}" to {}...'.format(filename, self.name))
+				filename = filename.decode('utf-8')
+				if len(filename) > 45:
+					filename = filename[:42] + '...'
+				sys.stdout.write(u'Sending "{}" to {}...'.format(filename,
+																 self.name))
 				self.in_progress = True
 			sys.stdout.flush()
 
@@ -346,9 +350,8 @@ class Bluetooth(Client):
 	def connect(self):
 		status = False
 		try:
-			resp = Client.connect(self)
+			Client.connect(self)
 			self.socket.settimeout(Bluetooth.SOCKETTIMEOUT)
-			print(resp)
 			status = True
 		except socket.error as e:
 			Bcolors.error(str(e))
@@ -357,8 +360,8 @@ class Bluetooth(Client):
 
 	def disconnect(self):
 		try:
-			resp = Client.disconnect(self)
-			print(resp)
+			Client.disconnect(self)
+			#  print(resp)
 		except socket.errno as e:
 			Bcolors.error(str(e))
 			Bcolors.warn('Wait a minute.')
@@ -375,6 +378,7 @@ downloader=youtube-dl
 ; enter your device ID in the line below
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
+	INDENTATION = 10
 
 	def add_playlist(self, url, out_format):
 		''' add a new playlists to RSS feeds '''
@@ -401,7 +405,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			for a in all_playlists:
 				print(a['author'])
 				for c in a['playlists']:
-					o = u'{}{}'.format(u' ' * len(a['author']), c['title'])
+					o = u'{}{}'.format(u' ' * Bluetube.INDENTATION, c['title'])
 					o = u'{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(c['last_update'])))
 					print(o)
 		else:
@@ -432,7 +436,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		playlists = self._get_playlists_with_urls(feeds, show_all)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
-			return self._download_and_send_playlist(downloader,
+			return self._download_and_send_playlist(feeds,
+													downloader,
 													sender,
 													playlists,
 													download_dir,
@@ -441,7 +446,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
 
-	def _download_and_send_playlist(self, downloader, sender,
+	def _download_and_send_playlist(self, feeds, downloader, sender,
 									playlists, download_dir, verbose):
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
@@ -449,7 +454,11 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		for ch in playlists:
 			if len(ch['urls']):
-				if not self._download(downloader, ch, download_dir):
+				if self._download(downloader, ch, download_dir):
+					feeds.update_last_update(ch['author'],
+											ch['playlist'],
+											ch['published_parsed'])
+				else:
 					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
 				if sender.found:
 					self._send(sender, download_dir)
@@ -534,24 +543,19 @@ You must create {} with the content below manually in the script directory:\n{}\
 		playlists = []
 		for chs in all_playlists:
 			print(chs['author'])
-			ind1 = u' ' * len(chs['author'])
 			for ch in chs['playlists']:
-				processed_pl = self._process_playlist(chs['author'], ch, ind1, show_all)
-				feeds.update_last_update(processed_pl['author'],
-										processed_pl['playlist'],
-										processed_pl['published_parsed'])
+				processed_pl = self._process_playlist(chs['author'], ch, show_all)
 				playlists.append(processed_pl)
 		return playlists
 
-	def _process_playlist(self, author, ch, ind, show_all):
+	def _process_playlist(self, author, ch, show_all):
 		urls = []
 		new_last_update = last_update = ch['last_update']
-		print(u'{ind}{tit}'.format(ind=ind, tit=ch['title']))
-		ind2 = len(ch['title']) / 2 * u' '
+		print(u'{ind}{tit}'.format(ind=u' ' * Bluetube.INDENTATION, tit=ch['title']))
 		f = feedparser.parse(ch['url'])
 		for e in f.entries:
 			pub = e['published_parsed']
-			params = {'ind': ind+ind2,
+			params = {'ind': 2 * Bluetube.INDENTATION * u' ',
 					'tit': e['title'],
 					'h': pub.tm_hour,
 					'min': pub.tm_min,
