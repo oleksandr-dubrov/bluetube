@@ -2,10 +2,8 @@ BLUETUBE
 ========
 
 
-Bluetube is a script that downloads videos from Youtube by URLs get from RSS and sends them to a bluetooth device.
-The script downloads media to `/tmp/bluetube`. If there is no such path it will be created. After success sending the `bluetube` directory 
-is removed. If some file failed to be sent then the file is not removed and stays in the 
-directory.
+Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS and sends them to a bluetooth device.
+The script downloads media to a temporary directory. It is `/tmp/bluetube` on GNU. After the sending succeed, the `bluetube` directory is removed. If some file failed to be sent then the files are not removed and remain in the directory.
 
 
 1 Motivation.
@@ -13,7 +11,7 @@ directory.
 1.1. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
 That is why I use RSS feed that can get updates on Youtube playlists anonymously.
 
-1.2. I don't want to watch videos on Youtube site to save my time. It is always temptation that I keep watching other recommended videos over and over.
+1.2. I don't want to watch videos on Youtube to save my time. It is always temptation to keep watching other recommended videos over and over.
 So, the script will download selected videos and if it is needed converts it to audio.
 
 1.3. The script will send the video or audio files to my bluetooth device. In my case it is Nokia N73 under Symbian S60 v9.1.
@@ -25,18 +23,19 @@ If the transfer is done successfully the the script should remove the files.
 In order to use the script, you must have the next installed.
 
 GNU packages:
-+	libbluetooth-dev - for bluetooth Python package.
-+   [_youtube-dl_] (https://rg3.github.io/youtube-dl/).
-+   ffmpeg - for converting files in desirable  format.
++   Python 2
++   libbluetooth-dev - a bluetooth Python package.
++   [_youtube-dl_] (https://rg3.github.io/youtube-dl/) - a downloader.
++   ffmpeg - for converting files into desirable format.
 
 Python packages:
 +   _feedparser_
 +   _PyOBEX_
 +   _PyBluez_
 
-Before using this script the user must paired the device with the PC.
+Before using this script the user must pair the bluetooth device with the PC.
 
-*bluetube.cfg* must be provided together with the script.
+When the script is run for the first time, it prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the root directory of the script.
 
 
 3 Installing.
@@ -44,11 +43,11 @@ Before using this script the user must paired the device with the PC.
 In order to install *bluetube* to a specified directory you can run the next command:
 >./install *directory_to_install_in*
 
-If *bluetube* is present in the specified directory then the files will be rewritten.
+If *bluetube* is present in the specified directory then the files will be overwritten.
 
 
 4 Configurations.
-------------------
+-----------------
 The configuration is kept in the INI file ***bluetooth.cfg*** in the root directory.
 The content of the file please see below:
 
@@ -58,21 +57,21 @@ The content of the file please see below:
     ; enter your device ID in the line below
     deviceID=YOUR_RECEIVER_DEVICE_ID
 
-If *bluetooth.cfg* was not found, then please create it manually.
+If *bluetooth.cfg* is not found, then please create it manually.
 
 
 5 Run.
 ------
-In order to run the script you can start the *bash* script:
+In order to run *bluetube* you can start the command:
 
     ./bluetube
 
-Alternatively, you can start the Python script directly:
+Alternatively, you can start the Python script directly from the blutube directory:
 
     python bluetube.py
 
 
-6 Command user interface.
+6 Command user interface.   TODO PASTE NEW HELP
 -------------------------
 The command user interface is a composition of options:
 
@@ -108,7 +107,7 @@ The tests are base on *unittests* and *mock*. Don't forget to install *mock* bef
 8 Development.
 -------------
 
-This section contains information of the script internals.
+This section contains information about the script internals.
 
 ### 8.1 How to get the feed.
 
@@ -125,10 +124,10 @@ Replace CHANNELID in the link below with a Youtube channel ID. The channel ID ca
 
 `https://www.youtube.com/feeds/videos.xml?channel_id=CHANNELID`
 
-**Note.** Sometimes Youtube changes its rules and the URL might become not valid. In this case, the script must be fixed.
+**Note.** Sometimes Youtube changes its rules and the URL patterns might become not valid. In this case, the script must be fixed.
 
 ### 8.2 Commands.
-*youtube-dl* downloads vidoes from youtube.
+*youtube-dl* downloads videos from youtube.
 The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
@@ -148,9 +147,9 @@ If audio is requested:
 
 
 ### 8.3 Data structure.
-The data are stored in *shelve* DB in the root directory.
+The data are stored in *shelve* DB in the root directory of the script.
 The structure is represented in JSON.
-Underlining DB doesn't support unicode, so all keys must be strings.
+Underlining DB doesn't support unicode keys, so all keys must be strings.
 
 	{
         feeds: [
@@ -161,7 +160,7 @@ Underlining DB doesn't support unicode, so all keys must be strings.
     				    "title": "the name of an entity",
     				    "url": "url of the entity",
     				    "last_update": 1548951984,
-                        "out_format": "a" or "v" 
+                      "out_format": "a" or "v" 
     			     },
     			     {
     			         ...
@@ -203,7 +202,7 @@ For more information see [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/defau
 ------------------
 On Windows if you see
     UnicodeEncodeError: 'charmap' codec can't encode characters in position 
-it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*.
+it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*. However, the script is not developed for Windows.
 First, it should be installed:
     pip install install win-unicode-console
 Once the package is installed, you should run the script like this:
