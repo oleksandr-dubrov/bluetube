@@ -200,16 +200,17 @@ class Feeds(object):
 		if 'feeds' not in self.db:
 			self.db['feeds'] = []
 		self.db['feeds'] = feeds
-		self.db.sync()
 
-	def update_last_update(self, author, playlist, published_parsed):
+	def update_last_update(self, info):
+		'''update last_update in a list by info'''
 		feeds = self.get_all_playlists()
 		for a in feeds:
-			if a['author'] == author:
+			if a['author'] == info['author']:
 				for ch in a['playlists']:
-					if ch['title'] == playlist['title']:
-						ch['last_update'] = published_parsed
-		self.write_to_db(feeds)
+					if ch['title'] == info['playlist']['title']:
+						ch['last_update'] = info['published_parsed']
+						self.write_to_db(feeds)
+						return
 
 
 class Bluetooth(Client):
@@ -455,15 +456,15 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		for ch in playlists:
 			if len(ch['urls']):
 				if self._download(downloader, ch, download_dir):
-					feeds.update_last_update(ch['author'],
-											ch['playlist'],
-											ch['published_parsed'])
+					feeds.update_last_update(ch)
 				else:
 					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
 				if sender.found:
 					self._send(sender, download_dir)
-			elif verbose:
-				Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
+			else:
+				feeds.update_last_update(ch)
+				if verbose:
+					Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
 		self._return_download_dir(download_dir)
 		return 0
 
