@@ -81,18 +81,24 @@ class CommandExecutor(object):
 	def __init__(self, verbose):
 		self._verbose = verbose
 		
-	def call(self, args, cwd=None, suppress_output=False):
+	def call(self, args, cwd=None, suppress_stdout=False, suppress_stderr=False):
 		if cwd == None:
 			cwd = os.getcwd()
 		call_env = os.environ
 		return_code = 0
-		stdout = None
+		stdout, stderr = None, None
 		try:
 			if self._verbose:
-				print('RUN: {}'.format(args))
-			if suppress_output:
+				print(u'RUN: {}'.format([a.decode('utf-8') for a in args]))
+			if suppress_stdout:
 				stdout = open(os.devnull, 'wb')
-			return_code = subprocess.call(args, env=call_env, stdout=stdout, cwd=cwd)
+			if suppress_stderr:
+				stderr = open(os.devnull, 'wb')
+			return_code = subprocess.call(args,
+										env=call_env,
+										stdout=stdout,
+										stderr=stderr,
+										cwd=cwd)
 		except OSError as e:
 			return_code = e.errno
 			print(e.strerror)
@@ -100,7 +106,7 @@ class CommandExecutor(object):
 
 	def does_command_exist(self, name):
 		'''call a command with the given name and expects that it has option --version'''
-		return not self.call((name, '--version'), suppress_output=True);
+		return not self.call((name, '--version'), suppress_stdout=True);
 
 
 class Feeds(object):
@@ -200,6 +206,7 @@ class Feeds(object):
 		if 'feeds' not in self.db:
 			self.db['feeds'] = []
 		self.db['feeds'] = feeds
+		self.db.sync()
 
 	def update_last_update(self, info):
 		'''update last_update in a list by info'''
@@ -437,12 +444,13 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		playlists = self._get_playlists_with_urls(feeds, show_all)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
-			return self._download_and_send_playlist(feeds,
-													downloader,
-													sender,
-													playlists,
-													download_dir,
-													verbose)
+			if self._download_and_send_playlist(feeds,
+												downloader,
+												sender,
+												playlists,
+												download_dir,
+												verbose):
+				self._return_download_dir(download_dir)
 		else:
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
@@ -456,6 +464,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		for ch in playlists:
 			if len(ch['urls']):
 				if self._download(downloader, ch, download_dir):
+					if ch['playlist']['out_format'] == 'video' and not self._convert_video(download_dir):
+						Bcolors.error(u'Failed to convert video for {}'.format(ch['playlist']['title']))
+						Bcolors.warn(u'Try to convert manually.')
+						continue
 					feeds.update_last_update(ch)
 				else:
 					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
@@ -465,8 +477,19 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 				feeds.update_last_update(ch)
 				if verbose:
 					Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
-		self._return_download_dir(download_dir)
-		return 0
+		return True
+
+	def _convert_video(self, download_dir):
+		options = ('-y',  # overwrite output files
+					'-vcodec', 'h263',  # video codec
+					'-acodec', 'aac',  # audio codec
+					'-s', '352x288',  # screen resolution, defined by the codec
+					'-hide_banner',)
+		files = os.listdir(download_dir)
+		for f in [x for x in files if os.path.splitext(x)[-1] == '.webm']:
+			args = ('ffmpeg',) + ('-i', f) + options + (os.path.splitext(f)[0] + '.3gp',)
+			if not self.executor.call(args, cwd=download_dir):
+				os.remove(os.path.join(download_dir, f))
 
 	def _get_configs(self):
 		parser = SafeConfigParser()
@@ -586,10 +609,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 			if out_format == 'audio':
 				spec_options = ('--extract-audio',
 								'--audio-format=mp3',
-								'--audio-quality=9' # 9 means worse
+								'--audio-quality=9'  # 9 means worse
 								)
 			elif out_format == 'video':
-				spec_options = ('--format=3gp',)
+				spec_options = ('--format', '43',)
+				# 43 - webm 640x360 medium, vp8.0, vorbis@128k
 			else:
 				assert 0, 'unexpected output format; should be either "v" or "a"'
 			args = (downloader,) + options + spec_options + tuple(playlist['urls'])

@@ -211,5 +211,7 @@ Once the package is installed, you should run the script like this:
 
 TODO
 ----
+0. Sync the doc with reality.
 1. Add options only to download or only to send.
-3. Configurations should keep a BT device name rather than id.
+2. Sync DB when it is really needed.
+4. Split bluetube.py into modules.
