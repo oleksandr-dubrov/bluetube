@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath('..'))
 
 import unittest
 from bluetube import Bluetube
-from bluetube import Bluetooth
-from bluetube import Feeds
+from bluetoothclient import BluetoothClient
+from feeds import Feeds
 from mock import patch  # @UnresolvedImport
 
 
@@ -66,8 +66,9 @@ class TestBluetube(unittest.TestCase):
 		self.SUT = Bluetube()
 
 	def tearDown(self):
-		if os.path.isfile(Feeds.DATABASE_FILE) and os.path.exists(Feeds.DATABASE_FILE):
-			os.remove(Feeds.DATABASE_FILE)
+		db_file = Feeds(Bluetube.CUR_DIR).db_file
+		if os.path.isfile(db_file) and os.path.exists(db_file):
+			os.remove(db_file)
 		if os.path.isfile(Bluetube.CONFIG_FILE) and os.path.exists(Bluetube.CONFIG_FILE):
 			os.remove(Bluetube.CONFIG_FILE)
 		download_dir = os.path.join(os.getcwd(), 'Downloads')
@@ -119,12 +120,12 @@ class TestBluetube(unittest.TestCase):
 
 	@patch('bluetube.raw_input')
 	@patch('bluetube.Bluetube._get_playlists_with_urls')
-	@patch('bluetube.bluetooth.find_service')
+	@patch('bluetoothclient.bluetooth.find_service')
 	def test_run_precondition_fails(self, mocked_find_service,
 										mocked_get_urls,
 										mocked_raw_input):  # @UnusedVariable
 		'''1st - no configurations
-		   2nd - no remote bluetooth device'''
+		   2nd - no remote bluetoothclient device'''
 
 		self.assertFalse(self.SUT.run(), 'No configuration file, the case should fail')
 
@@ -132,15 +133,15 @@ class TestBluetube(unittest.TestCase):
 		mocked_find_service.return_value = []
 		mocked_get_urls.return_value = [{'urls': []}, ]
 
-		self.assertTrue(self.SUT.run(), 'no remote bluetooth device, the case succeed')
+		self.assertTrue(self.SUT.run(), 'no remote bluetoothclient device, the case succeed')
 
-	@patch('bluetube.Client')
+	@patch('bluetoothclient.Client')
 	@patch('os.path.expanduser')
 	@patch('PyOBEX.client.Client.disconnect')
 	@patch('PyOBEX.client.Client.connect')
 	@patch('PyOBEX.client.Client.put')
-	@patch('bluetube.bluetooth.lookup_name')
-	@patch('bluetube.bluetooth.find_service')
+	@patch('bluetoothclient.bluetooth.lookup_name')
+	@patch('bluetoothclient.bluetooth.find_service')
 	@patch('bluetube.raw_input')
 	@patch('bluetube.feedparser.parse')
 	@patch('bluetube.subprocess.call')
@@ -174,7 +175,7 @@ class TestBluetube(unittest.TestCase):
 		mocked_lookup_name.return_value = 'Symbian S60'
 		mocked_client_put.return_value = False
 		mocked_expanduser.return_value = os.getcwd()
-		Bluetooth.socket = TestBluetube.FakeSocket()
+		BluetoothClient.socket = TestBluetube.FakeSocket()
 
 		self._create_a_configuration_file()
 

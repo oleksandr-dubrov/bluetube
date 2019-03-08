@@ -227,4 +227,4 @@ Once the package is installed, you should run the script like this:
 
 0 TODO
 ------
-4. Split bluetube.py into modules.
+Nothing to do.

@@ -19,8 +19,6 @@ the Free Software Foundation; either version 2 of the License, or
 import argparse
 import os
 import re
-import shelve
-import socket
 import subprocess
 import sys
 import tempfile
@@ -28,51 +26,16 @@ import time
 import webbrowser
 from ConfigParser import SafeConfigParser
 
+from bcolors import Bcolors
+from feeds import Feeds
+
 try:
-	import bluetooth  # @UnresolvedImport
-	from PyOBEX.client import Client  # @UnresolvedImport
-	from PyOBEX import headers
-	from PyOBEX import requests
-	from PyOBEX import responses
+	from bluetoothclient import BluetoothClient
 	import feedparser
 except ImportError:
 	print('''Dependencies is not satisfied.
 	Run pip install -r dependencies.txt''')
 	sys.exit(-1)
-
-
-CUR_DIR = os.path.dirname(os.path.realpath(__file__))
-
-
-class Bcolors:
-	BOLD = '\033[1m'
-	HEADER = '\033[95m'
-	OKBLUE = '\033[94m'
-	OKGREEN = '\033[92m'
-	WARNING = '\033[93m'
-	FAIL = '\033[91m'
-	ENDC = '\033[0m'
-
-	def disable(self):
-		Bcolors.BOLD = ''
-		Bcolors.HEADER = ''
-		Bcolors.OKBLUE = ''
-		Bcolors.OKGREEN = ''
-		Bcolors.WARNING = ''
-		Bcolors.FAIL = ''
-		Bcolors.ENDC = ''
-
-	@staticmethod
-	def warn(txt):
-		print(u'{}{}{}'.format(Bcolors.WARNING, txt, Bcolors.ENDC))
-
-	@staticmethod
-	def error(txt):
-		print(u'{}{}{}'.format(Bcolors.FAIL, txt, Bcolors.ENDC))
-
-	@staticmethod
-	def intense(txt):
-		print(u'{}{}{}'.format(Bcolors.BOLD, txt, Bcolors.ENDC))
 
 
 class CommandExecutor(object):
@@ -113,276 +76,10 @@ class CommandExecutor(object):
 							suppress_stdout=True);
 
 
-class Feeds(object):
-	'''Manages a RSS feeds in the shelve database'''
-
-	DATABASE_FILE = os.path.join(CUR_DIR, 'bluetube.dat')
-
-	def __init__(self, mode='rw'):
-		self.db = None
-		if mode == 'r':
-			self.db = Feeds._create_ro_connector()
-		elif mode == 'rw':
-			self.db = Feeds._create_rw_connector()
-		else:
-			assert 0, 'the access mode should be either "rw" or "r"'
-
-	def __del__(self):
-		if self.db:
-			try:
-				self.db.close()
-			except ValueError as e:
-				Bcolors.error('Probably your changes were lost. Try again')
-				raise e
-
-	@staticmethod
-	def _create_rw_connector():
-		'''create DB connector in read/write mode'''
-		return shelve.open(Feeds.DATABASE_FILE, flag='c', writeback=False)
-
-	@staticmethod
-	def _create_ro_connector():
-		'''create DB connector in read-only mode'''
-		if not os.path.isfile(Feeds.DATABASE_FILE):
-			Feeds._create_empty_db()
-		return shelve.open(Feeds.DATABASE_FILE, flag='r')
-
-	@staticmethod
-	def _create_empty_db():
-		db = Feeds._create_rw_connector()
-		db['feeds'] = []
-		db.sync()
-
-	def get_authors(self):
-		if 'feeds' in self.db:
-			return [a['author'] for a in self.db['feeds']]
-		return []
-
-	def get_playlists(self, author):
-		authors = self.get_authors()
-		if authors:
-			for au in self.db['feeds']:
-				if au['author'] == author:
-					return [ch['title'] for ch in au['playlists']]
-		return []
-
-	def has_playlist(self, author, playlist):
-		if playlist in self.get_playlists(author):
-			return True
-		return False
-
-	def add_playlist(self, author, title, url, out_format):
-		feeds = self.get_all_playlists()
-
-		# create a playlist 
-		playlist = {"title": title,
-					"url": url,
-					"last_update" : 0,
-					"out_format": out_format}
-
-		# insert the playlist into the author
-		if author not in [f['author'] for f in feeds]:
-			feeds.append({'author': author, 'playlists': []})
-		for f in feeds:
-			if f['author'] == author:
-				f['playlists'].append(playlist)
-				break
-
-		self.write_to_db(feeds)
-
-	def get_all_playlists(self):
-		return self.db.get('feeds', [])
-
-	def remove_playlist(self, author, title):
-		feeds = self.get_all_playlists()
-		for idx in range(len(feeds)):
-			if feeds[idx]['author'] == author:
-				for jdx in range(len(feeds[idx]['playlists'])):
-					if feeds[idx]['playlists'][jdx]['title'] == title:
-						del feeds[idx]['playlists'][jdx]
-					if len(feeds[idx]['playlists']) == 0:
-						del feeds[idx]
-					break
-				break
-		self.write_to_db(feeds)
-
-	def write_to_db(self, feeds):
-		if 'feeds' not in self.db:
-			self.db['feeds'] = []
-		self.db['feeds'] = feeds
-		self.db.sync()
-
-	def update_last_update(self, info):
-		'''update last_update in a list by info'''
-		feeds = self.get_all_playlists()
-		for a in feeds:
-			if a['author'] == info['author']:
-				for ch in a['playlists']:
-					if ch['title'] == info['playlist']['title']:
-						ch['last_update'] = info['published_parsed']
-						self.write_to_db(feeds)
-						return
-
-
-class Bluetooth(Client):
-	'''Sends files to the given device'''
-
-	SOCKETTIMEOUT = 120.0
-
-	def __init__(self, device_id, bluetube_dir):
-		self.found = self._find_device(device_id)
-		if self.found:
-			print("Checking connection to \"%s\" on %s" % (self.name, self.host))
-			# Client is old style class, so don't use super
-			Client.__init__(self, self.host, self.port)
-			self.bluetube_dir = bluetube_dir
-			self.in_progress = False
-		else:
-			Bcolors.error('Device {} is not found.'.format(device_id))
-
-	def _find_device(self, device_id):
-		service_matches = bluetooth.find_service(address = device_id)
-		if len(service_matches) == 0:
-			Bcolors.error("Couldn't find the service.")
-			return False
-
-		for s in service_matches:
-			if s['name'] == 'OBEX Object Push':
-				first_match = s
-				break
-
-		self.name = bluetooth.lookup_name(device_id)
-		self.host = first_match["host"]
-		self.port = first_match["port"]
-		return True
-
-	def _callback(self, resp, filename):
-		if resp:
-			if self.in_progress:
-				sys.stdout.write('.')
-			else:
-				filename = filename.decode('utf-8')
-				if len(filename) > 45:
-					filename = filename[:42] + '...'
-				sys.stdout.write(u'Sending "{}" to {}...'.format(filename,
-																 self.name))
-				self.in_progress = True
-			sys.stdout.flush()
-
-	def _put(self, name, file_data, header_list = ()):  # @UnusedVariable
-		'''Modify the method from the base class
-		to allow getting data from the file stream.'''
-
-		header_list = [
-			headers.Name(name),
-			headers.Length(os.path.getsize(file_data))
-			]
-
-		max_length = self.remote_info.max_packet_length
-		request = requests.Put()
-
-		response = self._send_headers(request, header_list, max_length)
-		yield response
-
-		if not isinstance(response, responses.Continue):
-			return
-
-		optimum_size = max_length - 3 - 3
-
-		i = 0
-		size = os.path.getsize(file_data)
-		while i < size:
-
-			data = self.file_data_stream.read(optimum_size)
-			i += len(data)
-			if i < size:
-				request = requests.Put()
-				request.add_header(headers.Body(data, False), max_length)
-				self.socket.sendall(request.encode())
-
-				response = self.response_handler.decode(self.socket)
-				yield response
-
-				if not isinstance(response, responses.Continue):
-					return
-			else:
-				request = requests.Put_Final()
-				request.add_header(headers.End_Of_Body(data, False), max_length)
-				self.socket.sendall(request.encode())
-
-				response = self.response_handler.decode(self.socket)
-				yield response
-
-				if not isinstance(response, responses.Success):
-					return
-
-	def send(self, filenames):
-		'''Sends files to the bluetooth device.
-		Returns file names that has been sent.'''
-		assert self.found, 'Device is not found. Create a new Bluetooth.'
-		sent = []
-		for fm in filenames:
-			full_path = os.path.join(self.bluetube_dir, fm)
-			if full_path.endswith('.part') or full_path.endswith('.ytdl'):
-				# ignore but put them to send:
-				#		partially downloaded files
-				#		youtube-dl service files
-				sent.append(full_path)
-				continue
-			self.file_data_stream = open(full_path, 'rb')
-			try:
-				resp = self.put(fm.decode('utf-8'),
-								full_path,
-								callback=lambda resp : self._callback(resp, fm))
-				if resp:
-					pass  # print(resp)
-				else:
-					print(u'\n{} sent.'.format(fm.decode('utf-8')))
-					sent.append(full_path)
-			except socket.error as e:
-				Bcolors.error(str(e))
-				Bcolors.error(u'{} didn\'t send'.format(fm.decode('utf-8')))
-				print('Trying to reconnect...')
-				self.socket.shutdown(socket.SHUT_RDWR)
-				self.socket.close()
-				del self.socket
-				time.sleep(10.0)
-				if not self.connect():
-					break
-				else:
-					self.send([fm, ])
-			except KeyboardInterrupt:
-				Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
-								.format(fm.decode('utf-8')))
-			finally:
-				self.in_progress = False
-				self.file_data_stream.close()
-		return sent
-
-	def connect(self):
-		status = False
-		try:
-			Client.connect(self)
-			self.socket.settimeout(Bluetooth.SOCKETTIMEOUT)
-			status = True
-		except socket.error as e:
-			Bcolors.error(str(e))
-			Bcolors.warn('Some files will not be sent.')
-		return status
-
-	def disconnect(self):
-		try:
-			Client.disconnect(self)
-			#  print(resp)
-		except socket.errno as e:
-			Bcolors.error(str(e))
-			Bcolors.warn('Wait a minute.')
-			time.sleep(60.0)
-
-
 class Bluetube(object):
 	''' The main class of the script. '''
 
+	CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
 	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
 [bluetube]
@@ -402,7 +99,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			f = feedparser.parse(feed_url)
 			title = f.feed.title
 			author = f.feed.author
-			feeds = Feeds()
+			feeds = Feeds(Bluetube.CUR_DIR)
 			if feeds.has_playlist(author, title):
 				Bcolors.error(u'The playlist {} by {} has already been existed'
 							.format(title, author))
@@ -415,7 +112,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def list_playlists(self):
 		''' list all playlists in RSS feeds '''
-		feeds = Feeds('r')
+		feeds = Feeds(Bluetube.CUR_DIR, 'r')
 		all_playlists = feeds.get_all_playlists()
 		if len(all_playlists):
 			for a in all_playlists:
@@ -430,7 +127,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def remove_playlist(self, author, title):
 		''' remove a playlist be given title '''
-		feeds = Feeds()
+		feeds = Feeds(Bluetube.CUR_DIR)
 		if feeds.has_playlist(author, title):
 			feeds.remove_playlist(author, title)
 		else:
@@ -446,10 +143,10 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		return False
 
 	def _run(self, verbose, show_all):
-		feeds = Feeds()
+		feeds = Feeds(Bluetube.CUR_DIR)
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
-		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'),
+		sender = BluetoothClient(self.configs.get('bluetube', 'deviceID'),
 						download_dir)
 		if len(playlists):
 			if self._download_and_send_playlist(feeds,
@@ -692,8 +389,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 if __name__ == '__main__':
 
-	description='The script downloads youtube video as video or audio and sends to a bluetooth device.'
-	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth.'
+	description='The script downloads youtube video as video or audio and sends to a bluetoothclient device.'
+	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetoothclient.'
 	parser = argparse.ArgumentParser(description=description)
 	parser.epilog = epilog
 	me_group = parser.add_mutually_exclusive_group()

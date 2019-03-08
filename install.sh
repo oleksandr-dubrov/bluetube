@@ -23,6 +23,9 @@ echo Installing Bluetube to $DIRECTORY ...
 
 FILES=( \
 bluetube.py \
+bcolors.py \
+bluetoothclient.py \
+feeds.py \
 dependencies.txt \
 README.md \
 )
@@ -46,8 +49,13 @@ done
 echo "Setting access modes..."
 chmod 774 $DIRECTORY/bluetube
 chmod 400 $DIRECTORY/bluetube.py
+chmod 400 $DIRECTORY/bcolors.py
+chmod 400 $DIRECTORY/bluetoothclient.py
+chmod 400 $DIRECTORY/feeds.py
 chmod 400 $DIRECTORY/dependencies.txt
 chmod 400 $DIRECTORY/README.md
+
+rm -rf $DIRECTORY/*.pyc
 
 echo Done
 exit 0
