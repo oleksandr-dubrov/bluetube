@@ -2,20 +2,19 @@ BLUETUBE
 ========
 
 
-Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS and sends them to a bluetooth device.
-The script downloads media to a temporary directory. It is `/tmp/bluetube` on GNU. After the sending succeed, the `bluetube` directory is removed. If some file failed to be sent then the files are not removed and remain in the directory.
+Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, convert them and sends them to a bluetooth device.
 
 
 1 Motivation.
 -------------
-1.1. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
+1.1. I want to have audio and video files from subscribed by RSS Youtube lists and channels on my smartphone. So, the script should convert the files to an appropriate video format or, if it's a talk channel, extract audio.
+
+1.2. I want to download only the files I choose in the list of updates on a Youtube lists and channels.
+
+1.3. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
 That is why I use RSS feed that can get updates on Youtube playlists anonymously.
 
-1.2. I don't want to watch videos on Youtube to save my time. It is always temptation to keep watching other recommended videos over and over.
-So, the script will download selected videos and if it is needed converts it to audio.
-
-1.3. The script will send the video or audio files to my bluetooth device. In my case it is Nokia N73 under Symbian S60 v9.1.
-If the transfer is done successfully the the script should remove the files.
+1.4. I don't want to watch videos on Youtube to save my time. It is always temptation to keep watching other recommended videos over and over.
 
 
 2 Preconditions.
@@ -33,9 +32,8 @@ Python packages:
 +   _PyOBEX_
 +   _PyBluez_
 
-Before using this script the user must pair the bluetooth device with the PC.
-
-When the script is run for the first time, it prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the root directory of the script.
+Before using this script the user should pair the bluetooth device with the PC.
+If the bluetooth device is not accessible, the script can download ( and convert) files only.
 
 
 3 Installing.
@@ -48,8 +46,8 @@ If *bluetube* is present in the specified directory then the files will be overw
 
 4 Configurations.
 -----------------
-The configuration is kept in the INI file ***bluetooth.cfg*** in the root directory.
-The content of the file please see below:
+The configuration is kept in the INI file ***bluetooth.cfg*** in the script's directory.
+The content of the file below:
 
     ; Configurations for bluetube.
     [bluetube]
@@ -57,7 +55,7 @@ The content of the file please see below:
     ; enter your device ID in the line below
     deviceID=YOUR_RECEIVER_DEVICE_ID
 
-If *bluetooth.cfg* is not found, then please create it manually.
+If *bluetooth.cfg* is not found, the script prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the script's directory. Likely, it happens when the script is run for the first time.
 
 
 5 Run.
@@ -66,12 +64,12 @@ In order to run *bluetube* you can start the command:
 
     ./bluetube
 
-Alternatively, you can start the Python script directly from the blutube directory:
+Alternatively, you can start the Python script directly from the bluetube directory:
 
     python bluetube.py
 
 
-6 Command user interface.   TODO PASTE NEW HELP
+6 Command user interface.
 -------------------------
 The command user interface is a composition of options:
 
@@ -127,7 +125,7 @@ Replace CHANNELID in the link below with a Youtube channel ID. The channel ID ca
 **Note.** Sometimes Youtube changes its rules and the URL patterns might become not valid. In this case, the script must be fixed.
 
 ### 8.2 Commands.
-*youtube-dl* downloads videos from youtube.
+#### 8.2.1 *youtube-dl* downloads videos from youtube.
 The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
@@ -145,9 +143,23 @@ If audio is requested:
 +    *--audio-format FORMAT* - specify audio format.
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
+**FYI**. In order to get a list of formats available for downloading URL use *-F*.
+For the time being, the most appropriate format is 43 - webm 640x360 medium, vp8.0, vorbis@128k.
+
+#### 8.2.2 *ffmpeg* converts audio and video formats.
+The tool is used to convert video in *webm* format into *3gp*. Youtube used to have *3gp* version, but now it doesn't.
+The tools receives the next options:
+
++   *-y* -  overwrite output files.
++   *-vcodec* -  video codec (h263).
++   *-acodec* -  audio codec (acc).
++   *-s* - screen resolution, one of defined by the codec (352x288).
++   *-hide_banner* - hide the banner.
++   *-i* - an input file.
+
 
 ### 8.3 Data structure.
-The data are stored in *shelve* DB in the root directory of the script.
+The data are stored in *shelve* DB in the script's directory of the script.
 The structure is represented in JSON.
 Underlining DB doesn't support unicode keys, so all keys must be strings.
 
@@ -179,7 +191,7 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
 
 
 ### 8.4 Error handling.
-If a method fails it returns -1. Otherwise - 0.
+If a method fails it returns **False**. Otherwise - **True**.
 
 
 ### 8.5 Links.
@@ -187,19 +199,24 @@ If a method fails it returns -1. Otherwise - 0.
 
 [YouTube-dl](https://rg3.github.io/youtube-dl/).
 
+[ffmpeg](https://ffmpeg.org/).
+
 [Markdown](https://daringfireball.net/projects/markdown/).
 
-[INI](https://en.wikipedia.org/wiki/INI_file)
+[INI](https://en.wikipedia.org/wiki/INI_file).
 
 
 9 Bluetooth.
 ------------
 The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
+A few experiments showed that the most appropriate socket timeout is 120 seconds.
+Unlike the base implementation, the extended version of the method reads the data from the file stream rather than reading all file in memory before sending.
 For more information see [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
 
 
 10 Troubleshooting
 ------------------
+### 10.1 For porting the Script to a non-GNU OS.
 On Windows if you see
     UnicodeEncodeError: 'charmap' codec can't encode characters in position 
 it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*. However, the script is not developed for Windows.
@@ -209,9 +226,11 @@ Once the package is installed, you should run the script like this:
     python -mrun bluetube.py
 
 
-TODO
-----
-0. Sync the doc with reality.
+0 TODO
+------
 1. Add options only to download or only to send.
 2. Sync DB when it is really needed.
 4. Split bluetube.py into modules.
+5. When files cannot be converted or remain in the temporal directory, print the directory path in messages.
+6. Check if ffmpeg is in PATH. If not, recommend to install and inform that converting is not available.
+7. Make sure that all methods returns True if success, otherwise - False.
