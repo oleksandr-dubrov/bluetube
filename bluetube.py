@@ -472,6 +472,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		is_converter = self._check_vidoe_converter()
 		for ch in playlists:
+			if ch['urls'] == None:
+				continue
 			if len(ch['urls']):
 				if self._download(ch, download_dir):
 					if not self._convert_if_needed(ch['playlist']['out_format'],
@@ -613,6 +615,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 	def _process_playlist(self, author, ch, show_all):
 		urls = []
+		is_need_update = False
 		new_last_update = last_update = ch['last_update']
 		print(u'{ind}{tit}'.format(ind=u' ' * Bluetube.INDENTATION, tit=ch['title']))
 		f = feedparser.parse(ch['url'])
@@ -627,6 +630,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 			e_update = time.mktime(e['published_parsed'])
 			if last_update < e_update or show_all:
+				if not is_need_update:
+					is_need_update = True
 				print(u'{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params))
 
 				if self._ask(e['link'], summary=e['summary']):
@@ -636,7 +641,7 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 		return {'author': author,
 				'playlist': ch,
-				'urls': urls,
+				'urls': urls if is_need_update else None,
 				'published_parsed': new_last_update}
 
 	def _download(self, playlist, download_dir):
