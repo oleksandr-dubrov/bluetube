@@ -35,7 +35,7 @@ if [ ! -d "$DIRECTORY" ]; then
 fi
 
 RUNNER1=$'#!/bin/bash\n# Runner script for bluetube.py\npython2 '
-RUNNER2=$'/bluetube.py $@'
+RUNNER2=$'/bluetube.py "$@"'
 RUNNER=$RUNNER1$DIRECTORY$RUNNER2
 
 echo "$RUNNER" > $DIRECTORY/bluetube
