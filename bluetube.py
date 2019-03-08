@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__version__ = '1.0'
+__version__ = '1.1'
 __author__ = 'OD'
 __license__ = '''This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -102,11 +102,15 @@ class CommandExecutor(object):
 		except OSError as e:
 			return_code = e.errno
 			print(e.strerror)
+		if self._verbose:
+			print('Return code: {}'.format(return_code))
 		return return_code
 
-	def does_command_exist(self, name):
+	def does_command_exist(self, name, dashes=2):
 		'''call a command with the given name and expects that it has option --version'''
-		return not self.call((name, '--version'), suppress_stdout=True);
+		return not self.call((name,
+							'{}version'.format(dashes * '-')),
+							suppress_stdout=True);
 
 
 class Feeds(object):
@@ -387,6 +391,9 @@ downloader=youtube-dl
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
 	INDENTATION = 10
+	DOWNLOADER = 'youtube-dl'
+	CONVERTER = 'ffmpeg'
+
 
 	def add_playlist(self, url, out_format):
 		''' add a new playlists to RSS feeds '''
@@ -432,20 +439,17 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		self.configs = self._get_configs()
 		self.executor = CommandExecutor(verbose)
 
-		if self._check_config_file():
-			downloader = self.configs.get('bluetube', 'downloader')
-			if self._check_downloader(downloader):
-				return self._run(downloader, verbose, show_all)
+		if self._check_config_file() and self._check_downloader():
+				return self._run(verbose, show_all)
 		return -1
 
-	def _run(self, downloader, verbose, show_all):
+	def _run(self, verbose, show_all):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
 		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
 		if len(playlists):
 			if self._download_and_send_playlist(feeds,
-												downloader,
 												sender,
 												playlists,
 												download_dir,
@@ -455,29 +459,54 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
 			return -1
 
-	def _download_and_send_playlist(self, feeds, downloader, sender,
-									playlists, download_dir, verbose):
+	def _download_and_send_playlist(self, feeds, sender, playlists, download_dir, verbose):
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
 			Bcolors.warn('The script will download files to /tmp directory.')
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
+		is_converter = self._check_vidoe_converter()
 		for ch in playlists:
 			if len(ch['urls']):
-				if self._download(downloader, ch, download_dir):
-					if ch['playlist']['out_format'] == 'video' and not self._convert_video(download_dir):
-						Bcolors.error(u'Failed to convert video for {}'.format(ch['playlist']['title']))
-						Bcolors.warn(u'Try to convert manually.')
+				if self._download(ch, download_dir):
+					if not self._convert_if_needed(ch['playlist']['out_format'],
+													ch['playlist']['title'],
+													is_converter,
+													download_dir):
 						continue
 					feeds.update_last_update(ch)
 				else:
-					Bcolors.error(u'Failed to download this playlist: \n\t{}'.format(ch['playlist']['title']))
+					Bcolors.error(u'Failed to download this playlist: \n\t{}'
+								.format(ch['playlist']['title']))
 				if sender.found:
 					self._send(sender, download_dir)
 			else:
 				feeds.update_last_update(ch)
 				if verbose:
-					Bcolors.warn(u'Nothing to download from {}.'.format(ch['playlist']['title']))
+					Bcolors.warn(u'Nothing to download from {}.'
+								.format(ch['playlist']['title']))
 		return True
+
+	def _convert_if_needed(self, out_format, title, is_converter, download_dir):
+		ret = True
+		if is_converter:
+			if out_format == 'video' and not self._convert_video(download_dir):
+				Bcolors.error(u'Failed to convert video for {}'.format(title))
+				Bcolors.warn(u'Try to convert manually.')
+				ret = False
+		else:
+			Bcolors.warn(u'Vidoe from "{}" will be send without converting'
+						.format(title))
+		return ret
+
+	def _check_vidoe_converter(self):
+		if self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
+			return True
+		else:
+			Bcolors.warn(u'ERROR: The tool for converting video "{}" is not found in PATH'
+						.format(Bluetube.CONVERTER))
+			Bcolors.warn(u'Pease install the converter.')
+			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
+			return False
 
 	def _convert_video(self, download_dir):
 		options = ('-y',  # overwrite output files
@@ -502,11 +531,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 			return False
 		return True
 
-	def _check_downloader(self, downloader):
-		if self.executor.does_command_exist(downloader):
+	def _check_downloader(self):
+		if self.executor.does_command_exist(Bluetube.DOWNLOADER):
 			return True
 		else:
-			Bcolors.error(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(downloader))
+			Bcolors.error(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(Bluetube.DOWNLOADER))
 			return False
 
 	def _get_type(self, out_format):
@@ -600,27 +629,23 @@ You must create {} with the content below manually in the script directory:\n{}\
 				'urls': urls,
 				'published_parsed': new_last_update}
 
-	def _download(self, downloader, playlist, download_dir):
-		if downloader == 'youtube-dl':
-			options = ('--ignore-config',
-						'--ignore-errors',
-						'--mark-watched',)
-			out_format = playlist['playlist']['out_format']
-			if out_format == 'audio':
-				spec_options = ('--extract-audio',
-								'--audio-format=mp3',
-								'--audio-quality=9'  # 9 means worse
-								)
-			elif out_format == 'video':
-				spec_options = ('--format', '43',)
-				# 43 - webm 640x360 medium, vp8.0, vorbis@128k
-			else:
-				assert 0, 'unexpected output format; should be either "v" or "a"'
-			args = (downloader,) + options + spec_options + tuple(playlist['urls'])
-			return not self.executor.call(args, cwd=download_dir)
+	def _download(self, playlist, download_dir):
+		options = ('--ignore-config',
+					'--ignore-errors',
+					'--mark-watched',)
+		out_format = playlist['playlist']['out_format']
+		if out_format == 'audio':
+			spec_options = ('--extract-audio',
+							'--audio-format=mp3',
+							'--audio-quality=9'  # 9 means worse
+							)
+		elif out_format == 'video':
+			spec_options = ('--format', '43',)
+			# 43 - webm 640x360 medium, vp8.0, vorbis@128k
 		else:
-			Bcolors.error('ERROR: No downloader.')
-			return False
+			assert 0, 'unexpected output format; should be either "v" or "a"'
+		args = (Bluetube.DOWNLOADER,) + options + spec_options + tuple(playlist['urls'])
+		return not self.executor.call(args, cwd=download_dir)
 
 	def _send(self, sender, download_dir):
 		'''Send all files in the given directory'''

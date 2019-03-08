@@ -51,7 +51,6 @@ The content of the file below:
 
     ; Configurations for bluetube.
     [bluetube]
-    downloader=youtube-dl
     ; enter your device ID in the line below
     deviceID=YOUR_RECEIVER_DEVICE_ID
 
@@ -228,9 +227,8 @@ Once the package is installed, you should run the script like this:
 
 0 TODO
 ------
-1. Add options only to download or only to send.
 2. Sync DB when it is really needed.
 4. Split bluetube.py into modules.
 5. When files cannot be converted or remain in the temporal directory, print the directory path in messages.
-6. Check if ffmpeg is in PATH. If not, recommend to install and inform that converting is not available.
 7. Make sure that all methods returns True if success, otherwise - False.
+8. Format the code a bit.
