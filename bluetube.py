@@ -467,7 +467,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 								download_dir, verbose):
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
-			Bcolors.warn('The script will download files to /tmp directory.')
+			Bcolors.warn('The script will download files to {} directory.'
+						.format(download_dir))
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
 		is_converter = self._check_vidoe_converter()
 		for ch in playlists:
@@ -496,7 +497,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		if is_converter:
 			if out_format == 'video' and not self._convert_video(download_dir):
 				Bcolors.error(u'Failed to convert video for {}'.format(title))
-				Bcolors.warn(u'Try to convert manually.')
+				Bcolors.warn(u'The files is here {}'.format(download_dir))
 				ret = False
 		else:
 			Bcolors.warn(u'Vidoe from "{}" will be send without converting'
