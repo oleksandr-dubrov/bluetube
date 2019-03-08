@@ -50,9 +50,14 @@ The configuration is kept in the INI file ***bluetooth.cfg*** in the script's di
 The content of the file below:
 
     ; Configurations for bluetube.
-    [bluetube]
+    [bluetooth]
     ; enter your device ID in the line below
-    deviceID=YOUR_RECEIVER_DEVICE_ID
+    deviceID=YOUR_RECEIVER_DEVICE_ID_IS_REQUIRED
+    ;
+    [video]
+    ; configure audio and video codecs like in the command line below
+    codecs_options=OPTIONS
+    output_format=FORMAT_IS_REQUIRED
 
 If *bluetooth.cfg* is not found, the script prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the script's directory. Likely, it happens when the script is run for the first time.
 
@@ -150,11 +155,10 @@ The tool is used to convert video in *webm* format into *3gp*. Youtube used to h
 The tools receives the next options:
 
 +   *-y* -  overwrite output files.
-+   *-vcodec* -  video codec (h263).
-+   *-acodec* -  audio codec (acc).
-+   *-s* - screen resolution, one of defined by the codec (352x288).
 +   *-hide_banner* - hide the banner.
 +   *-i* - an input file.
+
+You can configure audio and video codecs in **bluetube.cfg**.
 
 
 ### 8.3 Data structure.

@@ -85,6 +85,11 @@ class Bluetube(object):
 [bluetube]
 ; enter your device ID in the line below
 deviceID=YOUR_RECEIVER_DEVICE_ID
+;
+[video]
+; configure audio and video codecs like in the command line below
+codecs_options=OPTIONS
+output_format=FORMAT_IS_REQUIRED
 '''
 	INDENTATION = 10
 	DOWNLOADER = 'youtube-dl'
@@ -146,7 +151,7 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 		feeds = Feeds(Bluetube.CUR_DIR)
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
-		sender = BluetoothClient(self.configs.get('bluetube', 'deviceID'),
+		sender = BluetoothClient(self.configs.get('bluetooth', 'deviceID'),
 						download_dir)
 		if len(playlists):
 			if self._download_and_send_playlist(feeds,
@@ -215,13 +220,16 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 	def _convert_video(self, download_dir):
 		options = ('-y',  # overwrite output files
-					'-vcodec', 'h263',  # video codec
-					'-acodec', 'aac',  # audio codec
-					'-s', '352x288',  # screen resolution, defined by the codec
 					'-hide_banner',)
+		codecs_options = self.configs.get('video', 'codecs_options')
+		output_format = self.configs.get('video', 'output_format')
 		files = os.listdir(download_dir)
 		for f in [x for x in files if os.path.splitext(x)[-1] == '.webm']:
-			args = ('ffmpeg',) + ('-i', f) + options + (os.path.splitext(f)[0] + '.3gp',)
+			args = ('ffmpeg',) + \
+					('-i', f) + \
+					options + \
+					codecs_options + \
+					(os.path.splitext(f)[0] + '.' + output_format,)
 			if not self.executor.call(args, cwd=download_dir):
 				os.remove(os.path.join(download_dir, f))
 
