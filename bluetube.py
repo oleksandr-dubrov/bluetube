@@ -386,7 +386,6 @@ class Bluetube(object):
 	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
 	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
 [bluetube]
-downloader=youtube-dl
 ; enter your device ID in the line below
 deviceID=YOUR_RECEIVER_DEVICE_ID
 '''
@@ -405,12 +404,14 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 			author = f.feed.author
 			feeds = Feeds()
 			if feeds.has_playlist(author, title):
-				Bcolors.error(u'The playlist {} by {} has already been existed'.format(title, author))
+				Bcolors.error(u'The playlist {} by {} has already been existed'
+							.format(title, author))
 			else:
 				feeds.add_playlist(author, title, feed_url, out_format)
-				Bcolors.intense(u'{} by {} added successfully.'.format(title, author))
-			return 0
-		return -1
+				Bcolors.intense(u'{} by {} added successfully.'.format(title,
+																	author))
+			return True
+		return False
 
 	def list_playlists(self):
 		''' list all playlists in RSS feeds '''
@@ -421,7 +422,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 				print(a['author'])
 				for c in a['playlists']:
 					o = u'{}{}'.format(u' ' * Bluetube.INDENTATION, c['title'])
-					o = u'{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(c['last_update'])))
+					o = u'{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S',
+														time.localtime(c['last_update'])))
 					print(o)
 		else:
 			Bcolors.warn('The list of playlist is empty. Use --add to add a playlist.')
@@ -441,13 +443,14 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 
 		if self._check_config_file() and self._check_downloader():
 				return self._run(verbose, show_all)
-		return -1
+		return False
 
 	def _run(self, verbose, show_all):
 		feeds = Feeds()
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
-		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'), download_dir)
+		sender = Bluetooth(self.configs.get('bluetube', 'deviceID'),
+						download_dir)
 		if len(playlists):
 			if self._download_and_send_playlist(feeds,
 												sender,
@@ -457,9 +460,11 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 				self._return_download_dir(download_dir)
 		else:
 			Bcolors.warn('No playlists in the list. Use --add to add a playlist.')
-			return -1
+			return False
+		return True
 
-	def _download_and_send_playlist(self, feeds, sender, playlists, download_dir, verbose):
+	def _download_and_send_playlist(self, feeds, sender, playlists,
+								download_dir, verbose):
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
 			Bcolors.warn('The script will download files to /tmp directory.')
@@ -527,7 +532,8 @@ deviceID=YOUR_RECEIVER_DEVICE_ID
 	def _check_config_file(self):
 		if self.configs == None:
 			Bcolors.warn(u'''Configuration file is not found.\n
-You must create {} with the content below manually in the script directory:\n{}\n'''.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
+You must create {} with the content below manually in the script directory:\n{}\n'''
+.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
 			return False
 		return True
 
@@ -535,7 +541,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 		if self.executor.does_command_exist(Bluetube.DOWNLOADER):
 			return True
 		else:
-			Bcolors.error(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'.format(Bluetube.DOWNLOADER))
+			Bcolors.error(u'ERROR: The tool for downloading from youtube "{}" is not found in PATH'
+						.format(Bluetube.DOWNLOADER))
 			return False
 
 	def _get_type(self, out_format):
@@ -571,9 +578,11 @@ You must create {} with the content below manually in the script directory:\n{}\
 		r = [u'r', u'R', u'к', u'К', u'n', u'N', u'т', u'Т', u'no', u'NO'] # r for reject
 		s = [u's', u'S', u'і', u'І']
 		open_browser = [u'b', u'B', u'и', u'И']
-		question = '{b}d{e}ownload | {b}r{e}eject | open in {b}b{e}rowser'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
+		question = '{b}d{e}ownload | {b}r{e}eject | open in {b}b{e}rowser'.format(b=Bcolors.HEADER,
+																				e=Bcolors.ENDC)
 		if summary:
-			question = question + ' | {b}s{e}ummary'.format(b=Bcolors.HEADER, e=Bcolors.ENDC)
+			question = question + ' | {b}s{e}ummary'.format(b=Bcolors.HEADER,
+															e=Bcolors.ENDC)
 
 		while True:
 			i = raw_input('{}\n'.format(question))
@@ -668,7 +677,8 @@ You must create {} with the content below manually in the script directory:\n{}\
 			try:
 				os.rmdir(bluetube_dir)
 			except OSError:
-				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'.format(bluetube_dir))
+				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'
+							.format(bluetube_dir))
 
 
 # ============================================================================ #
@@ -676,17 +686,32 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 if __name__ == '__main__':
 
-	parser = argparse.ArgumentParser(description='The script downloads youtube video as video or audio and sends to a bluetooth device.')
-	parser.epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth.'
+	description='The script downloads youtube video as video or audio and sends to a bluetooth device.'
+	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth.'
+	parser = argparse.ArgumentParser(description=description)
+	parser.epilog = epilog
 	me_group = parser.add_mutually_exclusive_group()
 
-	me_group.add_argument('--add', '-a', help='add a URL to youtube playlist', type=unicode)
-	parser.add_argument('-t', dest='type', help='a type of a file you want to get (for --add)', choices=['a', 'v'], default='v')
-	me_group.add_argument('--list', '-l', help='list all playlists', action='store_true')
-	me_group.add_argument('--remove', '-r', nargs=2, help='remove a playlist by names of the author and the playlist', type=lambda s: unicode(s, 'utf8'))
+	me_group.add_argument('--add', '-a',
+						help='add a URL to youtube playlist', type=unicode)
+	parser.add_argument('-t',
+					dest='type',
+					help='a type of a file you want to get (for --add)',
+					choices=['a', 'v'],
+					default='v')
+	me_group.add_argument('--list', '-l',
+						help='list all playlists', action='store_true')
+	me_group.add_argument('--remove', '-r',
+						nargs=2, 
+						help='remove a playlist by names of the author and the playlist',
+						type=lambda s: unicode(s, 'utf8'))
 
-	parser.add_argument('--show_all', '-s', action='store_true', help='show all available feed items despite last update time')
-	parser.add_argument('--verbose', '-v', action='store_true', help='print more information')
+	parser.add_argument('--show_all', '-s',
+					action='store_true',
+					help='show all available feed items despite last update time')
+	parser.add_argument('--verbose', '-v',
+					action='store_true',
+					help='print more information')
 	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
 	bluetube = Bluetube()

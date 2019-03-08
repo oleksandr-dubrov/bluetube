@@ -91,16 +91,16 @@ class TestBluetube(unittest.TestCase):
 
 		print('ADDING CHANNELS')
 		ret = self.SUT.add_playlist(url1, 'a')
-		self.assertFalse(ret, 'add playlist 1 failed')
+		self.assertTrue(ret, 'add playlist 1 failed')
 
 		ret = self.SUT.add_playlist(url1, 'a')
-		self.assertFalse(ret, 'add playlist 1 for the second time failed')
+		self.assertTrue(ret, 'add playlist 1 for the second time failed')
 
 		ret = self.SUT.add_playlist(url2, 'v')
-		self.assertFalse(ret, 'add playlist 2 failed')
+		self.assertTrue(ret, 'add playlist 2 failed')
 
 		ret = self.SUT.add_playlist(url3, 'v')
-		self.assertFalse(ret, 'add playlist 3 failed')
+		self.assertTrue(ret, 'add playlist 3 failed')
 
 		print('SHOW ALL CHANNELS')
 		self.SUT.list_playlists()
@@ -126,13 +126,13 @@ class TestBluetube(unittest.TestCase):
 		'''1st - no configurations
 		   2nd - no remote bluetooth device'''
 
-		self.assertTrue(self.SUT.run(), 'No configuration file, the case should fail')
+		self.assertFalse(self.SUT.run(), 'No configuration file, the case should fail')
 
 		self._create_a_configuration_file()
 		mocked_find_service.return_value = []
 		mocked_get_urls.return_value = [{'urls': []}, ]
 
-		self.assertFalse(self.SUT.run(), 'no remote bluetooth device, the case succeed')
+		self.assertTrue(self.SUT.run(), 'no remote bluetooth device, the case succeed')
 
 	@patch('bluetube.Client')
 	@patch('os.path.expanduser')
@@ -181,10 +181,10 @@ class TestBluetube(unittest.TestCase):
 		print('ADDING CHANNELS')
 		# use real URL in order to pass the validation
 		ret = self.SUT.add_playlist('https://www.youtube.com/watch?v=VTC8gj01s6g&list=PL17KOAV8JBN_uE7v4qgQxLX7kno4G9HyQ', 'a')
-		self.assertFalse(ret, 'add playlist failed')
+		self.assertTrue(ret, 'add playlist failed')
 		
 		ret = self.SUT.run()
-		self.assertFalse(ret, 'run failed')
+		self.assertTrue(ret, 'run failed')
 	
 	def _create_a_configuration_file(self):
 		with open(Bluetube.CONFIG_FILE, 'w') as f:

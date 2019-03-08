@@ -230,5 +230,3 @@ Once the package is installed, you should run the script like this:
 2. Sync DB when it is really needed.
 4. Split bluetube.py into modules.
 5. When files cannot be converted or remain in the temporal directory, print the directory path in messages.
-7. Make sure that all methods returns True if success, otherwise - False.
-8. Format the code a bit.
