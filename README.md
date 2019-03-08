@@ -2,7 +2,7 @@ BLUETUBE
 ========
 
 
-Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, convert them and sends them to a bluetooth device.
+Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, converts them and sends them to a bluetooth device.
 
 
 1 Motivation.
@@ -39,7 +39,8 @@ If the bluetooth device is not accessible, the script can download ( and convert
 3 Installing.
 --------------
 In order to install *bluetube* to a specified directory you can run the next command:
->./install *directory_to_install_in*
+
+    ./install *directory_to_install_in*
 
 If *bluetube* is present in the specified directory then the files will be overwritten.
 
@@ -77,19 +78,19 @@ Alternatively, you can start the Python script directly from the bluetube direct
 -------------------------
 The command user interface is a composition of options:
 
-	usage: bluetube.py [-h] [--add ADD] [-t {a,v}] [--list]
+    usage: bluetube.py [-h] [--add ADD] [-t {a,v}] [--list]
                    [--remove REMOVE REMOVE] [--version]
-	
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  --add ADD, -a ADD     add a URL to youtube playlist
-	  -t {a,v}              a type of a file you want to get (for --add)
-	  --list, -l            list all playlists
-	  --remove REMOVE REMOVE, -r REMOVE REMOVE
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      --add ADD, -a ADD     add a URL to youtube playlist
+      -t {a,v}              a type of a file you want to get (for --add)
+      --list, -l            list all playlists
+      --remove REMOVE REMOVE, -r REMOVE REMOVE
                             remove a playlist by names of the author and the
                             playlist
-	  --show_all, -s        show all available feed items despite last update time
-	  --version             show program's version number and exit
+      --show_all, -s        show all available feed items despite last update time
+      --version             show program's version number and exit
 
 If no option specified the script shows feeds to choose, downloads and sends
 via bluetooth.
@@ -166,31 +167,31 @@ The data are stored in *shelve* DB in the script's directory of the script.
 The structure is represented in JSON.
 Underlining DB doesn't support unicode keys, so all keys must be strings.
 
-	{
+     {
         feeds: [
             {
                 "author": "author1":
                 "playlists: [
-    			     {
-    				    "title": "the name of an entity",
-    				    "url": "url of the entity",
-    				    "last_update": 1548951984,
+                   {
+                      "title": "the name of an entity",
+                      "url": "url of the entity",
+                      "last_update": 1548951984,
                       "out_format": "a" or "v" 
-    			     },
-    			     {
-    			         ...
-    			     }
-		          ],
+                   },
+                   {
+                       ...
+                   }
+                ],
             },
             {
                 "author": "author1":
-		         "playlists: [
-			      ...
-		          ],
-		      ...
+                "playlists: [
+                    ...
+                 ],
+              ...
             }
         ]
-	}
+    }
 
 
 ### 8.4 Error handling.

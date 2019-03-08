@@ -204,7 +204,7 @@ output_format=FORMAT_IS_REQUIRED
 				Bcolors.warn(u'The files is here {}'.format(download_dir))
 				ret = False
 		else:
-			Bcolors.warn(u'Vidoe from "{}" will be send without converting'
+			Bcolors.warn(u'Video from "{}" will be sent without converting'
 						.format(title))
 		return ret
 
