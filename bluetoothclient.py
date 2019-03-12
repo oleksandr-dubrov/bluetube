@@ -111,12 +111,6 @@ class BluetoothClient(Client):
         sent = []
         for fm in filenames:
             full_path = os.path.join(self.bluetube_dir, fm)
-            if full_path.endswith('.part') or full_path.endswith('.ytdl'):
-                # ignore but put them to send:
-                #        partially downloaded files
-                #        youtube-dl service files
-                sent.append(full_path)
-                continue
             self.file_data_stream = open(full_path, 'rb')
             try:
                 resp = self.put(fm.decode('utf-8'),

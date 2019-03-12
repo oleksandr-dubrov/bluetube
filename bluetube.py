@@ -82,7 +82,7 @@ class Bluetube(object):
 	CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
 	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
-[bluetube]
+[bluetooth]
 ; enter your device ID in the line below
 deviceID=YOUR_RECEIVER_DEVICE_ID
 ;
@@ -151,11 +151,8 @@ output_format=FORMAT_IS_REQUIRED
 		feeds = Feeds(Bluetube.CUR_DIR)
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
-		sender = BluetoothClient(self.configs.get('bluetooth', 'deviceID'),
-						download_dir)
 		if len(playlists):
 			if self._download_and_send_playlist(feeds,
-												sender,
 												playlists,
 												download_dir,
 												verbose):
@@ -165,8 +162,9 @@ output_format=FORMAT_IS_REQUIRED
 			return False
 		return True
 
-	def _download_and_send_playlist(self, feeds, sender, playlists,
-								download_dir, verbose):
+	def _download_and_send_playlist(self, feeds, playlists, download_dir, verbose):
+		sender = BluetoothClient(self.configs.get('bluetooth', 'deviceID'),
+						download_dir)
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
 			Bcolors.warn('The script will download files to {} directory.'
@@ -205,7 +203,7 @@ output_format=FORMAT_IS_REQUIRED
 				ret = False
 		else:
 			Bcolors.warn(u'Video from "{}" will be sent without converting'
-						.format(title))
+						.format(title.decode('utf-8')))
 		return ret
 
 	def _check_vidoe_converter(self):
@@ -222,6 +220,7 @@ output_format=FORMAT_IS_REQUIRED
 		options = ('-y',  # overwrite output files
 					'-hide_banner',)
 		codecs_options = self.configs.get('video', 'codecs_options')
+		codecs_options = tuple(codecs_options.split())
 		output_format = self.configs.get('video', 'output_format')
 		files = os.listdir(download_dir)
 		for f in [x for x in files if os.path.splitext(x)[-1] == '.webm']:
@@ -230,20 +229,42 @@ output_format=FORMAT_IS_REQUIRED
 					options + \
 					codecs_options + \
 					(os.path.splitext(f)[0] + '.' + output_format,)
-			if not self.executor.call(args, cwd=download_dir):
+			if not 1 == self.executor.call(args, cwd=download_dir):
 				os.remove(os.path.join(download_dir, f))
+			else:
+				Bcolors.error('Failed to convert the file {}.'
+							.format(os.path.basename(f).decode('utf-8')))
+				Bcolors.warn('Check {} after the script is done.'
+							.format(tempfile.gettempdir()))
+		return True
 
 	def _get_configs(self):
 		parser = SafeConfigParser()
 		return None if len(parser.read(Bluetube.CONFIG_FILE)) == 0 else parser
 
 	def _check_config_file(self):
+		ok = True
 		if self.configs == None:
-			Bcolors.warn(u'''Configuration file is not found.\n
-You must create {} with the content below manually in the script directory:\n{}\n'''
-.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
+			Bcolors.error('Configuration file is not found.')
+			ok = False
+
+		if ok and not (self.configs.has_section('bluetooth')
+			and self.configs.has_section('video')
+			and self.configs.has_option('bluetooth', 'deviceID')
+			and self.configs.has_option('video', 'output_format')):
+			Bcolors.error('The configuration file has no needed options.')
+			ok = False
+
+		if not ok:
+			Bcolors.error(u'You must create {} with the content below manually in the script directory:\n{}'
+						.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
 			return False
-		return True
+
+		if not self.configs.has_option('video', 'codecs_options'):
+			Bcolors.error('ffmpeg codecs are not configured in {}'
+						.format(Bluetube.CONFIG_FILE))
+
+		return ok
 
 	def _check_downloader(self):
 		if self.executor.does_command_exist(Bluetube.DOWNLOADER):
@@ -369,13 +390,19 @@ You must create {} with the content below manually in the script directory:\n{}\
 
 	def _send(self, sender, download_dir):
 		'''Send all files in the given directory'''
-		if sender.found:
-			files = os.listdir(download_dir)
-			if sender.connect():
-				sent = sender.send(files)
+		sent = []
+		files = os.listdir(download_dir)
+		for fl in files:
+			if fl.endswith('.part') or fl.endswith('.ytdl'):
+				# ignore but put them to send:
+				#        partially downloaded files
+				#        youtube-dl service files
+				sent.append(os.path.join(fl))
+		if sender.found and sender.connect():
+				sent += sender.send(files)
 				sender.disconnect()
-				for f in sent:
-					os.remove(f)
+		for f in sent:
+			os.remove(f)
 
 	def _fetch_download_dir(self):
 		bluetube_dir = os.path.join(tempfile.gettempdir(), 'bluetube')

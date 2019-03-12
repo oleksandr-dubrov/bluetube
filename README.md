@@ -160,6 +160,10 @@ The tools receives the next options:
 +   *-i* - an input file.
 
 You can configure audio and video codecs in **bluetube.cfg**.
+Recommended *ffmpeg* options:
+>	codecs_options=-vcodec libx264 -acodec aac -s 320x280
+>	output_format=3gp
+
 
 
 ### 8.3 Data structure.
