@@ -1,0 +1,17 @@
+; Configurations for bluetube.
+;
+[bluetooth]
+; enter your device ID in the line below
+deviceID=YOUR_RECEIVER_DEVICE_ID
+;
+;
+[video]
+; configure audio and video codecs like in the command line below
+; working examples:
+;    codecs_options=-vcodec libx264 -acodec aac -s 320x280
+;    codecs_options=-vcodec h263 -acodec aac -s 352x288
+codecs_options=OPTIONS
+;
+; working examples:
+;    output_format=3gp
+output_format=FORMAT_IS_REQUIRED

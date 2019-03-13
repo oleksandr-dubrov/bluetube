@@ -189,7 +189,8 @@ class TestBluetube(unittest.TestCase):
 	
 	def _create_a_configuration_file(self):
 		with open(Bluetube.CONFIG_FILE, 'w') as f:
-			f.write(Bluetube.DEFAULT_CONFIGS)
+			with open(Bluetube.CONFIG_TEMPLATE, 'r') as ft:
+				f.write(ft.read())
 
 
 if __name__ == "__main__":

@@ -81,16 +81,7 @@ class Bluetube(object):
 
 	CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
-	DEFAULT_CONFIGS = u'''; Configurations for bluetube.
-[bluetooth]
-; enter your device ID in the line below
-deviceID=YOUR_RECEIVER_DEVICE_ID
-;
-[video]
-; configure audio and video codecs like in the command line below
-codecs_options=OPTIONS
-output_format=FORMAT_IS_REQUIRED
-'''
+	CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.template')
 	INDENTATION = 10
 	DOWNLOADER = 'youtube-dl'
 	CONVERTER = 'ffmpeg'
@@ -256,8 +247,9 @@ output_format=FORMAT_IS_REQUIRED
 			ok = False
 
 		if not ok:
-			Bcolors.error(u'You must create {} with the content below manually in the script directory:\n{}'
-						.format(Bluetube.CONFIG_FILE, Bluetube.DEFAULT_CONFIGS))
+			with open(Bluetube.CONFIG_TEMPLATE, 'r') as f:
+				Bcolors.error(u'You must create {} with the content below manually in the script directory:\n{}'
+							.format(Bluetube.CONFIG_FILE, f.read()))
 			return False
 
 		if not self.configs.has_option('video', 'codecs_options'):

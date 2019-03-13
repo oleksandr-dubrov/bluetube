@@ -57,10 +57,18 @@ The content of the file below:
     ;
     [video]
     ; configure audio and video codecs like in the command line below
+    ; working examples:
+    ; codecs_options=-vcodec libx264 -acodec aac -s 320x280
+    ; codecs_options=-vcodec h263 -acodec aac -s 352x288
     codecs_options=OPTIONS
     output_format=FORMAT_IS_REQUIRED
 
 If *bluetooth.cfg* is not found, the script prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the script's directory. Likely, it happens when the script is run for the first time.
+
+You can get your device ID by running the next commands in the Python shell:
+
+	import bluetooth
+	[x['host'] for x in bluetooth.find_service() if x['name'] == 'OBEX Object Push'][0]
 
 
 5 Run.
@@ -164,6 +172,10 @@ Recommended *ffmpeg* options:
 >	codecs_options=-vcodec libx264 -acodec aac -s 320x280
 >	output_format=3gp
 
+or
+
+>	codecs_options=-vcodec h263 -acodec aac -s 352x288
+>	output_format=3gp
 
 
 ### 8.3 Data structure.
