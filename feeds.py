@@ -4,7 +4,7 @@ from bcolors import Bcolors
 
 
 class Feeds(object):
-    '''Manages a RSS feeds in the shelve database'''
+    '''Manages RSS feeds in the shelve database'''
 
     def __init__(self, cur_dir, mode='rw'):
         self.db = None
