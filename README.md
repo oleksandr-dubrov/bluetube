@@ -214,6 +214,13 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
 If a method fails it returns **False**. Otherwise - **True**.
 
 
+### 8.5 Bluetooth.
+------------------
+The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
+A few experiments showed that the most appropriate socket timeout is 120 seconds.
+Unlike the base implementation, the extended version of the method reads the data from the file stream rather than reading all file in memory before sending.
+
+
 ### 8.5 Links.
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
@@ -225,18 +232,12 @@ If a method fails it returns **False**. Otherwise - **True**.
 
 [INI](https://en.wikipedia.org/wiki/INI_file).
 
-
-9 Bluetooth.
-------------
-The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
-A few experiments showed that the most appropriate socket timeout is 120 seconds.
-Unlike the base implementation, the extended version of the method reads the data from the file stream rather than reading all file in memory before sending.
-For more information see [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
+[PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
 
 
-10 Troubleshooting
-------------------
-### 10.1 For porting the Script to a non-GNU OS.
+9 Troubleshooting
+-----------------
+### 9.1 For porting the Script to a non-GNU OS.
 On Windows if you see
     UnicodeEncodeError: 'charmap' codec can't encode characters in position 
 it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*. However, the script is not developed for Windows.

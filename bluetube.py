@@ -3,12 +3,23 @@
 
 
 __version__ = '1.1'
-__author__ = 'OD'
+__author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
+__license__ = '''
+	This file is part of Bluetube.
 
+	Bluetube is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-#########################################################################
-# This a script that loads RSS and sends selected feeds to my Nokia N73.#
-#########################################################################
+	Bluetube is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
+'''
 
 
 import argparse
@@ -411,9 +422,9 @@ class Bluetube(object):
 
 if __name__ == '__main__':
 
-	description='The script downloads youtube video as video or audio and sends to a bluetoothclient device.'
-	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetoothclient.'
-	parser = argparse.ArgumentParser(description=description)
+	description='The script downloads youtube video as video or audio and sends to a bluetooth client device.'
+	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth client.'
+	parser = argparse.ArgumentParser(prog='bluetube', description=description)
 	parser.epilog = epilog
 	me_group = parser.add_mutually_exclusive_group()
 
@@ -437,7 +448,8 @@ if __name__ == '__main__':
 	parser.add_argument('--verbose', '-v',
 					action='store_true',
 					help='print more information')
-	parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+	parser.add_argument('--version', action='version',
+					version='%(prog)s {}'.format(__version__))
 
 	bluetube = Bluetube()
 	args = parser.parse_args()
