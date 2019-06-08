@@ -376,11 +376,11 @@ class Bluetube(object):
 		if out_format == 'audio':
 			spec_options = ('--extract-audio',
 							'--audio-format=mp3',
-							'--audio-quality=9'  # 9 means worse
+							'--audio-quality=9',  # 9 means worse
+							'--embed-thumbnail',
 							)
 		elif out_format == 'video':
-			spec_options = ('--format', '43',)
-			# 43 - webm 640x360 medium, vp8.0, vorbis@128k
+			spec_options = ('--format', 'webm[width<=640]',)
 		else:
 			assert 0, 'unexpected output format; should be either "v" or "a"'
 		args = (Bluetube.DOWNLOADER,) + options + spec_options + tuple(playlist['urls'])

@@ -143,12 +143,12 @@ The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
 +   *--ignore-errors* - continue on download errors, for example to skip unavailable videos in a playlist
-+   *--mark-watched* - videos watched (YouTube only). Make the author know you watch his/her videos.
++   *--mark-watched* - make the author know you watch his/her videos.
 +   *--dateafter DATE* - download only videos uploaded on or after this date (i.e. inclusive); the format of the date is *%Y%m%d* e.g 19700101.
 
 If video requested:
 
-+    *--format FORMAT* - video format code, see the "FORMAT SELECTION" for all the info
++    *--format FORMAT* - video format code
 
 If audio is requested:
 
@@ -157,7 +157,7 @@ If audio is requested:
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
 **FYI**. In order to get a list of formats available for downloading URL use *-F*.
-For the time being, the most appropriate format is 43 - webm 640x360 medium, vp8.0, vorbis@128k.
+For the time being, the most appropriate format is 'webm[width<=640]' - webm where the width is less or equals 640.
 
 #### 8.2.2 *ffmpeg* converts audio and video formats.
 The tool is used to convert video in *webm* format into *3gp*. Youtube used to have *3gp* version, but now it doesn't.
