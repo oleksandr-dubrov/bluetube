@@ -50,18 +50,26 @@ If *bluetube* is present in the specified directory then the files will be overw
 The configuration is kept in the INI file ***bluetooth.cfg*** in the script's directory.
 The content of the file below:
 
-    ; Configurations for bluetube.
-    [bluetooth]
-    ; enter your device ID in the line below
-    deviceID=YOUR_RECEIVER_DEVICE_ID_IS_REQUIRED
-    ;
-    [video]
-    ; configure audio and video codecs like in the command line below
-    ; working examples:
-    ; codecs_options=-vcodec libx264 -acodec aac -s 320x280
-    ; codecs_options=-vcodec h263 -acodec aac -s 352x288
-    codecs_options=OPTIONS
-    output_format=FORMAT_IS_REQUIRED
+	[bluetooth]
+	; enter your device ID in the line below
+	deviceID=YOUR_RECEIVER_DEVICE_ID
+	;
+	[download]
+	; define video format to be download based on youtube-dl's format selection
+	; note: make sure the codec for this format is available in the system
+	; working examples:
+	;    mp4[width<=640]+worstaudio
+	video_format=FORMAT_IS_OPTIONAL
+	;
+	[video]
+	; configure audio and video codecs like in the command line below
+	; working examples:
+	;    codecs_options=-vcodec h263 -acodec aac -s 352x288
+	codecs_options=OPTIONS
+	;
+	; working examples:
+	;    output_format=3gp
+	output_format=FORMAT_IS_REQUIRED
 
 If *bluetooth.cfg* is not found, the script prints the template of the configuration file. Edit this template and save to *bluetube.cfg* in the script's directory. Likely, it happens when the script is run for the first time.
 
@@ -70,6 +78,9 @@ You can get your device ID by running the next commands in the Python shell:
 	import bluetooth
 	[x['host'] for x in bluetooth.find_service() if x['name'] == 'OBEX Object Push'][0]
 
+In order to set the download video format you can check the [FORMAT SELECTION](https://github.com/ytdl-org/youtube-dl/blob/master/README.md#format-selection) section on the *youtube-dl* website.
+
+To configure codecs options please consult [ffmpeg options](https://ffmpeg.org/ffmpeg.html#Options).
 
 5 Run.
 ------
@@ -157,7 +168,7 @@ If audio is requested:
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
 **FYI**. In order to get a list of formats available for downloading URL use *-F*.
-For the time being, the most appropriate format is 'webm[width<=640]' - webm where the width is less or equals 640.
+For the time being, the most appropriate format is 'mp4[width<=640]+worstaudio' - mp4 where the width is less or equals 640 and with the worst audio. In case, there is no mp4 video with audio, then the audio is downloaded separately and merged into *mkv* container.
 
 #### 8.2.2 *ffmpeg* converts audio and video formats.
 The tool is used to convert video in *webm* format into *3gp*. Youtube used to have *3gp* version, but now it doesn't.

@@ -220,7 +220,7 @@ class Bluetube(object):
 		codecs_options = tuple(codecs_options.split())
 		output_format = self.configs.get('video', 'output_format')
 		files = os.listdir(download_dir)
-		for f in [x for x in files if os.path.splitext(x)[-1] == '.webm']:
+		for f in [x for x in files if os.path.splitext(x)[-1] in ['.mp4', '.mkv']]:
 			args = ('ffmpeg',) + \
 					('-i', f) + \
 					options + \
@@ -380,7 +380,11 @@ class Bluetube(object):
 							'--embed-thumbnail',
 							)
 		elif out_format == 'video':
-			spec_options = ('--format', 'webm[width<=640]',)
+			if self.configs.has_section('download'):
+				video_format = self.configs.get('download', 'video_format')
+			else:
+				video_format = 'mp4[width<=640]+worstaudio'
+			spec_options = ('--format', video_format,)
 		else:
 			assert 0, 'unexpected output format; should be either "v" or "a"'
 		args = (Bluetube.DOWNLOADER,) + options + spec_options + tuple(playlist['urls'])
