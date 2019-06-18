@@ -2,19 +2,19 @@ BLUETUBE
 ========
 
 
-Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, converts them and sends them to a bluetooth device.
+Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, converts them and sends to a bluetooth device.
 
 
 1 Motivation.
 -------------
 1.1. I want to have audio and video files from subscribed by RSS Youtube lists and channels on my smartphone. So, the script should convert the files to an appropriate video format or, if it's a talk channel, extract audio.
 
-1.2. I want to download only the files I choose in the list of updates on a Youtube lists and channels.
+1.2. I want to download only the files I choose in the list of updates of Youtube lists and channels.
 
 1.3. I don't want to be always logged in Youtube to avoid surveillance and "informational bubble".
 That is why I use RSS feed that can get updates on Youtube playlists anonymously.
 
-1.4. I don't want to watch videos on Youtube to save my time. It is always temptation to keep watching other recommended videos over and over.
+1.4. I don't want to watch videos on Youtube to save my time. It is always a temptation to keep watching other recommended videos over and over.
 
 
 2 Preconditions.
@@ -24,8 +24,8 @@ In order to use the script, you must have the next installed.
 GNU packages:
 +   Python 2
 +   libbluetooth-dev - a bluetooth Python package.
-+   [_youtube-dl_] (https://rg3.github.io/youtube-dl/) - a downloader.
-+   ffmpeg - for converting files into desirable format.
++   [_youtube-dl_](https://rg3.github.io/youtube-dl/) - a downloader.
++   ffmpeg - for converting files into a desirable format.
 
 Python packages:
 +   _feedparser_
@@ -33,14 +33,14 @@ Python packages:
 +   _PyBluez_
 
 Before using this script the user should pair the bluetooth device with the PC.
-If the bluetooth device is not accessible, the script can download ( and convert) files only.
+If the bluetooth device is not accessible, the script can download (and convert) files only.
 
 
 3 Installing.
 --------------
 In order to install *bluetube* to a specified directory you can run the next command:
 
-    ./install *directory_to_install_in*
+    ./install *a_directory_to_install_in*
 
 If *bluetube* is present in the specified directory then the files will be overwritten.
 
@@ -117,14 +117,13 @@ via bluetooth.
 
 7 Tests.
 --------
-There are some unit tests provided to verify that the script is not broken.
-I don't have a goal to rich good code coverage, so passed tests don't guarantee the 
-correct work of the script. In order to get more information reed the test's output.
+There are some unit tests provided. They are mostly related to the RSS feed.
+I don't have a goal to rich good code coverage, so the passed tests don't guarantee correct work of the script.
 Run test from *tests* directory:
 
     python test_bluetube.py
 
-The tests are base on *unittests* and *mock*. Don't forget to install *mock* before run the tests.
+The tests are based on *unittests* and *mock*. Don't forget to install *mock* before running the tests.
 
 8 Development.
 -------------
@@ -168,11 +167,11 @@ If audio is requested:
 +    *--audio-quality QUALITY* - specify ffmpeg/avconv audio quality, 0 (better) or 9 (worse).
 
 **FYI**. In order to get a list of formats available for downloading URL use *-F*.
-For the time being, the most appropriate format is 'mp4[width<=640]+worstaudio' - mp4 where the width is less or equals 640 and with the worst audio. In case, there is no mp4 video with audio, then the audio is downloaded separately and merged into *mkv* container.
+For the time being, the most appropriate format is *'mp4[width<=640]+worstaudio'* - mp4 where the width is less or equals 640 and with the worst audio. In case there is no mp4 video with any audio track, then the audio is downloaded separately and merged into a *mkv* container.
 
-#### 8.2.2 *ffmpeg* converts audio and video formats.
-The tool is used to convert video in *webm* format into *3gp*. Youtube used to have *3gp* version, but now it doesn't.
-The tools receives the next options:
+#### 8.2.2 *ffmpeg* converts video files.
+The tool is used to convert video into *3gp*. Youtube used to have *3gp* version, but now it doesn't.
+The tool receives the next options:
 
 +   *-y* -  overwrite output files.
 +   *-hide_banner* - hide the banner.
@@ -249,13 +248,15 @@ Unlike the base implementation, the extended version of the method reads the dat
 9 Troubleshooting
 -----------------
 ### 9.1 For porting the Script to a non-GNU OS.
-On Windows if you see
-    UnicodeEncodeError: 'charmap' codec can't encode characters in position 
+On Windows if you see *UnicodeEncodeError: 'charmap' codec can't encode characters in position*, 
 it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*. However, the script is not developed for Windows.
 First, it should be installed:
-    pip install install win-unicode-console
+
+	pip install install win-unicode-console
+
 Once the package is installed, you should run the script like this:
-    python -mrun bluetube.py
+
+	python -mrun bluetube.py
 
 
 0 TODO
