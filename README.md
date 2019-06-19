@@ -38,11 +38,20 @@ If the bluetooth device is not accessible, the script can download (and convert)
 
 3 Installing.
 --------------
+
+### 3.1 Install to a dictionary
 In order to install *bluetube* to a specified directory you can run the next command:
 
     ./install *a_directory_to_install_in*
 
 If *bluetube* is present in the specified directory then the files will be overwritten.
+
+### 3.2 Install to a package manager - PIP.
+You can run
+
+    python setup.py install
+
+to install the script to your environment.
 
 
 4 Configurations.
