@@ -7,9 +7,9 @@ import time
 sys.path.insert(0, os.path.abspath('..'))
 
 import unittest
-from bluetube import Bluetube
-from bluetoothclient import BluetoothClient
-from feeds import Feeds
+from bluetube.bluetube import Bluetube
+from bluetube.bluetoothclient import BluetoothClient
+from bluetube.feeds import Feeds
 from mock import patch  # @UnresolvedImport
 
 
@@ -66,11 +66,11 @@ class TestBluetube(unittest.TestCase):
 		self.SUT = Bluetube()
 
 	def tearDown(self):
-		db_file = Feeds(Bluetube.CUR_DIR).db_file
+		db_file = Feeds([Bluetube.CUR_DIR,Bluetube.CUR_DIR]).db_file
 		if os.path.isfile(db_file) and os.path.exists(db_file):
 			os.remove(db_file)
-		if os.path.isfile(Bluetube.CONFIG_FILE) and os.path.exists(Bluetube.CONFIG_FILE):
-			os.remove(Bluetube.CONFIG_FILE)
+		if os.path.isfile(Bluetube.CONFIG_FILES[0]) and os.path.exists(Bluetube.CONFIG_FILES[0]):
+			os.remove(Bluetube.CONFIG_FILES[0])
 		download_dir = os.path.join(os.getcwd(), 'Downloads')
 		if os.path.exists(download_dir):
 			try:
@@ -78,7 +78,7 @@ class TestBluetube(unittest.TestCase):
 			except OSError:
 				print('The download directory {} is not empty. Some test doesn\'t remove downloaded files.'.format(download_dir))
 
-	@patch('bluetube.feedparser.parse')
+	@patch('bluetube.bluetube.feedparser.parse')
 	def test_add_list_remove(self, mocked_feed):
 		mocked_feed.side_effect = [TestBluetube.FakeFeed(u"Евгений Вольнов", u"Настенька"),
 								TestBluetube.FakeFeed(u"Евгений Вольнов", u"Настенька"),
@@ -118,9 +118,9 @@ class TestBluetube(unittest.TestCase):
 		print('SHOW ALL CHANNELS AGAIN')
 		self.SUT.list_playlists()
 
-	@patch('bluetube.raw_input')
-	@patch('bluetube.Bluetube._get_playlists_with_urls')
-	@patch('bluetoothclient.bluetooth.find_service')
+	@patch('bluetube.bluetube.raw_input')
+	@patch('bluetube.bluetube.Bluetube._get_playlists_with_urls')
+	@patch('bluetube.bluetoothclient.bluetooth.find_service')
 	def test_run_precondition_fails(self, mocked_find_service,
 										mocked_get_urls,
 										mocked_raw_input):  # @UnusedVariable
@@ -131,20 +131,22 @@ class TestBluetube(unittest.TestCase):
 
 		self._create_a_configuration_file()
 		mocked_find_service.return_value = []
-		mocked_get_urls.return_value = [{'urls': []}, ]
+		mocked_get_urls.return_value = [{'author': 'a',
+										'playlists': [{'title': 't'}],
+										'urls': []}, ]
 
 		self.assertTrue(self.SUT.run(), 'no remote bluetoothclient device, the case succeed')
 
-	@patch('bluetoothclient.Client')
+	@patch('bluetube.bluetoothclient.Client')
 	@patch('os.path.expanduser')
 	@patch('PyOBEX.client.Client.disconnect')
 	@patch('PyOBEX.client.Client.connect')
 	@patch('PyOBEX.client.Client.put')
-	@patch('bluetoothclient.bluetooth.lookup_name')
-	@patch('bluetoothclient.bluetooth.find_service')
-	@patch('bluetube.raw_input')
-	@patch('bluetube.feedparser.parse')
-	@patch('bluetube.subprocess.call')
+	@patch('bluetube.bluetoothclient.bluetooth.lookup_name')
+	@patch('bluetube.bluetoothclient.bluetooth.find_service')
+	@patch('bluetube.bluetube.raw_input')
+	@patch('bluetube.bluetube.feedparser.parse')
+	@patch('bluetube.bluetube.subprocess.call')
 	def test_run(self,  # @DontTrace
 				mocked_call,
 				mocked_feed_parse,
@@ -188,7 +190,7 @@ class TestBluetube(unittest.TestCase):
 		self.assertTrue(ret, 'run failed')
 	
 	def _create_a_configuration_file(self):
-		with open(Bluetube.CONFIG_FILE, 'w') as f:
+		with open(Bluetube.CONFIG_FILES[0], 'w') as f:
 			with open(Bluetube.CONFIG_TEMPLATE, 'r') as ft:
 				f.write(ft.read())
 

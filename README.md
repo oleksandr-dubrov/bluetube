@@ -52,6 +52,11 @@ You can run
     python setup.py install
 
 to install the script to your environment.
+After the script is installed, you can run
+
+    python setup.py clean
+
+to clean the repository from *setuptools* data.
 
 
 4 Configurations.
@@ -252,6 +257,8 @@ Unlike the base implementation, the extended version of the method reads the dat
 [INI](https://en.wikipedia.org/wiki/INI_file).
 
 [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
+
+[setuptools](https://setuptools.readthedocs.io/en/latest/)
 
 
 9 Troubleshooting

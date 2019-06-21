@@ -22,11 +22,11 @@ DIRECTORY=$1/bluetube
 echo Installing Bluetube to $DIRECTORY ...
 
 FILES=( \
-bluetube.py \
-bcolors.py \
-bluetoothclient.py \
-bt_config.template \
-feeds.py \
+bluetube/bluetube.py \
+bluetube/bcolors.py \
+bluetube/bluetoothclient.py \
+bluetube/bt_config.template \
+bluetube/feeds.py \
 dependencies.txt \
 README.md \
 )

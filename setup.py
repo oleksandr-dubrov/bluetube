@@ -53,20 +53,25 @@ class CleanCommand(Command):
                     os.remove(f)
 
         remove("build")
-        remove("bluetube.egg-info")
+        remove("bluetube_cli.egg-info")
         remove("dist")
         remove_pyc()
 
 
 setup(
-    name="bluetube",
-    version="1.1",
+    name="bluetube-cli",
+    version="1.2",
     packages=find_packages(),
     package_data={
         '': ['*.py', 'bt_config.template', ],
     },
     exclude_package_data={
         'tests': ['*'],
+    },
+    entry_points={
+        "console_scripts": [
+            "bluetube=bluetube.bluetube:main",
+            ]
     },
     author="Olexandr Dubrov",
     author_email="olexandr.dubrov@gmail.com",

@@ -24,9 +24,11 @@ from bcolors import Bcolors
 class Feeds(object):
     '''Manages RSS feeds in the shelve database'''
 
-    def __init__(self, cur_dir, mode='rw'):
+    def __init__(self, db_dirs, mode='rw'):
         self.db = None
-        self.db_file = os.path.join(cur_dir, 'bluetube.dat')
+        self.db_file = os.path.join(db_dirs[0], 'bluetube.dat')
+        if not ( os.path.exists(self.db_file) and os.path.isfile(self.db_file)):
+            self.db_file = os.path.join(db_dirs[1], 'bluetube.dat')
         if mode == 'r':
             self.db = self._create_ro_connector()
         elif mode == 'rw':

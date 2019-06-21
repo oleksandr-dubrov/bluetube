@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__version__ = '1.1'
+__version__ = '1.2'
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
 	This file is part of Bluetube.
@@ -85,8 +85,12 @@ class CommandExecutor(object):
 class Bluetube(object):
 	''' The main class of the script. '''
 
+	CONFIG_FILE_NAME = 'bluetube.cfg'
 	CUR_DIR = os.path.dirname(os.path.realpath(__file__))
-	CONFIG_FILE = os.path.join(CUR_DIR, 'bluetube.cfg')
+	CONFIG_FILES = [os.path.join(CUR_DIR, CONFIG_FILE_NAME),
+					os.path.expanduser(os.path.join('~',
+													'.bluetube',
+													CONFIG_FILE_NAME))]
 	CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.template')
 	INDENTATION = 10
 	DOWNLOADER = 'youtube-dl'
@@ -101,7 +105,7 @@ class Bluetube(object):
 			f = feedparser.parse(feed_url)
 			title = f.feed.title
 			author = f.feed.author
-			feeds = Feeds(Bluetube.CUR_DIR)
+			feeds = Feeds(self._get_bt_dir())
 			if feeds.has_playlist(author, title):
 				Bcolors.error(u'The playlist {} by {} has already been existed'
 							.format(title, author))
@@ -114,7 +118,7 @@ class Bluetube(object):
 
 	def list_playlists(self):
 		''' list all playlists in RSS feeds '''
-		feeds = Feeds(Bluetube.CUR_DIR, 'r')
+		feeds = Feeds(self._get_bt_dir(), 'r')
 		all_playlists = feeds.get_all_playlists()
 		if len(all_playlists):
 			for a in all_playlists:
@@ -129,7 +133,7 @@ class Bluetube(object):
 
 	def remove_playlist(self, author, title):
 		''' remove a playlist be given title '''
-		feeds = Feeds(Bluetube.CUR_DIR)
+		feeds = Feeds(self._get_bt_dir())
 		if feeds.has_playlist(author, title):
 			feeds.remove_playlist(author, title)
 		else:
@@ -145,7 +149,7 @@ class Bluetube(object):
 		return False
 
 	def _run(self, verbose, show_all):
-		feeds = Feeds(Bluetube.CUR_DIR)
+		feeds = Feeds(self._get_bt_dir())
 		download_dir = self._fetch_download_dir()
 		playlists = self._get_playlists_with_urls(feeds, show_all)
 		if len(playlists):
@@ -237,7 +241,7 @@ class Bluetube(object):
 
 	def _get_configs(self):
 		parser = SafeConfigParser()
-		return None if len(parser.read(Bluetube.CONFIG_FILE)) == 0 else parser
+		return None if len(parser.read(Bluetube.CONFIG_FILES)) == 0 else parser
 
 	def _check_config_file(self):
 		ok = True
@@ -254,8 +258,10 @@ class Bluetube(object):
 
 		if not ok:
 			with open(Bluetube.CONFIG_TEMPLATE, 'r') as f:
-				Bcolors.error(u'You must create {} with the content below manually in the script directory:\n{}'
-							.format(Bluetube.CONFIG_FILE, f.read()))
+				Bcolors.error(u'You must create {} or {} with the content below manually:\n{}'
+							.format(Bluetube.CONFIG_FILES[0],
+									Bluetube.CONFIG_FILES[1],
+									f.read()))
 			return False
 
 		if not self.configs.has_option('video', 'codecs_options'):
@@ -420,12 +426,13 @@ class Bluetube(object):
 				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'
 							.format(bluetube_dir))
 
+	def _get_bt_dir(self):
+		return [Bluetube.CUR_DIR, os.path.expanduser(os.path.join('~', '.bluetube')), ]
 
 # ============================================================================ #
 
 
-if __name__ == '__main__':
-
+def main():
 	description='The script downloads youtube video as video or audio and sends to a bluetooth client device.'
 	epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth client.'
 	parser = argparse.ArgumentParser(prog='bluetube', description=description)
@@ -467,3 +474,6 @@ if __name__ == '__main__':
 	else:
 		bluetube.run(args.verbose, args.show_all)
 	print('Done')
+
+if __name__ == '__main__':
+	main()
