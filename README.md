@@ -113,16 +113,17 @@ The command user interface is a composition of options:
 
     usage: bluetube.py [-h] [--add ADD] [-t {a,v}] [--list]
                    [--remove REMOVE REMOVE] [--version]
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       --add ADD, -a ADD     add a URL to youtube playlist
       -t {a,v}              a type of a file you want to get (for --add)
       --list, -l            list all playlists
       --remove REMOVE REMOVE, -r REMOVE REMOVE
-                            remove a playlist by names of the author and the
-                            playlist
-      --show_all, -s        show all available feed items despite last update time
+                            remove a playlist by names of the author and the playlist
+      --send, -s            send already downloaded files
+      --show_all            show all available feed items despite last update time
+      --verbose, -v         print more information
       --version             show program's version number and exit
 
 If no option specified the script shows feeds to choose, downloads and sends

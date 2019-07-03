@@ -148,6 +148,20 @@ class Bluetube(object):
 				return self._run(verbose, show_all)
 		return False
 
+	def send(self):
+		'''send files from the bluetube download directory
+		to a bluetooth device'''
+		download_dir = self._fetch_download_dir()
+		if os.listdir(download_dir):
+			sender = self._get_sender(download_dir)
+			if sender.found:
+				self._send(sender, download_dir)
+			else:
+				Bcolors.warn('Your bluetooth device is not accessible.')
+		else:
+			Bcolors.warn('Nothing to send.')
+		self._return_download_dir(download_dir)
+
 	def _run(self, verbose, show_all):
 		feeds = Feeds(self._get_bt_dir())
 		download_dir = self._fetch_download_dir()
@@ -163,14 +177,20 @@ class Bluetube(object):
 			return False
 		return True
 
-	def _download_and_send_playlist(self, feeds, playlists, download_dir, verbose):
+	def _get_sender(self, download_dir):
+		'''create and return a sender'''
 		sender = BluetoothClient(self.configs.get('bluetooth', 'deviceID'),
-						download_dir)
+								download_dir)
 		if not sender.found:
 			Bcolors.warn('Your bluetooth device is not accessible.')
 			Bcolors.warn('The script will download files to {} directory.'
 						.format(download_dir))
 			raw_input('Press Enter to continue, Ctrl+c to interrupt.')
+
+		return sender
+
+	def _download_and_send_playlist(self, feeds, playlists, download_dir, verbose):
+		sender = self._get_sender(download_dir)
 		is_converter = self._check_vidoe_converter()
 		for ch in playlists:
 			if ch['urls'] == None:
@@ -425,6 +445,7 @@ class Bluetube(object):
 			except OSError:
 				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'
 							.format(bluetube_dir))
+				Bcolors.warn('\n  '.join(os.listdir(bluetube_dir)))
 
 	def _get_bt_dir(self):
 		return [Bluetube.CUR_DIR, os.path.expanduser(os.path.join('~', '.bluetube')), ]
@@ -453,7 +474,11 @@ def main():
 						help='remove a playlist by names of the author and the playlist',
 						type=lambda s: unicode(s, 'utf8'))
 
-	parser.add_argument('--show_all', '-s',
+	me_group.add_argument('--send', '-s',
+						help='send already downloaded files',
+						action='store_true')
+
+	parser.add_argument('--show_all',
 					action='store_true',
 					help='show all available feed items despite last update time')
 	parser.add_argument('--verbose', '-v',
@@ -471,6 +496,8 @@ def main():
 		bluetube.list_playlists()
 	elif args.remove:
 		bluetube.remove_playlist(args.remove[0].strip(), args.remove[1].strip())
+	elif args.send:
+		bluetube.send()
 	else:
 		bluetube.run(args.verbose, args.show_all)
 	print('Done')
