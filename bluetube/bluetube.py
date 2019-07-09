@@ -151,6 +151,7 @@ class Bluetube(object):
 	def send(self):
 		'''send files from the bluetube download directory
 		to a bluetooth device'''
+		self.configs = self._get_configs()
 		download_dir = self._fetch_download_dir()
 		if os.listdir(download_dir):
 			sender = self._get_sender(download_dir)
