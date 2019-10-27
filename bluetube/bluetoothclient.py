@@ -150,7 +150,7 @@ class BluetoothClient(Client):
                 if not self.connect():
                     break
                 else:
-                    self.send([fm, ])
+                    sent += self.send([fm, ])
             except KeyboardInterrupt:
                 Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
                                 .format(fm.decode('utf-8')))

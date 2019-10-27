@@ -339,7 +339,7 @@ class Bluetube(object):
 															e=Bcolors.ENDC)
 
 		while True:
-			i = raw_input('{}\n'.format(question))
+			i = raw_input('{}\n'.format(question)).decode('utf8')
 			if i in d:
 				return True
 			elif i in r:
@@ -446,10 +446,13 @@ class Bluetube(object):
 			except OSError:
 				Bcolors.warn('The download directory {} is not empty. Cannot delete it.'
 							.format(bluetube_dir))
-				Bcolors.warn('\n  '.join(os.listdir(bluetube_dir)))
+				Bcolors.warn('\n  '
+							.join(os.listdir(bluetube_dir))
+							.decode('utf-8'))
 
 	def _get_bt_dir(self):
-		return [Bluetube.CUR_DIR, os.path.expanduser(os.path.join('~', '.bluetube')), ]
+		return [Bluetube.CUR_DIR, os.path.expanduser(os.path.join('~',
+																'.bluetube')), ]
 
 # ============================================================================ #
 
