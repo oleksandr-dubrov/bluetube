@@ -24,7 +24,7 @@ In order to use the script, you must have the next installed.
 GNU packages:
 +   Python 2
 +   libbluetooth-dev - a bluetooth Python package.
-+   [_youtube-dl_](https://rg3.github.io/youtube-dl/) - a downloader.
++   [youtube-dl](https://rg3.github.io/youtube-dl/) - a downloader.
 +   ffmpeg - for converting files into a desirable format.
 
 Python packages:
@@ -225,7 +225,7 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
                 ],
             },
             {
-                "author": "author1":
+                "author": "author2":
                 "playlists: [
                     ...
                  ],

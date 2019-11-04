@@ -174,7 +174,7 @@ class BluetoothClient(Client):
         try:
             Client.disconnect(self)
             #  print(resp)
-        except (socket.errno, socket.timeout) as e:
+        except (socket.error, socket.timeout) as e:
             Bcolors.error(str(e))
             Bcolors.warn('Wait a minute.')
             time.sleep(60.0)
