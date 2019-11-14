@@ -106,11 +106,11 @@ class Feeds(object):
                 for jdx in range(len(feeds[idx]['playlists'])):
                     if feeds[idx]['playlists'][jdx]['title'] == title:
                         del feeds[idx]['playlists'][jdx]
-                    if len(feeds[idx]['playlists']) == 0:
-                        del feeds[idx]
-                    break
-                break
-        self.write_to_db(feeds)
+                        if len(feeds[idx]['playlists']) == 0:
+                            del feeds[idx]
+                        self.write_to_db(feeds)
+                        return
+
 
     def write_to_db(self, feeds):
         if 'feeds' not in self.db:

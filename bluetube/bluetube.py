@@ -426,6 +426,7 @@ class Bluetube(object):
 
 	def _send(self, sender, download_dir):
 		'''Send all files in the given directory'''
+		sent = []
 		files = os.listdir(download_dir)
 		if sender.found and sender.connect():
 				sent += sender.send(files)
