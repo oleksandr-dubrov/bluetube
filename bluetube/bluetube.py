@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__version__ = '1.2'
+__version__ = '1.3'
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
 	This file is part of Bluetube.
