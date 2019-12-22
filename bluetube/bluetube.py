@@ -35,6 +35,9 @@ from ConfigParser import SafeConfigParser
 from bcolors import Bcolors
 from feeds import Feeds
 
+import urllib2
+import StringIO
+
 try:
 	from bluetoothclient import BluetoothClient
 	import feedparser
@@ -364,9 +367,23 @@ class Bluetube(object):
 		'''get URLs from the RSS that the user will selected for every playlist'''
 		all_playlists = feeds.get_all_playlists()
 		playlists = []
+		headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
+		for chs in all_playlists:
+			print(u'Fetching updates for {}'.format(chs['author']))
+			for ch in chs['playlists']:
+				req = urllib2.Request(ch['url'], headers=headers)
+				response = urllib2.urlopen(req).read()
+				f = feedparser.parse(StringIO.StringIO(response))
+				ch['feedparser_data'] = f
+
+		# inform the user by voice that the update has ben done
+		self.executor.call(('spd-say', '--wait', 'beep, beep.'))
+
 		for chs in all_playlists:
 			print(chs['author'])
 			for ch in chs['playlists']:
+				print(u'{ind}{tit}'.format(ind=u' ' * Bluetube.INDENTATION, tit=ch['title']))                                
 				processed_pl = self._process_playlist(chs['author'], ch, show_all)
 				playlists.append(processed_pl)
 		return playlists
@@ -375,9 +392,8 @@ class Bluetube(object):
 		urls = []
 		is_need_update = False
 		new_last_update = last_update = ch['last_update']
-		print(u'{ind}{tit}'.format(ind=u' ' * Bluetube.INDENTATION, tit=ch['title']))
-		f = feedparser.parse(ch['url'])
-		for e in f.entries:
+
+		for e in ch['feedparser_data'].entries:
 			pub = e['published_parsed']
 			params = {'ind': 2 * Bluetube.INDENTATION * u' ',
 					'tit': e['title'],
