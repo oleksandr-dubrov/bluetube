@@ -156,14 +156,7 @@ class Bluetube(object):
 		to a bluetooth device'''
 		self.configs = self._get_configs()
 		download_dir = self._fetch_download_dir()
-		files = os.listdir(download_dir)
-		if files:
-			for fl in files:
-				if fl.endswith('.part') or fl.endswith('.ytdl'):
-					# remove:
-					#        partially downloaded files
-					#        youtube-dl service files
-					os.remove(os.path.join(download_dir, fl))
+		if os.listdir(download_dir):
 			sender = self._get_sender(download_dir)
 			if sender.found:
 				self._send(sender, download_dir)
@@ -444,6 +437,13 @@ class Bluetube(object):
 		'''Send all files in the given directory'''
 		sent = []
 		files = os.listdir(download_dir)
+		for fl in files:
+			if fl.endswith('.part') or fl.endswith('.ytdl'):
+				# remove:
+				#        partially downloaded files
+				#        youtube-dl service files
+				os.remove(os.path.join(download_dir, fl))
+		files = os.listdir(download_dir) # update the list of files
 		if sender.found and sender.connect():
 				sent += sender.send(files)
 				sender.disconnect()

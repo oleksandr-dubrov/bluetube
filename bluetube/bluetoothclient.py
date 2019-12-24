@@ -70,7 +70,7 @@ class BluetoothClient(Client):
                 filename = filename.decode('utf-8')
                 if len(filename) > 45:
                     filename = filename[:42] + '...'
-                sys.stdout.write(u'Sending "{}" to {}...'.format(filename,
+                sys.stdout.write(u'[sending] "{}" to {}...'.format(filename,
                                                                  self.name))
                 self.in_progress = True
             sys.stdout.flush()
