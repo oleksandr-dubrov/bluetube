@@ -18,12 +18,12 @@ class Bcolors:
 
     @staticmethod
     def warn(txt):
-        print(u'{}{}{}'.format(Bcolors.WARNING, txt, Bcolors.ENDC))
+        print('{}{}{}'.format(Bcolors.WARNING, txt, Bcolors.ENDC))
 
     @staticmethod
     def error(txt):
-        print(u'{}{}{}'.format(Bcolors.FAIL, txt, Bcolors.ENDC))
+        print('{}{}{}'.format(Bcolors.FAIL, txt, Bcolors.ENDC))
 
     @staticmethod
     def intense(txt):
-        print(u'{}{}{}'.format(Bcolors.BOLD, txt, Bcolors.ENDC))
+        print('{}{}{}'.format(Bcolors.BOLD, txt, Bcolors.ENDC))

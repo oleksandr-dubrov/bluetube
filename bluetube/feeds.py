@@ -1,7 +1,6 @@
 import os
 import shelve
-
-from bcolors import Bcolors
+from .bcolors import Bcolors
 
 
 '''

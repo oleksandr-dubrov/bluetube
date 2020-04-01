@@ -7,7 +7,7 @@ import bluetooth  # @UnresolvedImport
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client  # @UnresolvedImport
 
-from bcolors import Bcolors
+from .bcolors import Bcolors
 
 
 '''
@@ -69,8 +69,8 @@ class BluetoothClient(Client):
                 filename = filename.decode('utf-8')
                 if len(filename) > 45:
                     filename = filename[:42] + '...'
-                sys.stdout.write(u'[sending] "{}" to {}...'.format(filename,
-                                                                   self.name))
+                sys.stdout.write('[sending] "{}" to {}...'.format(filename,
+                                                                 self.name))
                 self.in_progress = True
             sys.stdout.flush()
 
@@ -137,11 +137,11 @@ class BluetoothClient(Client):
                 if resp:
                     pass  # print(resp)
                 else:
-                    print(u'\n{} sent.'.format(fm.decode('utf-8')))
+                    print('\n{} sent.'.format(fm.decode('utf-8')))
                     sent.append(full_path)
             except socket.error as e:
                 Bcolors.error(str(e))
-                Bcolors.error(u'{} didn\'t send'.format(fm.decode('utf-8')))
+                Bcolors.error('{} didn\'t send'.format(fm.decode('utf-8')))
                 print('Trying to reconnect...')
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
@@ -152,9 +152,8 @@ class BluetoothClient(Client):
                 else:
                     sent += self.send([fm, ])
             except KeyboardInterrupt:
-                Bcolors.error(u'Sending of {} stopped because '
-                              u'of KeyboardInterrupt'
-                              .format(fm.decode('utf-8')))
+                Bcolors.error('Sending of {} stopped because of KeyboardInterrupt'
+                                .format(fm.decode('utf-8')))
             finally:
                 self.in_progress = False
                 self.file_data_stream.close()
