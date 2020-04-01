@@ -22,7 +22,7 @@ That is why I use RSS feed that can get updates on Youtube playlists anonymously
 In order to use the script, you must have the next installed.
 
 GNU packages:
-+   Python 2
++   Python 3
 +   libbluetooth-dev - a bluetooth Python package.
 +   [youtube-dl](https://rg3.github.io/youtube-dl/) - a downloader.
 +   ffmpeg - for converting files into a desirable format.

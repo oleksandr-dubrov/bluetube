@@ -36,7 +36,7 @@ if [ ! -d "$DIRECTORY" ]; then
   mkdir "$DIRECTORY"
 fi
 
-RUNNER1=$'#!/bin/bash\n# Runner script for bluetube.py\npython2 '
+RUNNER1=$'#!/bin/bash\n# Runner script for bluetube.py\npython3 '
 RUNNER2=$'/bluetube.py "$@"'
 RUNNER=$RUNNER1$DIRECTORY$RUNNER2
 

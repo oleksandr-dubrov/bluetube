@@ -62,7 +62,7 @@ class CleanCommand(Command):
 
 setup(
     name="bluetube-cli",
-    version="1.5",
+    version="1.3",
     packages=find_packages(),
     package_data={
         '': ['*.py', '*.tmplt', ],
@@ -78,7 +78,7 @@ setup(
     license="GNU GPL",
     keywords="Youtube, bluetooth, RSS",
     url="https://github.com/oleksandr-dubrov/bluetube",
-    python_requires='>=2.7,<3.0',
+    python_requires='>3.4',
     install_requires=['feedparser', 'PyBluez', 'PyOBEX'],
     cmdclass={
         'clean': CleanCommand,

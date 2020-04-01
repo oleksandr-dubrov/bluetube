@@ -4,6 +4,8 @@
 *~
 .eclipse_user_dict.txt
 .project
-bluetube_cli.egg-info/*
+playground/*
+*.egg-info/*
 build/*
 dist/*
+taskboard.txt
