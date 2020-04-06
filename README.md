@@ -130,24 +130,14 @@ If no option specified the script shows feeds to choose, downloads and sends
 via bluetooth.
 
 
-7 Tests.
---------
-There are some unit tests provided. They are mostly related to the RSS feed.
-I don't have a goal to rich good code coverage, so the passed tests don't guarantee correct work of the script.
-Run test from *tests* directory:
-
-    python test_bluetube.py
-
-The tests are based on *unittests* and *mock*. Don't forget to install *mock* before running the tests.
-
-8 Development.
+7 Development.
 -------------
 
 This section contains information about the script internals.
 
-### 8.1 How to get the feed.
+### 7.1 How to get the feed.
 
-#### 8.1.1 Get RSS feed from the list.
+#### 7.1.1 Get RSS feed from the list.
 Let's look at the URL below:
 
 `https://www.youtube.com/watch?v=TcA4hhX81cg&list=PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_.`
@@ -155,15 +145,15 @@ Let's look at the URL below:
 The list ID that follows `&list=` is `PLqWhsEuaxvZt3bwQpJfecWH3g0xDyvJs_`.
 This ID should be placed in `https://www.youtube.com/feeds/videos.xml?playlist_id=YOURPLAYLISTIDHERE` instead of `YOURPLAYLISTIDHERE`.
 
-#### 8.1.2 Get RSS feed from the channel.
+#### 7.1.2 Get RSS feed from the channel.
 Replace CHANNELID in the link below with a Youtube channel ID. The channel ID can be found in the address bar of your browser
 
 `https://www.youtube.com/feeds/videos.xml?channel_id=CHANNELID`
 
 **Note.** Sometimes Youtube changes its rules and the URL patterns might become not valid. In this case, the script must be fixed.
 
-### 8.2 Commands.
-#### 8.2.1 *youtube-dl* downloads videos from youtube.
+### 7.2 Commands.
+#### 7.2.1 *youtube-dl* downloads videos from youtube.
 The tool receives the next options for any requested output format:
 
 +   *--ignore-config* - not read configuration files.
@@ -184,7 +174,7 @@ If audio is requested:
 **FYI**. In order to get a list of formats available for downloading URL use *-F*.
 For the time being, the most appropriate format is *'mp4[width<=640]+worstaudio'* - mp4 where the width is less or equals 640 and with the worst audio. In case there is no mp4 video with any audio track, then the audio is downloaded separately and merged into a *mkv* container.
 
-#### 8.2.2 *ffmpeg* converts video files.
+#### 7.2.2 *ffmpeg* converts video files.
 The tool is used to convert video into *3gp*. Youtube used to have *3gp* version, but now it doesn't.
 The tool receives the next options:
 
@@ -203,7 +193,7 @@ or
 >	output_format=3gp
 
 
-### 8.3 Data structure.
+### 7.3 Data structure.
 The data are stored in *shelve* DB in the script's directory of the script.
 The structure is represented in JSON.
 Underlining DB doesn't support unicode keys, so all keys must be strings.
@@ -235,18 +225,18 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
     }
 
 
-### 8.4 Error handling.
+### 7.4 Error handling.
 If a method fails it returns **False**. Otherwise - **True**.
 
 
-### 8.5 Bluetooth.
+### 7.5 Bluetooth.
 ------------------
 The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
 A few experiments showed that the most appropriate socket timeout is 120 seconds.
 Unlike the base implementation, the extended version of the method reads the data from the file stream rather than reading all file in memory before sending.
 
 
-### 8.5 Links.
+### 7.5 Links.
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
 [YouTube-dl](https://rg3.github.io/youtube-dl/).
@@ -260,20 +250,6 @@ Unlike the base implementation, the extended version of the method reads the dat
 [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/)
 
 [setuptools](https://setuptools.readthedocs.io/en/latest/)
-
-
-9 Troubleshooting
------------------
-### 9.1 For porting the Script to a non-GNU OS.
-On Windows if you see *UnicodeEncodeError: 'charmap' codec can't encode characters in position*, 
-it means that CMD cannot display a symbol. In this case try to use *install win-unicode-console*. However, the script is not developed for Windows.
-First, it should be installed:
-
-	pip install install win-unicode-console
-
-Once the package is installed, you should run the script like this:
-
-	python -mrun bluetube.py
 
 
 0 TODO

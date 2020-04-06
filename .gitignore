@@ -7,3 +7,6 @@ project
 .project
 playground/*
 taskboard.txt
+bluetube_cli.egg-info/*
+build/*
+dist/*
