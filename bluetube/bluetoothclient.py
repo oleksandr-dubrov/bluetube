@@ -38,7 +38,8 @@ class BluetoothClient(Client):
     def __init__(self, device_id, bluetube_dir):
         self.found = self._find_device(device_id)
         if self.found:
-            print("Checking connection to \"%s\" on %s" % (self.name, self.host))
+            print("Checking connection to \"%s\" on %s"
+                  % (self.name, self.host))
             # Client is old style class, so don't use super
             Client.__init__(self, self.host, self.port)
             self.bluetube_dir = bluetube_dir
@@ -47,7 +48,7 @@ class BluetoothClient(Client):
             Bcolors.error('Device {} is not found.'.format(device_id))
 
     def _find_device(self, device_id):
-        service_matches = bluetooth.find_service(address = device_id)
+        service_matches = bluetooth.find_service(address=device_id)
         if len(service_matches) == 0:
             Bcolors.error("Couldn't find the service.")
             return False
@@ -71,11 +72,11 @@ class BluetoothClient(Client):
                 if len(filename) > 45:
                     filename = filename[:42] + '...'
                 sys.stdout.write(u'[sending] "{}" to {}...'.format(filename,
-                                                                 self.name))
+                                                                   self.name))
                 self.in_progress = True
             sys.stdout.flush()
 
-    def _put(self, name, file_data, header_list = ()):  # @UnusedVariable
+    def _put(self, name, file_data, header_list=()):  # @UnusedVariable
         '''Modify the method from the base class
         to allow getting data from the file stream.'''
 
@@ -113,7 +114,8 @@ class BluetoothClient(Client):
                     return
             else:
                 request = requests.Put_Final()
-                request.add_header(headers.End_Of_Body(data, False), max_length)
+                request.add_header(headers.End_Of_Body(data, False),
+                                   max_length)
                 self.socket.sendall(request.encode())
 
                 response = self.response_handler.decode(self.socket)
@@ -133,7 +135,7 @@ class BluetoothClient(Client):
             try:
                 resp = self.put(fm.decode('utf-8'),
                                 full_path,
-                                callback=lambda resp : self._callback(resp, fm))
+                                callback=lambda resp: self._callback(resp, fm))
                 if resp:
                     pass  # print(resp)
                 else:
@@ -152,8 +154,9 @@ class BluetoothClient(Client):
                 else:
                     sent += self.send([fm, ])
             except KeyboardInterrupt:
-                Bcolors.error(u'Sending of {} stopped because of KeyboardInterrupt'
-                                .format(fm.decode('utf-8')))
+                Bcolors.error(u'Sending of {} stopped because '
+                              u'of KeyboardInterrupt'
+                              .format(fm.decode('utf-8')))
             finally:
                 self.in_progress = False
                 self.file_data_stream.close()

@@ -27,7 +27,7 @@ class Feeds(object):
     def __init__(self, db_dirs, mode='rw'):
         self.db = None
         self.db_file = os.path.join(db_dirs[0], 'bluetube.dat')
-        if not ( os.path.exists(self.db_file) and os.path.isfile(self.db_file)):
+        if not (os.path.exists(self.db_file) and os.path.isfile(self.db_file)):
             self.db_file = os.path.join(db_dirs[1], 'bluetube.dat')
         if mode == 'r':
             self.db = self._create_ro_connector()
@@ -80,10 +80,10 @@ class Feeds(object):
     def add_playlist(self, author, title, url, out_format):
         feeds = self.get_all_playlists()
 
-        # create a playlist 
+        # create a playlist
         playlist = {"title": title,
                     "url": url,
-                    "last_update" : 0,
+                    "last_update": 0,
                     "out_format": out_format}
 
         # insert the playlist into the author
@@ -110,7 +110,6 @@ class Feeds(object):
                             del feeds[idx]
                         self.write_to_db(feeds)
                         return
-
 
     def write_to_db(self, feeds):
         if 'feeds' not in self.db:
