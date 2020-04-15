@@ -111,8 +111,12 @@ Alternatively, you can start the Python script directly from the bluetube direct
 -------------------------
 The command user interface is a composition of options:
 
-    usage: bluetube.py [-h] [--add ADD] [-t {a,v}] [--list]
-                   [--remove REMOVE REMOVE] [--version]
+    usage: bluetube [-h] [--add ADD] [-t {a,v}] [--list] [--remove REMOVE REMOVE]
+                    [--send] [--show_all] [--yes] [--no_noise] [--verbose]
+                    [--version]
+
+    The script downloads youtube video as video or audio and sends to a bluetooth
+    client device.
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -120,11 +124,15 @@ The command user interface is a composition of options:
       -t {a,v}              a type of a file you want to get (for --add)
       --list, -l            list all playlists
       --remove REMOVE REMOVE, -r REMOVE REMOVE
-                            remove a playlist by names of the author and the playlist
+                            remove a playlist by names of the author and the
+                            playlist
       --send, -s            send already downloaded files
       --show_all            show all available feed items despite last update time
+      --yes, -y             answer positive to all questions
+      --no_noise            don't beep when feeds updated
       --verbose, -v         print more information
       --version             show program's version number and exit
+
 
 If no option specified the script shows feeds to choose, downloads and sends
 via bluetooth.
