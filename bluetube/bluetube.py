@@ -412,6 +412,9 @@ class Bluetube(object):
                     ch['feedparser_data'] = f
                 except urllib2.HTTPError as e:
                     print ('{}. {} ({})'.format(e, ch['title'], ch['url']))
+                except urllib2.URLError as e:
+                    print ('FATAL. {}. No Internet connection'.format(e))
+                    sys.exit(1)
 
         if not self.no_noise:
             # inform the user by voice that the update has been done
