@@ -141,7 +141,7 @@ class Bluetube(object):
                     o = u'{}{}'.format(u' ' * Bluetube.INDENTATION, c['title'])
                     f = (o, time.strftime('%Y-%m-%d %H:%M:%S',
                                           time.localtime(c['last_update'])))
-                    o = u'{} ({})'.format(f)
+                    o = u'{} ({})'.format(*f)
                     print(o)
         else:
             Bcolors.warn('The list of playlist is empty.'
