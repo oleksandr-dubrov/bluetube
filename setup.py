@@ -60,13 +60,10 @@ class CleanCommand(Command):
 
 setup(
     name="bluetube-cli",
-    version="1.2",
+    version="1.4",
     packages=find_packages(),
     package_data={
         '': ['*.py', 'bt_config.template', ],
-    },
-    exclude_package_data={
-        'tests': ['*'],
     },
     entry_points={
         "console_scripts": [

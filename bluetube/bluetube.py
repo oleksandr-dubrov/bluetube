@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__version__ = '1.3'
+__version__ = '1.4'
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
     This file is part of Bluetube.
@@ -110,6 +110,12 @@ class Bluetube(object):
 
     def set_yes(self, yes):
         self.yes = yes
+
+    def migrate_db(self):
+        '''Migrate DB to Python compatible one'''
+        feeds = Feeds(self._get_bt_dir())
+        p = feeds.migrate_db()
+        print('Python 3 compatible DB is here - {}'.format(p))
 
     def add_playlist(self, url, out_format):
         ''' add a new playlists to RSS feeds '''
@@ -571,6 +577,9 @@ def main():
     parser.add_argument('--version', action='version',
                         version='%(prog)s {}'.format(__version__))
 
+    parser.add_argument('--migrate_db', action='store_true',
+                        help='migrate DB to Python 3')
+
     bluetube = Bluetube()
     args = parser.parse_args()
     bluetube.set_yes(args.yes)
@@ -585,6 +594,8 @@ def main():
                                  args.remove[1].strip())
     elif args.send:
         bluetube.send()
+    elif args.migrate_db:
+        bluetube.migrate_db()
     else:
         bluetube.run(args.verbose, args.show_all)
     print('Done')

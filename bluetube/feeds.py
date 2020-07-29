@@ -127,3 +127,22 @@ class Feeds(object):
                         ch['last_update'] = info['published_parsed']
                         self.write_to_db(feeds)
                         return
+
+    def migrate_db(self):
+        '''migrate db to Python 3'''
+        import sys
+        assert sys.version_info.major == 2, "Cannot migrate. Use Python 2."
+
+        import dbhash
+        import dumbdbm
+
+        feeds = dbhash.open(self.db_file, flag='r').get('feeds', [])
+
+        new_db_filepath = self.db_file + '.db'
+        new_feeds = dumbdbm.open(new_db_filepath)
+        new_feeds['feeds'] = feeds
+        new_feeds.close()
+
+        return new_db_filepath
+
+
