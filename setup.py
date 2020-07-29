@@ -65,7 +65,7 @@ setup(
     version="1.3",
     packages=find_packages(),
     package_data={
-        '': ['*.py', '*.tmplt', ],
+        '': ['*.py', 'bt_config.template', ],
     },
     entry_points={
         "console_scripts": [

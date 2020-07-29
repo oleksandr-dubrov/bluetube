@@ -1,6 +1,7 @@
 import os
 import shelve
 from .bcolors import Bcolors
+from .model import Playlist
 
 
 '''
@@ -128,27 +129,78 @@ class Feeds(object):
                         self.write_to_db(feeds)
                         return
 
-    def migrate_db(self):
-        '''migrate DB to Python 3'''
-        import sys
-        assert sys.version_info.major == 2, "Cannot migrate. Use Python 2."
 
-        import dbhash
-        import dumbdbm
-        import whichdb
-        import pickle
+class Feeds2(object):
+    '''Manages RSS feeds in the shelve database'''
 
-        assert whichdb.whichdb(self.db_file) == 'dbhash'
-        feeds_pickle = dbhash.open(self.db_file, flag='r').get('feeds', [])
+    DBFILENAME = 'bluetube.dat'
 
-        feeds = pickle.loads(feeds_pickle)
-        for f in feeds:
-            for p in f['playlists']:
-                p['profiles'] = ['bluetube_2']
+    def __init__(self, db_dir):
+        self.db_file = os.path.join(db_dir, Feeds2.DBFILENAME)
+        self._feeds = []
 
-        new_db_filepath = os.path.splitext(self.db_file)[0] + '.db'
-        new_feeds = dumbdbm.open(new_db_filepath)
-        new_feeds['feeds'] = pickle.dumps(feeds)
-        new_feeds.close()
+    def add_playlist(self, author, title, url, out_format):
+        if not len(self._feeds):
+            self._pull()
+        pl = Playlist(title, url)
+        pl.set_output_format_type(out_format)
+        self._feeds[author].append(pl)
+        self._push()
 
-        return new_db_filepath
+    def get_all_playlists(self):
+        if not len(self._feeds):
+            self._pull()
+        return self._feeds
+    
+    def get_authors(self):
+        if not len(self._feeds):
+            self._pull()
+        return [a['author'] for a in self._feeds]
+
+    def _pull(self):
+        'pull data from the DB'
+        db = self._create_ro_connector()
+        if db:
+            raw_feeds = db.get('feeds', [])
+            for author in raw_feeds:
+                for raw_pl in author['playlists']:
+                    pl = Playlist(raw_pl['title'], raw_pl['url'])
+                    pl.set_last_update(raw_pl['last_update'])
+                    pl.set_output_format_type(raw_pl['out_format'])
+                    self._feeds[author].append(pl)
+            self._close(db)
+
+    def _push(self):
+        'push data to the db'
+        if not len(self._feeds):
+            db = self._create_rw_connector()
+            if db:
+                res = []
+                for author, pllst in self._feeds:
+                    o = {'author': author, 'playlists': []}
+                    for l in pllst:
+                        o['playlists'].append({'title': l.title,
+                                               'url': l.url,
+                                               'last_update': l.last_update,
+                                               'out_format': l.output_format,
+                                               'profile': l.profile})
+                    res.append(o)
+                db['feeds'] = res
+                self._close(db)
+
+    def _create_rw_connector(self):
+        '''create DB connector in read/write mode'''
+        return shelve.open(self.db_file, flag='c', writeback=False)
+
+    def _create_ro_connector(self):
+        '''create DB connector in read-only mode'''
+        if not ( os.path.exists(self.db_file) and os.path.isfile(self.db_file)):
+            return None
+        return shelve.open(self.db_file, flag='r')
+
+    def _close(self, db):
+        try:
+            db.close()
+        except ValueError as e:
+            Bcolors.error('Probably your changes were lost. Try again')
+            raise e

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 
@@ -37,7 +37,7 @@ from configparser import SafeConfigParser
 from .bcolors import Bcolors
 from .feeds import Feeds
 
-import urllib.request, urllib.error, urllib.parse
+import urllib
 import io
 
 try:
