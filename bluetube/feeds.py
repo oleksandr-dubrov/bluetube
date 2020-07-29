@@ -1,7 +1,7 @@
 import os
 import shelve
-from .bcolors import Bcolors
-from .model import Playlist
+from bcolors import Bcolors
+from model import Playlist
 
 
 '''
@@ -133,7 +133,7 @@ class Feeds(object):
 class Feeds2(object):
     '''Manages RSS feeds in the shelve database'''
 
-    DBFILENAME = 'bluetube.dat'
+    DBFILENAME = 'bluetube.db'
 
     def __init__(self, db_dir):
         self.db_file = os.path.join(db_dir, Feeds2.DBFILENAME)

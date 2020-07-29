@@ -7,7 +7,7 @@ import bluetooth  # @UnresolvedImport
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client  # @UnresolvedImport
 
-from .bcolors import Bcolors
+from bcolors import Bcolors
 
 
 '''
