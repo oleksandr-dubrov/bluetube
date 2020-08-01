@@ -2,8 +2,8 @@ import dbm
 import os
 import shelve
 
-from bcolors import Bcolors
-from model import Playlist
+from bluetube.bcolors import Bcolors
+from bluetube.model import Playlist
 
 '''
     This file is part of Bluetube.

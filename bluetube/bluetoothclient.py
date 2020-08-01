@@ -3,10 +3,10 @@ import socket
 import sys
 import time
 
-import bluetooth  # @UnresolvedImport
-from bcolors import Bcolors
+import bluetooth
+from bluetube.bcolors import Bcolors
 from PyOBEX import headers, requests, responses
-from PyOBEX.client import Client  # @UnresolvedImport
+from PyOBEX.client import Client
 
 '''
     This file is part of Bluetube.

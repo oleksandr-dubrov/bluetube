@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from setuptools import Command, find_packages, setup
+from setuptools import Command, setup
 
 
 def onerror(func, path, exc_info):
@@ -59,11 +59,20 @@ class CleanCommand(Command):
         remove_pyc()
 
 
-print (find_packages())
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name="bluetube-cli",
     version="2.0",
-    packages=find_packages(),
+    author="Olexandr Dubrov",
+    author_email="olexandr.dubrov@gmail.com",
+    description="to get video from Youtube by RSS and send via bluetooth",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/oleksandr-dubrov/bluetube",
+    license="GNU GPL",
+    packages=['bluetube'],
     package_data={
         '': ['*.py', ],
     },
@@ -72,18 +81,16 @@ setup(
             "bluetube=bluetube.bluetube:main",
             ]
     },
-    author="Olexandr Dubrov",
-    author_email="olexandr.dubrov@gmail.com",
-    description="a script that downloads video from Youtube by URLs get from RSS and sends via bluetooth",
-    license="GNU GPL",
     keywords="Youtube, bluetooth, RSS",
-    url="https://github.com/oleksandr-dubrov/bluetube",
-    python_requires='>3.4, <4',
+    python_requires='>3.5',
     install_requires=['feedparser', 'PyBluez', 'PyOBEX', 'toml'],
     cmdclass={
         'clean': CleanCommand,
     },
     classifiers=[
         'Programming Language :: Python :: 3.7',
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'Operating System :: POSIX :: Linux'
     ],
 )

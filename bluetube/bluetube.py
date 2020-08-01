@@ -34,11 +34,11 @@ import webbrowser
 from configparser import SafeConfigParser
 
 import feedparser
-from bcolors import Bcolors
-from bluetoothclient import BluetoothClient
-from feeds import Feeds
-from model import OutputFormatType
-from profiles import Profiles, ProfilesException
+from bluetube.bcolors import Bcolors
+from bluetube.bluetoothclient import BluetoothClient
+from bluetube.feeds import Feeds
+from bluetube.model import OutputFormatType
+from bluetube.profiles import Profiles, ProfilesException
 
 
 class CommandExecutor(object):
