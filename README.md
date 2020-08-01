@@ -215,8 +215,9 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
                       "title": "the name of an entity",
                       "url": "url of the entity",
                       "last_update": 1548951984,
-                      "out_format": "a" or "v",
+                      "out_format": "audio" or "video",
                       "profile": "_default"
+                      ...
                    },
                    {
                        ...
@@ -259,6 +260,8 @@ Unlike the base implementation, the extended version of the method reads the dat
 [PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/).
 
 [setuptools](https://setuptools.readthedocs.io/en/latest/).
+
+[TOML](https://pypi.org/project/toml/).
 
 
 0 TODO

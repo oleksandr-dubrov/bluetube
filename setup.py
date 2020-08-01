@@ -1,8 +1,7 @@
 import os
 import shutil
-from setuptools import Command
-from setuptools import find_packages
-from setuptools import setup
+
+from setuptools import Command, find_packages, setup
 
 
 def onerror(func, path, exc_info):
@@ -60,12 +59,13 @@ class CleanCommand(Command):
         remove_pyc()
 
 
+print (find_packages())
 setup(
     name="bluetube-cli",
-    version="1.3",
+    version="2.0",
     packages=find_packages(),
     package_data={
-        '': ['*.py', 'bt_config.template', ],
+        '': ['*.py', ],
     },
     entry_points={
         "console_scripts": [
@@ -78,9 +78,12 @@ setup(
     license="GNU GPL",
     keywords="Youtube, bluetooth, RSS",
     url="https://github.com/oleksandr-dubrov/bluetube",
-    python_requires='>3.4',
-    install_requires=['feedparser', 'PyBluez', 'PyOBEX'],
+    python_requires='>3.4, <4',
+    install_requires=['feedparser', 'PyBluez', 'PyOBEX', 'toml'],
     cmdclass={
         'clean': CleanCommand,
     },
+    classifiers=[
+        'Programming Language :: Python :: 3.7',
+    ],
 )

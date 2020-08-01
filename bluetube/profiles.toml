@@ -1,0 +1,33 @@
+# Bluetube. Profiles.
+# TOML. https://pypi.org/project/toml/
+
+
+# Default profile.
+# Use it as an example for new profiles as well.
+[_default]
+
+    [_default.download]
+    # define video format to be download based on youtube-dl's format selection
+    # note: make sure the codec for this format is available in the system
+    # working examples:
+    #    mp4[width<=640]+worstaudio
+    # video_format=FORMAT_IS_OPTIONAL
+
+    [_default.bluetooth]
+    # enter your device ID in the line below
+    # deviceID=YOUR_RECEIVER_DEVICE_ID
+
+    [_default.video]
+    # configure audio and video codecs like in the command line below
+    # working examples:
+    #    codecs_options=-vcodec h263 -acodec aac -s 352x288
+    # codecs_options=OPTIONS
+    # set a video format e.g 3gp
+    # video_format=FORMAT
+
+    # working examples:
+    #    output_format=3gp
+    # output_format=FORMAT_IS_REQUIRED
+
+    # save downloaded and converted video here:
+    # local=PATH

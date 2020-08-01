@@ -1,7 +1,4 @@
 '''
-Created on Jul 29, 2020
-
-@author: olexandr
 
     This file is part of Bluetube.
 
@@ -44,17 +41,29 @@ class Playlist(object):
         self._last_update = None
         self._output_format = OutputFormatType.audio
         self._profile = None
-
-    def set_last_update(self, last_update):
-        self._last_update = last_update
+        self._feedparser_data = None
+        self._failed_links = []
+        self._links = []
 
     def set_output_format_type(self, output_format_type):
         if isinstance(output_format_type, str):
-            t = {'a': OutputFormatType.audio,
-                 'v': OutputFormatType.video}[output_format_type]
+            t = {'audio': OutputFormatType.audio,
+                 'video': OutputFormatType.video}[output_format_type]
         else:
             t = output_format_type
         self._output_format = t
+
+    @property
+    def feedparser_data(self):
+        return self._feedparser_data
+
+    @feedparser_data.setter
+    def feedparser_data(self, fd):
+        self._feedparser_data = fd
+
+    @feedparser_data.deleter
+    def feedparser_data(self):
+        self._feedparser_data = None
 
     @property
     def title(self):
@@ -68,6 +77,10 @@ class Playlist(object):
     def last_update(self):
         return self._last_update
 
+    @last_update.setter
+    def last_update(self, lu):
+        self._last_update = lu
+
     @property
     def output_format(self):
         return self._output_format
@@ -75,3 +88,28 @@ class Playlist(object):
     @property
     def profile(self):
         return self._profile
+
+    @property
+    def links(self):
+        self._links.extend(self.failed_links)
+        return self._links
+
+    @links.setter
+    def links(self, l):
+        self._links = l
+
+    @links.deleter
+    def links(self):
+        self._links = []
+
+    @property
+    def failed_links(self):
+        return self._failed_links
+
+    @failed_links.setter
+    def failed_links(self, fl):
+        self._failed_links = fl
+
+    @failed_links.deleter
+    def failed_links(self):
+        self._failed_links.clear()

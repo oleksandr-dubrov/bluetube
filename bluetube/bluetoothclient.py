@@ -4,11 +4,9 @@ import sys
 import time
 
 import bluetooth  # @UnresolvedImport
+from bcolors import Bcolors
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client  # @UnresolvedImport
-
-from bcolors import Bcolors
-
 
 '''
     This file is part of Bluetube.
