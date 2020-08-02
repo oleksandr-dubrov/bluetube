@@ -91,7 +91,7 @@ class Playlist(object):
 
     @property
     def links(self):
-        self._links.extend(self.failed_links)
+        # dont! self._links.extend(self.failed_links)
         return self._links
 
     @links.setter
@@ -106,9 +106,8 @@ class Playlist(object):
     def failed_links(self):
         return self._failed_links
 
-    @failed_links.setter
-    def failed_links(self, fl):
-        self._failed_links = fl
+    def add_failed_links(self, fl):
+        self._failed_links.append(fl)
 
     @failed_links.deleter
     def failed_links(self):

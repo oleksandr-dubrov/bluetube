@@ -60,7 +60,6 @@ class CommandExecutor(object):
                 stdout = open(os.devnull, 'wb')
             if suppress_stderr:
                 stderr = open(os.devnull, 'wb')
-            #print(*args, )
             return_code = subprocess.call(args,
                                         env=call_env,
                                         stdout=stdout,
@@ -79,7 +78,7 @@ class CommandExecutor(object):
         return not self.call((name,
                             '{}version'.format(dashes * '-')),
                             suppress_stdout=True,
-                            suppress_stderr=True);
+                            suppress_stderr=True)
 
 
 class CLI(object):
@@ -129,7 +128,7 @@ class CLI(object):
                       .format(os.path.basename(filepath)))
         Bcolors.warn('Command: \n{}'.format(' '.join(args)))
         Bcolors.warn('Check {} after the script is done.'
-                    .format(tempfile.gettempdir()))
+                    .format(where))
 
     def ask(self, feed_entry):
         '''ask if perform something'''
@@ -155,7 +154,8 @@ class CLI(object):
                 webbrowser.open(link, new=2)
             elif i in open_player:
                 print('Opening the link by {}...'.format(CLI.MEDIA_PLAYER))
-                self._executor.call((CLI.MEDIA_PLAYER, link))
+                self._executor.call((CLI.MEDIA_PLAYER, link),
+                                    suppress_stderr=True)
             else:
                 msg = '{}{} to download, {} to reject, {} to open in a browser'
                 params = (Bcolors.FAIL, d[0], r[0], open_browser[0])
@@ -204,7 +204,7 @@ class Bluetube(object):
     CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.template')
     DOWNLOADER = 'youtube-dl'
     CONVERTER = 'ffmpeg'
-    ACCESS_MODE = 0x744
+    ACCESS_MODE = 0o744
     NOT_CONV_DIR = 'not_converted' # keep files that failed to be converted here
 
 
@@ -275,6 +275,7 @@ class Bluetube(object):
             return [self._process_playlist(pl, show_all)
                     for pl in pls['playlists']]
         pls = [proccess_playlist(pl) for pl in pls]
+        pls = [p for pl in pls for p in pl] # make the list flat
 
         try:
             profiles = Profiles(self._get_bt_dir())
@@ -287,9 +288,9 @@ class Bluetube(object):
             return
         for pl in pls:
             if pl.output_format is OutputFormatType.audio:
-                dl_op = {} # no specific option for audio
+                dl_op = profiles.get_audio_options(pl.profile)
             elif pl.output_format is OutputFormatType.video:
-                dl_op = profiles.get_download_oprions(pl.profile)
+                dl_op = profiles.get_video_options(pl.profile)
             else:
                 assert 0, 'unexpected output format type'
             self._download(pl, dl_op, download_dir)
@@ -446,7 +447,7 @@ class Bluetube(object):
     def _get_rss_fetcher(self):
         '''make and return a function to get RSS'''
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        
+
         def fetch_rss(pl):
             '''get URLs from the RSS
             that the user will selected for every playlist'''
@@ -482,20 +483,21 @@ class Bluetube(object):
         # create a temporal directory to download a file by its link
         # to be sure that the file belongs to the link 
         tmp = os.path.join(download_dir, 'tmp')
-        os.makedirs(tmp, Bluetube.ACCESS_MODE)
+        os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
 
         for idx in range(len(pl.links)):
             status = self.executor.call(options + (pl.links[idx],), cwd=tmp)
             if status:
-                pl.add_failed_link(pl.links[idx])
+                pl.add_failed_links(pl.links[idx])
                 pl.links[idx] = None
-                for f in os.listdir(tmp): # clear the download directory
-                    os.unlink(f)
+                for f in os.listdir(tmp): # clear the tmp directory
+                    os.unlink(os.path.join(tmp, f))
             else:
                 fs = os.listdir(tmp)
                 assert len(fs) == 1, 'one link should march one file in tmp'
-                new_link = os.path.join(download_dir, os.path.basename(fs))
-                os.rename(fs, new_link) # move the file out of the tmp directory
+                new_link = os.path.join(download_dir, os.path.basename(fs[0]))
+                # move the file out of the tmp directory
+                os.rename(os.path.join(tmp, fs[0]), new_link)
                 pl.links[idx] = new_link
         os.rmdir(tmp)
 

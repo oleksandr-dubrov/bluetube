@@ -38,18 +38,18 @@ class Profiles(object):
         except FileNotFoundError as e:
             raise ProfilesException(e)
 
-    def get_download_options(self, profile):
-        if self._profiles.has_key(profile):
-            return self._profiles[profile].get('download', {})
+    def get_audio_options(self, profile):
+        if profile in self._profiles:
+            return self._profiles[profile].get('audio', {})
         return None
 
     def get_video_options(self, profile):
-        if self._profiles.has_key(profile):
+        if profile in self._profiles:
             return self._profiles[profile].get('video', {})
         return None
 
     def get_sender_options(self, profile):
-        if self._profiles.has_key(profile):
+        if profile in self._profiles:
             return self._profiles[profile].get('bluetooth')
 
 
