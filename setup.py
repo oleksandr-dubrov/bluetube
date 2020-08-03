@@ -2,6 +2,7 @@ import os
 import shutil
 
 from setuptools import Command, setup
+from bluetube import __version__
 
 
 def onerror(func, path, exc_info):
@@ -64,7 +65,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="bluetube-cli",
-    version="2.0",
+    version=__version__,
     author="Olexandr Dubrov",
     author_email="olexandr.dubrov@gmail.com",
     description="to get video from Youtube by RSS and send via bluetooth",
@@ -87,6 +88,7 @@ setup(
     cmdclass={
         'clean': CleanCommand,
     },
+    test_suite="tests",
     classifiers=[
         'Programming Language :: Python :: 3.7',
         'Development Status :: 4 - Beta',

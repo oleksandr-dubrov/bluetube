@@ -1,4 +1,9 @@
-PROFILES = '''
+# This is a test DB.
+# It has 2 authors with 1 + 9 = 10 playlists.
+# NOTE. It it is changed, *mocked_data.zip*
+#     and all asserts related to this should be updated.
+
+FAKE_DB = '''
 [{"playlists": [
     {"url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCemEkBcOpHNi1yZ4UjVi9EA",
     "out_format": "audio",

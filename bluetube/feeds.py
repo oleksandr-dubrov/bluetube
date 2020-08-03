@@ -44,7 +44,7 @@ class Feeds(object):
         if not len(self._feeds):
             self._pull()
         return self._feeds
-    
+
     def get_authors(self):
         if not len(self._feeds):
             self._pull()
@@ -75,13 +75,14 @@ class Feeds(object):
                 res = []
                 for author, pllst in self._feeds:
                     o = {'author': author, 'playlists': []}
-                    for l in pllst:
-                        o['playlists'].append({'title': l.title,
-                                               'url': l.url,
-                                               'last_update': l.last_update,
-                                               'out_format': l.output_format,
-                                               'profile': l.profile,
-                                               'failed_links': l.failed_links})
+                    for ls in pllst:
+                        o['playlists'].append(
+                            {'title': ls.title,
+                             'url': ls.url,
+                             'last_update': ls.last_update,
+                             'out_format': ls.output_format,
+                             'profile': ls.profile,
+                             'failed_links': ls.failed_links})
                     res.append(o)
                 db['feeds'] = res
                 self._close(db)

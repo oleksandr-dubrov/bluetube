@@ -32,7 +32,7 @@ class OutputFormatType(Enum):
 
 class Playlist(object):
     '''
-    Represents a playlist or channel. 
+    Represents a playlist or channel.
     '''
 
     def __init__(self, title, url):
@@ -99,8 +99,8 @@ class Playlist(object):
         return self._links
 
     @links.setter
-    def links(self, l):
-        self._links = l
+    def links(self, ln):
+        self._links = ln
 
     @links.deleter
     def links(self):

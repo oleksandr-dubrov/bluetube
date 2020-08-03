@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
-__version__ = '1.5'
-__author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
-__license__ = '''
+'''
     This file is part of Bluetube.
 
     Bluetube is free software: you can redistribute it and/or modify
@@ -34,6 +32,8 @@ import webbrowser
 from configparser import SafeConfigParser
 
 import feedparser
+
+from bluetube import __version__
 from bluetube.bcolors import Bcolors
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.feeds import Feeds
@@ -46,9 +46,10 @@ class CommandExecutor(object):
 
     def __init__(self, verbose):
         self._verbose = verbose
-        
-    def call(self, args, cwd=None, suppress_stdout=False, suppress_stderr=False):
-        if cwd == None:
+
+    def call(self, args, cwd=None,
+             suppress_stdout=False, suppress_stderr=False):
+        if cwd is None:
             cwd = os.getcwd()
         call_env = os.environ
         return_code = 0
@@ -61,10 +62,10 @@ class CommandExecutor(object):
             if suppress_stderr:
                 stderr = open(os.devnull, 'wb')
             return_code = subprocess.call(args,
-                                        env=call_env,
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cwd=cwd)
+                                          env=call_env,
+                                          stdout=stdout,
+                                          stderr=stderr,
+                                          cwd=cwd)
         except OSError as e:
             return_code = e.errno
             print(e.strerror)
@@ -75,10 +76,9 @@ class CommandExecutor(object):
     def does_command_exist(self, name, dashes=2):
         '''call a command with the given name
         and expects that it has option --version'''
-        return not self.call((name,
-                            '{}version'.format(dashes * '-')),
-                            suppress_stdout=True,
-                            suppress_stderr=True)
+        return not self.call((name, '{}version'.format(dashes * '-')),
+                             suppress_stdout=True,
+                             suppress_stderr=True)
 
 
 class CLI(object):
@@ -89,7 +89,7 @@ class CLI(object):
 
     def __init__(self, verbose):
         self._executor = CommandExecutor(verbose)
-        self._is_player = self._executor.does_command_exist(CLI.MEDIA_PLAYER)
+        self._is_player = None
 
     def warn(self, msg):
         '''warn the user by an arbitrary message'''
@@ -97,7 +97,7 @@ class CLI(object):
 
     def inform(self, msg):
         '''inform the user by an arbitrary message'''
-        print (msg)
+        print(msg)
 
     def feed_is_feaching(self, pl):
         '''a feed is about to be fetched'''
@@ -119,16 +119,15 @@ class CLI(object):
                       .format(downloader))
 
     def download_dir_not_empty(self, download_dir):
-        Bcolors.warn('The download directory {} is not empty. Cannot delete it.'
-                    .format(download_dir))
+        msg = 'The download directory {} is not empty. Cannot delete it.'
+        Bcolors.warn(msg.format(download_dir))
         Bcolors.warn('\n  '.join(os.listdir(download_dir)))
 
     def failed_to_convert(self, args, filepath, where):
         Bcolors.error('Failed to convert the file {}.'
                       .format(os.path.basename(filepath)))
         Bcolors.warn('Command: \n{}'.format(' '.join(args)))
-        Bcolors.warn('Check {} after the script is done.'
-                    .format(where))
+        Bcolors.warn('Check {} after the script is done.'.format(where))
 
     def ask(self, feed_entry):
         '''ask if perform something'''
@@ -139,6 +138,10 @@ class CLI(object):
         s = ['s', 'S', 'і', 'І']
         open_browser = ['b', 'B', 'и', 'И']
         open_player = ['p', 'P', 'З', 'з']
+
+        if self._is_player is None:
+            self._is_player = \
+                self._executor.does_command_exist(CLI.MEDIA_PLAYER)
 
         link = feed_entry['link']
         while True:
@@ -163,7 +166,7 @@ class CLI(object):
                     msg += ', {} to open in a media player'
                     params += (open_player[0], )
                 if feed_entry['summary']:
-                    msg +=', {} to get a summary'
+                    msg += ', {} to get a summary'
                     params += (s[0], )
                 msg += '.{}'.format(Bcolors.ENDC)
                 Bcolors.error(msg.format(*params))
@@ -181,11 +184,11 @@ class CLI(object):
         question += ('{b}d{e}ownload | '
                      '{b}r{e}eject | '
                      'open in a {b}b{e}rowser').format(b=Bcolors.HEADER,
-                                                     e=Bcolors.ENDC)
+                                                       e=Bcolors.ENDC)
         if self._is_player:
             msg = ' | open in a media {b}p{e}layer'.format(b=Bcolors.HEADER,
                                                            e=Bcolors.ENDC)
-            question += msg 
+            question += msg
         if feed_entry['summary']:
             question += ' | {b}s{e}ummary'.format(b=Bcolors.HEADER,
                                                   e=Bcolors.ENDC)
@@ -205,8 +208,8 @@ class Bluetube(object):
     DOWNLOADER = 'youtube-dl'
     CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
-    NOT_CONV_DIR = 'not_converted' # keep files that failed to be converted here
-
+    # keep files that failed to be converted here
+    NOT_CONV_DIR = 'not_converted'
 
     def __init__(self, verbose=False):
         self.verbose = verbose,
@@ -225,11 +228,11 @@ class Bluetube(object):
             feeds = Feeds(self._get_bt_dir())
             if feeds.has_playlist(author, title):
                 Bcolors.error('The playlist {} by {} has already been existed'
-                            .format(title, author))
+                              .format(title, author))
             else:
                 feeds.add_playlist(author, title, feed_url, out_format)
                 Bcolors.intense('{} by {} added successfully.'.format(title,
-                                                                    author))
+                                                                      author))
             return True
         return False
 
@@ -241,9 +244,10 @@ class Bluetube(object):
             for a in all_playlists:
                 print(a['author'])
                 for c in a['playlists']:
-                    o = '{}{}'.format(' ' * 10, c.title) # Bluetube.INDENTATION
-                    o = '{} ({})'.format(o, time.strftime('%Y-%m-%d %H:%M:%S',
-                                            time.localtime(c.last_update)))
+                    o = '{}{}'.format(' ' * 10, c.title)  # TODO: INDENTATION
+                    t = time.strftime('%Y-%m-%d %H:%M:%S',
+                                      time.localtime(c.last_update))
+                    o = '{} ({})'.format(o, t)
                     print(o)
         else:
             Bcolors.warn('The list of playlist is empty.\n'
@@ -275,7 +279,7 @@ class Bluetube(object):
             return [self._process_playlist(pl, show_all)
                     for pl in pls['playlists']]
         pls = [proccess_playlist(pl) for pl in pls]
-        pls = [p for pl in pls for p in pl] # make the list flat
+        pls = [p for pl in pls for p in pl]  # make the list flat
 
         try:
             profiles = Profiles(self._get_bt_dir())
@@ -290,17 +294,17 @@ class Bluetube(object):
             if pl.output_format is OutputFormatType.audio:
                 dl_op = profiles.get_audio_options(pl.profile)
                 if not dl_op:
-                    pass # TODO inform and set mp3
+                    pass  # TODO inform and set mp3
             elif pl.output_format is OutputFormatType.video:
                 dl_op = profiles.get_video_options(pl.profile)
-                if 'output_format' in dl_op \
-                    and 'codecs_options' in dl_op:
-                        # download video as is, it will be converted later
-                        dl_op = {}
+                if 'output_format' in dl_op and 'codecs_options' in dl_op:
+                    # download video as is, it will be converted later
+                    dl_op = {}
             else:
                 assert 0, 'unexpected output format type'
             self._download(pl, dl_op, download_dir)
 
+        self._check_vidoe_converter()
         for pl in pls:
             # convert video, audio has been converted by the downloader
             if pl.output_format is OutputFormatType.video:
@@ -357,8 +361,10 @@ class Bluetube(object):
         if self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
             return True
         else:
-            Bcolors.warn('ERROR: The tool for converting video "{}" is not found in PATH'
-                        .format(Bluetube.CONVERTER))
+            # TODO: move to CLI
+            Bcolors.warn('ERROR: The tool for converting video "{}"'
+                         ' is not found in PATH'
+                         .format(Bluetube.CONVERTER))
             Bcolors.warn('Please install the converter.')
             input('Press Enter to continue, Ctrl+c to interrupt.')
             return False
@@ -372,11 +378,8 @@ class Bluetube(object):
         for idx in range(len(pl.links)):
             orig = pl.links[idx]
             new = os.path.splitext(pl.links[idx])[0] + '.' + output_format
-            args = (Bluetube.CONVERTER,) + \
-                    ('-i', orig) + \
-                    options + \
-                    codecs_options + \
-                    (new,)
+            args = (Bluetube.CONVERTER,) + ('-i', orig) + options + \
+                codecs_options + (new,)
             if not 1 == self.executor.call(args, cwd=download_dir):
                 os.remove(os.path.join(download_dir, orig))
                 pl.links[idx] = new
@@ -393,29 +396,29 @@ class Bluetube(object):
 
     def _check_config_file(self):
         ok = True
-        if self.configs == None:
+        if self.configs is None:
             Bcolors.error('Configuration file is not found.')
             ok = False
 
         if ok and not (self.configs.has_section('bluetooth')
-            and self.configs.has_section('video')
-            and self.configs.has_option('bluetooth', 'deviceID')
-            and self.configs.has_option('video', 'output_format')):
+                       and self.configs.has_section('video')
+                       and self.configs.has_option('bluetooth', 'deviceID')
+                       and self.configs.has_option('video', 'output_format')):
             Bcolors.error('The configuration file has no needed options.')
             ok = False
 
         if not ok:
             with open(Bluetube.CONFIG_TEMPLATE, 'r') as f:
-                Bcolors.error('You must create {} or {} with the content below manually:\n{}'
-                            .format(Bluetube.CONFIG_FILES[0],
-                                    Bluetube.CONFIG_FILES[1],
-                                    f.read()))
+                Bcolors.error('You must create {} or {} with the content'
+                              ' below manually:\n{}'
+                              .format(Bluetube.CONFIG_FILES[0],
+                                      Bluetube.CONFIG_FILES[1],
+                                      f.read()))
             return False
 
         if not self.configs.has_option('video', 'codecs_options'):
             Bcolors.error('ffmpeg codecs are not configured in {}'
-                        .format(Bluetube.CONFIG_FILE))
-
+                          .format(Bluetube.CONFIG_FILE))
         return ok
 
     def _check_downloader(self):
@@ -436,18 +439,20 @@ class Bluetube(object):
         return None
 
     def _get_feed_url(self, url):
-        p1 = re.compile('^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
-        p2 = re.compile('^https://www\.youtube\.com/playlist\?list=(.+)$')
-        m = p1.match(url);
+        p1 = re.compile(r'^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
+        p2 = re.compile(r'^https://www\.youtube\.com/playlist\?list=(.+)$')
+        m = p1.match(url)
         if not m:
             m = p2.match(url)
         if m:
-            return 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'.format(m.group(1))
+            msg = 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'
+            return msg.format(m.group(1))
         else:
-            p = re.compile('^https://www\.youtube\.com/channel/(.+)$')
-            m = p.match(url);
+            p = re.compile(r'^https://www\.youtube\.com/channel/(.+)$')
+            m = p.match(url)
             if m:
-                return 'https://www.youtube.com/feeds/videos.xml?channel_id={}'.format(m.group(1))
+                msg = 'https://www.youtube.com/feeds/videos.xml?channel_id={}'
+                return msg.format(m.group(1))
             Bcolors.error('ERROR: misformatted URL of a youtube list provided.\n\
     Should be https://www.youtube.com/watch?v=XXX&list=XXX for a playlist,\n\
     or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.')
@@ -499,7 +504,7 @@ class Bluetube(object):
             if status:
                 pl.add_failed_links(pl.links[idx])
                 pl.links[idx] = None
-                for f in os.listdir(tmp): # clear the tmp directory
+                for f in os.listdir(tmp):  # clear the tmp directory
                     os.unlink(os.path.join(tmp, f))
             else:
                 fs = os.listdir(tmp)
@@ -512,8 +517,8 @@ class Bluetube(object):
 
     def _build_converter_options(self, pl, configs):
         options = ('--ignore-config',
-                    '--ignore-errors',
-                    '--mark-watched',)
+                   '--ignore-errors',
+                   '--mark-watched',)
         if pl.output_format == OutputFormatType.audio:
             output_format = configs['output_format']
             spec_options = ('--extract-audio',
@@ -523,7 +528,9 @@ class Bluetube(object):
         elif pl.output_format == OutputFormatType.video:
             if 'output_format' in configs:
                 video_format = configs['output_format']
-            spec_options = ('--format', video_format,)
+                spec_options = ('--format', video_format,)
+            else:
+                spec_options = ()
         else:
             assert 0, 'unexpected output format'
 
@@ -540,7 +547,7 @@ class Bluetube(object):
                 #        partially downloaded files
                 #        youtube-dl service files
                 os.remove(os.path.join(download_dir, fl))
-        files = os.listdir(download_dir) # update the list of files
+        files = os.listdir(download_dir)  # update the list of files
         if sender.found and sender.connect():
                 sent += sender.send(files)
                 sender.disconnect()
@@ -576,7 +583,7 @@ class Bluetube(object):
     def _get_bt_dir(self):
         if not os.path.exists(Bluetube.CUR_DIR) \
             or not os.path.isdir(Bluetube.CUR_DIR):
-            os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
+                os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
         return Bluetube.CUR_DIR
 
 # ============================================================================ #
@@ -599,7 +606,7 @@ def main():
     me_group.add_argument('--list', '-l',
                         help='list all playlists', action='store_true')
     me_group.add_argument('--remove', '-r',
-                        nargs=2, 
+                        nargs=2,
                         help='remove a playlist by names of the author and the playlist',
                         type=lambda s: str(s, 'utf8'))
 
@@ -624,12 +631,14 @@ def main():
     elif args.list:
         bluetube.list_playlists()
     elif args.remove:
-        bluetube.remove_playlist(args.remove[0].strip(), args.remove[1].strip())
+        bluetube.remove_playlist(args.remove[0].strip(),
+                                 args.remove[1].strip())
     elif args.send:
         bluetube.send()
     else:
         bluetube.run(args.show_all)
     print('Done')
+
 
 if __name__ == '__main__':
     main()
