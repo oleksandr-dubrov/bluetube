@@ -289,8 +289,14 @@ class Bluetube(object):
         for pl in pls:
             if pl.output_format is OutputFormatType.audio:
                 dl_op = profiles.get_audio_options(pl.profile)
+                if not dl_op:
+                    pass # TODO inform and set mp3
             elif pl.output_format is OutputFormatType.video:
                 dl_op = profiles.get_video_options(pl.profile)
+                if 'output_format' in dl_op \
+                    and 'codecs_options' in dl_op:
+                        # download video as is, it will be converted later
+                        dl_op = {}
             else:
                 assert 0, 'unexpected output format type'
             self._download(pl, dl_op, download_dir)
@@ -299,7 +305,10 @@ class Bluetube(object):
             # convert video, audio has been converted by the downloader
             if pl.output_format is OutputFormatType.video:
                 v_op = profiles.get_video_options(pl.profile)
-                self._convert_video(pl, v_op, download_dir)
+                if 'codecs_options' in v_op:
+                    # if no codecs_options, the video has been converted by
+                    # the downloader
+                    self._convert_video(pl, v_op, download_dir)
 
         for pl in pls:
             s_op = profiles.get_sender_options(pl.profile)
@@ -506,16 +515,14 @@ class Bluetube(object):
                     '--ignore-errors',
                     '--mark-watched',)
         if pl.output_format == OutputFormatType.audio:
+            output_format = configs['output_format']
             spec_options = ('--extract-audio',
-                            '--audio-format=mp3',
+                            '--audio-format={}'.format(output_format),
                             '--audio-quality=9',  # 9 means worse
-                            '--embed-thumbnail',
                             )
         elif pl.output_format == OutputFormatType.video:
-            if 'video_format' in configs:
-                video_format = self.configs['video_format']
-            else:
-                video_format = 'mp4[width<=640]+worstaudio'
+            if 'output_format' in configs:
+                video_format = configs['output_format']
             spec_options = ('--format', video_format,)
         else:
             assert 0, 'unexpected output format'

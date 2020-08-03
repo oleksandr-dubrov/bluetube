@@ -7,9 +7,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         this_path = os.path.dirname(os.path.abspath(__file__))
-        toml_path = os.path.join(this_path,
-                                 '../bluetube')
-        self.sut = Profiles(os.path.normpath(toml_path))
+        self.sut = Profiles(os.path.normpath(this_path))
 
     def test_file_not_found(self):
         fn = 'bad_dirrr'

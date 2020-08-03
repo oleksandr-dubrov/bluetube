@@ -8,7 +8,7 @@
 
     [_default.bluetooth]
     # enter your device ID in the line below
-    # deviceID="YOUR_RECEIVER_DEVICE_ID"
+    deviceID="00:22:66:D1:DB:E6"
 
     [_default.audio]
     # Specify audio format: "best", "aac", "flac", "mp3", "m4a",

@@ -89,6 +89,10 @@ class Playlist(object):
     def profile(self):
         return self._profile
 
+    @profile.setter
+    def profile(self, p):
+        self._profile = p
+
     @property
     def links(self):
         # dont! self._links.extend(self.failed_links)

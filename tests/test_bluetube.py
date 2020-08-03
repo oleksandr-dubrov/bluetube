@@ -1,13 +1,10 @@
-'''
-Created on Aug 1, 2020
-
-@author: olexandr
-'''
+import os
 import json
 import unittest
 from zipfile import ZipFile
 from unittest.mock import patch, Mock
 from bluetube import Bluetube
+from .fake_profiles import PROFILES
 
 
 def read_mocked_data():
@@ -25,25 +22,47 @@ def read_mocked_data():
         return pls
 
 
+def call_side_effect(*args, **kwargs):
+    ''' create a files from the URL as the call does'''
+    fake_name = args[0][-1].split('=')[1]
+    open(os.path.join(kwargs['cwd'], fake_name), 'w').close()
+    return 0
+
+
+def bt_side_effect(*args):
+    assert len(args) == 1
+    # return the link we have got
+    return args[0]
+
+
 class Test(unittest.TestCase):
 
     def setUp(self):
         self.sut = Bluetube(verbose=True)
+        self.sut._get_bt_dir = lambda: os.path.dirname(os.path.abspath(__file__))
 
 
     def tearDown(self):
         pass
 
+    @patch('bluetube.bluetube.BluetoothClient')
     @patch('bluetube.bluetube.CLI')
     @patch('shelve.open')
-    def testRun(self, shelve, cli):
+    def testRun(self, shelve, cli, bluetooth):
         md = read_mocked_data()
         mock_db = Mock()
-        mock_db.get.return_value = json.loads('[{"playlists": [{"url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCemEkBcOpHNi1yZ4UjVi9EA", "out_format": "audio", "title": "ТаТоТаке", "last_update": 1595950278.0}], "author": "ТаТоТаке"}, {"playlists": [{"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLtTFwiVKY6Hpk7YaoJucsK", "out_format": "audio", "last_update": 1595433768.0, "title": "Безумный мир"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvKejzvt2yclyZfJ-461xHB4", "out_format": "audio", "last_update": 1591785510.0, "title": "Право на гідність"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvIetxWpnNeAAfkm6XRVkmCg", "out_format": "video", "title": "Диктатори", "last_update": 1583842878.0}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvIdr0SM0yU4OEEOQV4JorVa", "out_format": "audio", "title": "Финансовая грамотность", "last_update": 1592806397.0}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLV7m3tATsU1Fodjy7ZGxXM", "out_format": "audio", "last_update": 1595914123.0, "title": "Чесна політика"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLX5jNrxI6LLI2-8t61Y5ql", "out_format": "audio", "last_update": 1595669945.0, "title": "Право на правду"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvKDg0QIffdd2u2oYKXpg2lY", "out_format": "audio", "last_update": 1579761625.0, "title": "Що це було ?"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvK1kz-Vifj4XSbg0ezMllJV", "out_format": "video", "last_update": 1595868497.0, "title": "Конфлікти"}, {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvJFiB30Tg_nNDKE3-T0ImI8", "out_format": "audio", "title": "Корпорації світу", "last_update": 1592143016.0}], "author": "24 Канал"}]')
+        mock_db.get.return_value = json.loads(PROFILES)
         shelve.return_value = mock_db
         
         cli.ask.return_value = True
         self.sut.event_listener = cli
+        self.sut.executor = Mock()
+        self.sut.executor.call.side_effect = call_side_effect
+
+        bluetooth.found = True
+        bluetooth.connect.return_value = True
+        bluetooth.send.side_effect = bt_side_effect
+
         with patch('urllib.request.urlopen') as urlopen:
             urlopen.return_value = Mock()
             urlopen.return_value.read.side_effect = [l.encode() for l in md]
@@ -51,5 +70,4 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

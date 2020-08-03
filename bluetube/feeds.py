@@ -61,6 +61,7 @@ class Feeds(object):
                     pl = Playlist(raw_pl['title'], raw_pl['url'])
                     pl.last_update = raw_pl['last_update']
                     pl.set_output_format_type(raw_pl['out_format'])
+                    pl.profile = raw_pl['profiles']
                     pls.append(pl)
                 self._feeds.append({'author': author['author'],
                                     'playlists': pls})
