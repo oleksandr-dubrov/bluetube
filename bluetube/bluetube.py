@@ -22,177 +22,22 @@ import argparse
 import io
 import os
 import re
-import StringIO
-import subprocess
 import sys
 import tempfile
 import time
 import urllib
-import webbrowser
+
 from configparser import SafeConfigParser
 
 import feedparser
 
 from bluetube import __version__
-from bluetube.bcolors import Bcolors
 from bluetube.bluetoothclient import BluetoothClient
+from bluetube.commandexecutor import CommandExecutor
+from bluetube.cli import CLI
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
-
-
-class CommandExecutor(object):
-    '''This class run the commands in the shell'''
-
-    def __init__(self, verbose):
-        self._verbose = verbose
-
-    def call(self, args, cwd=None,
-             suppress_stdout=False, suppress_stderr=False):
-        if cwd is None:
-            cwd = os.getcwd()
-        call_env = os.environ
-        return_code = 0
-        stdout, stderr = None, None
-        try:
-            if self._verbose:
-                print('RUN: {}'.format([a for a in args]))
-            if suppress_stdout:
-                stdout = open(os.devnull, 'wb')
-            if suppress_stderr:
-                stderr = open(os.devnull, 'wb')
-            return_code = subprocess.call(args,
-                                          env=call_env,
-                                          stdout=stdout,
-                                          stderr=stderr,
-                                          cwd=cwd)
-        except OSError as e:
-            return_code = e.errno
-            print(e.strerror)
-        if self._verbose:
-            print('Return code: {}'.format(return_code))
-        return return_code
-
-    def does_command_exist(self, name, dashes=2):
-        '''call a command with the given name
-        and expects that it has option --version'''
-        return not self.call((name, '{}version'.format(dashes * '-')),
-                             suppress_stdout=True,
-                             suppress_stderr=True)
-
-
-class CLI(object):
-    '''Command line interface of the tool'''
-
-    INDENTATION = 10
-    MEDIA_PLAYER = 'vlc'
-
-    def __init__(self, verbose):
-        self._executor = CommandExecutor(verbose)
-        self._is_player = None
-
-    def warn(self, msg):
-        '''warn the user by an arbitrary message'''
-        Bcolors.warn(msg)
-
-    def inform(self, msg):
-        '''inform the user by an arbitrary message'''
-        print(msg)
-
-    def feed_is_feaching(self, pl):
-        '''a feed is about to be fetched'''
-        print('{ind}{tit}'.format(ind=' ' * CLI.INDENTATION, tit=pl.title))
-
-    def feeds_updated(self):
-        ''' inform the user by voice that the update has been done'''
-        self._executor.call(('spd-say', '--wait', 'beep, beep.'))
-
-    def device_not_found(self, download_dir, is_fatal=False):
-        Bcolors.warn('Your bluetooth device is not accessible.')
-        Bcolors.warn('The script will download files to {} directory.'
-                     .format(download_dir))
-        if not is_fatal:
-            input('Press Enter to continue, Ctrl+c to interrupt.')
-
-    def downloader_not_found(self, downloader):
-        Bcolors.error('The tool for downloading "{}" is not found in PATH'
-                      .format(downloader))
-
-    def download_dir_not_empty(self, download_dir):
-        msg = 'The download directory {} is not empty. Cannot delete it.'
-        Bcolors.warn(msg.format(download_dir))
-        Bcolors.warn('\n  '.join(os.listdir(download_dir)))
-
-    def failed_to_convert(self, args, filepath, where):
-        Bcolors.error('Failed to convert the file {}.'
-                      .format(os.path.basename(filepath)))
-        Bcolors.warn('Command: \n{}'.format(' '.join(args)))
-        Bcolors.warn('Check {} after the script is done.'.format(where))
-
-    def ask(self, feed_entry):
-        '''ask if perform something'''
-        # d for download
-        d = ['d', 'D', 'В', 'в', 'Y', 'y', 'Н', 'н', 'yes', 'YES']
-        # r for reject
-        r = ['r', 'R', 'к', 'К', 'n', 'N', 'т', 'Т', 'no', 'NO']
-        s = ['s', 'S', 'і', 'І']
-        open_browser = ['b', 'B', 'и', 'И']
-        open_player = ['p', 'P', 'З', 'з']
-
-        if self._is_player is None:
-            self._is_player = \
-                self._executor.does_command_exist(CLI.MEDIA_PLAYER)
-
-        link = feed_entry['link']
-        while True:
-            i = input('{}\n'.format(self._make_question_to_ask(feed_entry)))
-            if i in d:
-                return True
-            elif i in r:
-                return False
-            elif i in s:
-                print('Summary:\n{}'.format(feed_entry['summary']))
-            elif i in open_browser:
-                print('Opening the link in the default browser...')
-                webbrowser.open(link, new=2)
-            elif i in open_player:
-                print('Opening the link by {}...'.format(CLI.MEDIA_PLAYER))
-                self._executor.call((CLI.MEDIA_PLAYER, link),
-                                    suppress_stderr=True)
-            else:
-                msg = '{}{} to download, {} to reject, {} to open in a browser'
-                params = (Bcolors.FAIL, d[0], r[0], open_browser[0])
-                if self._is_player:
-                    msg += ', {} to open in a media player'
-                    params += (open_player[0], )
-                if feed_entry['summary']:
-                    msg += ', {} to get a summary'
-                    params += (s[0], )
-                msg += '.{}'.format(Bcolors.ENDC)
-                Bcolors.error(msg.format(*params))
-
-    def _make_question_to_ask(self, feed_entry):
-        pub = feed_entry['published_parsed']
-        params = {'ind': 2 * CLI.INDENTATION * ' ',
-                  'tit': feed_entry['title'],
-                  'h': pub.tm_hour,
-                  'min': pub.tm_min,
-                  'd': pub.tm_mday,
-                  'mon': pub.tm_mon}
-        msg = '{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params)
-        question = '{}\n'.format(msg)
-        question += ('{b}d{e}ownload | '
-                     '{b}r{e}eject | '
-                     'open in a {b}b{e}rowser').format(b=Bcolors.HEADER,
-                                                       e=Bcolors.ENDC)
-        if self._is_player:
-            msg = ' | open in a media {b}p{e}layer'.format(b=Bcolors.HEADER,
-                                                           e=Bcolors.ENDC)
-            question += msg
-        if feed_entry['summary']:
-            question += ' | {b}s{e}ummary'.format(b=Bcolors.HEADER,
-                                                  e=Bcolors.ENDC)
-        return question
 
 
 class Bluetube(object):
@@ -215,11 +60,10 @@ class Bluetube(object):
         self.verbose = verbose,
         self.senders = {}
         self.executor = CommandExecutor(verbose)
-        self.event_listener = CLI(verbose)
+        self.event_listener = CLI(self.executor)
 
     def add_playlist(self, url, out_format):
         ''' add a new playlists to RSS feeds '''
-        out_format = self._get_type(out_format)
         feed_url = self._get_feed_url(url)
         if out_format and feed_url:
             f = feedparser.parse(feed_url)
@@ -227,12 +71,10 @@ class Bluetube(object):
             author = f.feed.author
             feeds = Feeds(self._get_bt_dir())
             if feeds.has_playlist(author, title):
-                Bcolors.error('The playlist {} by {} has already been existed'
-                              .format(title, author))
+                self.event_listener.error('playlist exists'. title, author)
             else:
                 feeds.add_playlist(author, title, feed_url, out_format)
-                Bcolors.intense('{} by {} added successfully.'.format(title,
-                                                                      author))
+                self.event_listener.success('added', title, author)
             return True
         return False
 
@@ -250,8 +92,9 @@ class Bluetube(object):
                     o = '{} ({})'.format(o, t)
                     print(o)
         else:
-            Bcolors.warn('The list of playlist is empty.\n'
-                         'Use --add to add a playlist.')
+            pass
+            # Bcolors.warn('The list of playlist is empty.\n'
+            #             'Use --add to add a playlist.')
 
     def remove_playlist(self, author, title):
         ''' remove a playlist be given title '''
@@ -259,20 +102,30 @@ class Bluetube(object):
         if feeds.has_playlist(author, title):
             feeds.remove_playlist(author, title)
         else:
-            Bcolors.error('{} by {} not found'.format(title, author))
+            pass
+            # Bcolors.error('{} by {} not found'.format(title, author))
 
-    def run(self, show_all=False):
-        ''' The main method. It does everything.'''
-
-        pls = Feeds(self._get_bt_dir()).get_all_playlists()
-
+    def _get_list(self, feed):
+        pls = feed.get_all_playlists()
         fetch_rss = self._get_rss_fetcher()
         for a in pls:
             self.event_listener.inform(a['author'])
             for pl in a['playlists']:
                 fetch_rss(pl)
 
-        self.event_listener.feeds_updated()
+        return pls
+
+    def run(self, show_all=False):
+        ''' The main method. It does everything.'''
+
+        feed = Feeds(self._get_bt_dir())
+        pls = self._get_list(feed)
+
+        if len(pls):
+            self.event_listener.inform('feeds updated')
+        else:
+            self.event_listener.inform('empty database')
+            return
 
         def proccess_playlist(pls):
             self.event_listener.inform(pls['author'])
@@ -284,13 +137,15 @@ class Bluetube(object):
         try:
             profiles = Profiles(self._get_bt_dir())
         except ProfilesException as e:
-            Bcolors.error(e)
+            self.event_listener.error(e)
             return
 
         download_dir = self._fetch_download_dir()
         if not self._check_downloader():
             return
         for pl in pls:
+            if not len(pl.links):
+                continue
             if pl.output_format is OutputFormatType.audio:
                 dl_op = profiles.get_audio_options(pl.profile)
                 if not dl_op:
@@ -306,6 +161,8 @@ class Bluetube(object):
 
         self._check_vidoe_converter()
         for pl in pls:
+            if not len(pl.links):
+                continue
             # convert video, audio has been converted by the downloader
             if pl.output_format is OutputFormatType.video:
                 v_op = profiles.get_video_options(pl.profile)
@@ -315,6 +172,8 @@ class Bluetube(object):
                     self._convert_video(pl, v_op, download_dir)
 
         for pl in pls:
+            if not len(pl.links):
+                continue
             s_op = profiles.get_sender_options(pl.profile)
             sender = self._get_sender(s_op, download_dir)
             sent = []
@@ -325,6 +184,8 @@ class Bluetube(object):
             for f in sent:
                 os.remove(f)
 
+        feed.set_all_playlists(pls)
+        feed.sync()
         self._return_download_dir(download_dir)
 
     def send(self):
@@ -337,9 +198,11 @@ class Bluetube(object):
             if sender.found:
                 self._send(sender, download_dir)
             else:
-                Bcolors.warn('Your bluetooth device is not accessible.')
+                pass
+                #Bcolors.warn('Your bluetooth device is not accessible.')
         else:
-            Bcolors.warn('Nothing to send.')
+            pass
+            #Bcolors.warn('Nothing to send.')
         self._return_download_dir(download_dir)
 
     def _get_sender(self, configs, download_dir):
@@ -362,11 +225,11 @@ class Bluetube(object):
             return True
         else:
             # TODO: move to CLI
-            Bcolors.warn('ERROR: The tool for converting video "{}"'
-                         ' is not found in PATH'
-                         .format(Bluetube.CONVERTER))
-            Bcolors.warn('Please install the converter.')
-            input('Press Enter to continue, Ctrl+c to interrupt.')
+#             Bcolors.warn('ERROR: The tool for converting video "{}"'
+#                          ' is not found in PATH'
+#                          .format(Bluetube.CONVERTER))
+#             Bcolors.warn('Please install the converter.')
+#             input('Press Enter to continue, Ctrl+c to interrupt.')
             return False
 
     def _convert_video(self, pl, configs, download_dir):
@@ -388,55 +251,22 @@ class Bluetube(object):
                 d = os.path.join(download_dir, Bluetube.NOT_CONV_DIR)
                 os.makedirs(d, Bluetube.ACCESS_MODE, exist_ok=True)
                 os.rename(orig, os.path.join(d, os.path.basename(orig)))
-                self.event_listener.failed_to_convert(args, orig, d)
+                self.event_listener.error(os.path.basename(orig))
+                self.event_listener.inform('Command: \n{}'.format(' '.join(args)))
+                self.event_listener.inform('Check {} after the script is done.'.format(d))
 
     def _get_configs(self):
         parser = SafeConfigParser()
         return None if len(parser.read(Bluetube.CONFIG_FILES)) == 0 else parser
 
-    def _check_config_file(self):
-        ok = True
-        if self.configs is None:
-            Bcolors.error('Configuration file is not found.')
-            ok = False
-
-        if ok and not (self.configs.has_section('bluetooth')
-                       and self.configs.has_section('video')
-                       and self.configs.has_option('bluetooth', 'deviceID')
-                       and self.configs.has_option('video', 'output_format')):
-            Bcolors.error('The configuration file has no needed options.')
-            ok = False
-
-        if not ok:
-            with open(Bluetube.CONFIG_TEMPLATE, 'r') as f:
-                Bcolors.error('You must create {} or {} with the content'
-                              ' below manually:\n{}'
-                              .format(Bluetube.CONFIG_FILES[0],
-                                      Bluetube.CONFIG_FILES[1],
-                                      f.read()))
-            return False
-
-        if not self.configs.has_option('video', 'codecs_options'):
-            Bcolors.error('ffmpeg codecs are not configured in {}'
-                          .format(Bluetube.CONFIG_FILE))
-        return ok
 
     def _check_downloader(self):
         if self.executor.does_command_exist(Bluetube.DOWNLOADER):
             return True
         else:
-            self.event_listener.downloader_not_found(Bluetube.DOWNLOADER)
+            self.event_listener.error('downloader not found',
+                                      Bluetube.DOWNLOADER)
             return False
-
-    def _get_type(self, out_format):
-        if out_format in ['a', 'audio']:
-            return OutputFormatType.audio
-        elif out_format in ['v', 'video']:
-            return OutputFormatType.video
-        else:
-            Bcolors.error('Unexpected output type.'
-                          'Should be v (or video) or a (audio).')
-        return None
 
     def _get_feed_url(self, url):
         p1 = re.compile(r'^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
@@ -453,9 +283,7 @@ class Bluetube(object):
             if m:
                 msg = 'https://www.youtube.com/feeds/videos.xml?channel_id={}'
                 return msg.format(m.group(1))
-            Bcolors.error('ERROR: misformatted URL of a youtube list provided.\n\
-    Should be https://www.youtube.com/watch?v=XXX&list=XXX for a playlist,\n\
-    or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.')
+            self.event_listener.error('misformatted URL')
             return None
 
     def _get_rss_fetcher(self):
@@ -465,7 +293,7 @@ class Bluetube(object):
         def fetch_rss(pl):
             '''get URLs from the RSS
             that the user will selected for every playlist'''
-            self.event_listener.feed_is_feaching(pl)
+            self.event_listener.inform('feed is fetching', pl.title)
             req = urllib.request.Request(pl.url, headers=headers)
             response = urllib.request.urlopen(req).read()
             f = feedparser.parse(io.BytesIO(response))
@@ -578,7 +406,9 @@ class Bluetube(object):
             try:
                 os.rmdir(bluetube_dir)
             except OSError:
-                self.event_listener.download_dir_not_empty(bluetube_dir)
+                self.event_listener.warn('download directory not empty',
+                                         bluetube_dir)
+                self.event_listener.warn('\n  '.join(os.listdir(bluetube_dir)))
 
     def _get_bt_dir(self):
         if not os.path.exists(Bluetube.CUR_DIR) \
@@ -626,7 +456,8 @@ def main():
     args = parser.parse_args()
     bluetube = Bluetube(args.verbose)
     if args.add:
-        if not bluetube.add_playlist(args.add, args.type):
+        if not bluetube.add_playlist(args.add,
+                                     OutputFormatType.from_char(args.type)):
             sys.exit(-1)
     elif args.list:
         bluetube.list_playlists()
