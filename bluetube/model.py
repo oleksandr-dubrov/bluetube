@@ -29,6 +29,14 @@ class OutputFormatType(Enum):
     audio = 1
     video = 2
 
+    @staticmethod
+    def from_char(ch):
+        if ch in ['a', 'audio']:
+            return OutputFormatType.audio
+        elif ch in ['v', 'video']:
+            return OutputFormatType.video
+        return None
+
 
 class Playlist(object):
     '''
@@ -95,7 +103,7 @@ class Playlist(object):
 
     @property
     def links(self):
-        # dont! self._links.extend(self.failed_links)
+        # TODO: dont! self._links.extend(self.failed_links)
         return self._links
 
     @links.setter

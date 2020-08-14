@@ -28,27 +28,51 @@ class Feeds(object):
 
     DBFILENAME = 'bluetube.db'
 
+    class Decor(object):
+        @staticmethod
+        def pull_if_needed(func):
+            def wrapper(*args, **kwargs):
+                self = args[0]
+                if not len(self._feeds):
+                    self._pull()
+                return func(*args, **kwargs)
+            return wrapper
+
+
     def __init__(self, db_dir):
         self.db_file = os.path.join(db_dir, Feeds.DBFILENAME)
         self._feeds = []
 
+    @Decor.pull_if_needed
     def add_playlist(self, author, title, url, out_format):
-        if not len(self._feeds):
-            self._pull()
         pl = Playlist(title, url)
         pl.set_output_format_type(out_format)
         self._feeds[author].append(pl)
         self._push()
 
+    @Decor.pull_if_needed
     def get_all_playlists(self):
-        if not len(self._feeds):
-            self._pull()
+        '''get all playlists'''
         return self._feeds
 
+    def set_all_playlists(self, pls):
+        '''update playlists'''
+        self._feeds = pls
+
+    def sync(self):
+        '''persist all playlists'''
+        self._push()
+
+    @Decor.pull_if_needed
     def get_authors(self):
+        return [a['author'] for a in self._feeds]
+
+    def has_playlist(self, author, title):
         if not len(self._feeds):
             self._pull()
-        return [a['author'] for a in self._feeds]
+        a_t = [{a['author']: [ p['title'] for p in a['playlists']]}
+               for a in self._feeds]
+        return author in a_t and title in a_t[author]
 
     def _pull(self):
         'pull data from the DB'

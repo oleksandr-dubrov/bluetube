@@ -7,7 +7,8 @@ class Bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-    def disable(self):
+    @staticmethod
+    def disable():
         Bcolors.BOLD = ''
         Bcolors.HEADER = ''
         Bcolors.OKBLUE = ''
