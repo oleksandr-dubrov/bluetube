@@ -2,31 +2,37 @@
 # TOML. https://pypi.org/project/toml/
 
 
-# Default profile.
-# Use it as an example for new profiles as well.
-[_default]
+# The base mandatory profile.
+# Other profile inherits this one.
+[__base__]
 
-    [_default.bluetooth]
-    # enter your device ID in the line below
-    # deviceID="YOUR_RECEIVER_DEVICE_ID"
-
-    [_default.audio]
+    [__base__.audio]
     # Specify audio format: "best", "aac", "flac", "mp3", "m4a",
     #                       "opus", "vorbis", or "wav"; "best" by default;
     output_format = "mp3"
 
-    [_default.video]
+    [__base__.video]
     # Encode the video to another format.
-    # If *codecs_options* is not set then the downloader tries to convert
-    # video to this format.
+    # If *<your profile>.codecs_options* is not set then the downloader
+    # tries to convert video to this format.
     # Currently supported by the downloader: mp4|flv|ogg|webm|mkv|avi.
-    output_format = "3gp"
+    output_format = "mp4"
 
+
+# Default profile.
+# Use it as an example for new profiles as well.
+[<your profile name>]
+
+    [<your profile name>.video]
     # to convert video configure audio and video codecs
     # e.g.:
     #    codecs_options=-vcodec h263 -acodec aac -s 352x288
     # for more info see "ffmpeg --help"
     # codecs_options = "OPTIONS"
 
-# save downloaded and converted video here:
-# local = "PATH"
+    [<your profile name>.send]
+    # enter your device ID in the line below
+    # deviceID="YOUR_RECEIVER_DEVICE_ID"
+
+    # save downloaded and converted video here:
+    # local_path = "~/Downloads"

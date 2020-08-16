@@ -1,32 +1,21 @@
-# Bluetube. Profiles.
-# TOML. https://pypi.org/project/toml/
+### FOR TESTS ONLY
 
 
-# Default profile.
-# Use it as an example for new profiles as well.
-[_default]
+[__base__]
 
-    [_default.bluetooth]
-    # enter your device ID in the line below
-    deviceID="00:22:66:D1:DB:E6"
-
-    [_default.audio]
-    # Specify audio format: "best", "aac", "flac", "mp3", "m4a",
-    #                       "opus", "vorbis", or "wav"; "best" by default;
+    [__base__.audio]
     output_format = "mp3"
 
-    [_default.video]
-    # Encode the video to another format.
-    # If *codecs_options* is not set then the downloader tries to convert
-    # video to this format.
-    # Currently supported by the downloader: mp4|flv|ogg|webm|mkv|avi.
+    [__base__.video]
+    output_format = "mp4"
+
+
+[mobile]
+
+    [mobile.video]
     output_format = "3gp"
-
-    # to convert video configure audio and video codecs
-    # e.g.:
-    #    codecs_options=-vcodec h263 -acodec aac -s 352x288
-    # for more info see "ffmpeg --help"
     codecs_options = "-vcodec h263 -acodec aac -s 352x288"
-
-# save downloaded and converted video here:
-# local = "PATH"
+    
+    [mobile.send]
+    bluetooth_device_id = "00:22:66:D1:DB:E6"
+    local_path = "/tmp/bluetube_tests"

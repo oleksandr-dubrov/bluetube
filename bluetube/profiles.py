@@ -26,17 +26,25 @@ class Profiles(object):
     '''
 
     PROFILES_NAME = 'profiles.toml'
+    BASE_PROFILE = '__base__'
 
     def __init__(self, bt_dir):
         path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
         try:
-            self._profiles = toml.load(path)
+            configs = toml.load(path)
+            self._verify_configurations(configs)
+            base = configs[Profiles.BASE_PROFILE]
         except TypeError:
             raise ProfilesException('Cannot open {}'.format(path))
         except toml.TomlDecodeError:
             raise ProfilesException('Error while decoding TOML')
         except FileNotFoundError as e:
             raise ProfilesException(e)
+
+        self._profiles = {}
+        for c in configs:
+            base.update(configs[c])
+            self._profiles[c] = base
 
     def get_audio_options(self, profile):
         if profile in self._profiles:
@@ -50,7 +58,18 @@ class Profiles(object):
 
     def get_sender_options(self, profile):
         if profile in self._profiles:
-            return self._profiles[profile].get('bluetooth')
+            return self._profiles[profile].get('send')
+
+    def check_profile(self, profile):
+        '''check if the given profile exists'''
+        return profile in self._profiles.keys()
+
+    def _verify_configurations(self, configs):
+        if configs and Profiles.BASE_PROFILE in configs:
+            base = configs[Profiles.BASE_PROFILE]
+            if 'audio' in base and 'video' in base:
+                return 
+        raise ProfilesException('the base profile not found')
 
 
 class ProfilesException(Exception):

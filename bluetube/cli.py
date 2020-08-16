@@ -30,23 +30,34 @@ class CLI(object):
         'empty database': 'The list of playlist is empty.\n'
                           'Use --add to add a playlist.',
         'feed is fetching': ' ' * INDENTATION + '{}',
+        'converter not found': 'Please install the converter.',
         }
 
     WARNS = {
         'device not found': 'Your bluetooth device is not accessible.\n'
                             'The script will download files to {} directory.',
         'download directory not empty': 'The download directory {} '
-                                        'is not empty. Cannot delete it.'
+                                        'is not empty. Cannot delete it.',
         }
 
     ERRORS = {
         'downloader not found': 'The tool for downloading "{}"'
                                 ' is not found in PATH',
+        'converter not found': 'The tool for converting video "{}"'
+                               ' is not found in PATH',
         'failed to convert': 'Failed to convert the file {}.',
         'misformatted URL':'''Misformatted URL of the youtube list.
 Should be https://www.youtube.com/watch?v=XXX&list=XXX for a playlist,
 or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.''',
-        'playlist exists': 'The playlist {} by {} has already existed'
+        'playlist exists': 'The playlist {} by {} has already existed',
+        'the base profile not found': '''The base profile is not found.
+Check the config file. It must have something like this
+[__base__]
+    [__common__.audio]
+    output_format = "mp3"
+    [__common__.video]
+    output_format = "mp4"
+''',
         }
 
     SUCCESS = {
@@ -86,7 +97,7 @@ or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.''',
         ''' inform the user by voice'''
         self._executor.call(('spd-say', '--wait', 'beep, beep.'))
 
-    def yes_or_no(self):
+    def do_continue(self):
         input('Press Enter to continue, Ctrl+c to interrupt.')
         return True
 

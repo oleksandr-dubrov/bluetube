@@ -26,9 +26,6 @@ import sys
 import tempfile
 import time
 import urllib
-
-from configparser import SafeConfigParser
-
 import feedparser
 
 from bluetube import __version__
@@ -38,6 +35,14 @@ from bluetube.cli import CLI
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
+
+
+class ToolNotFoundException(Exception):
+    '''Raise this exception in case an external tool is not found'''
+
+    def __init__(self, msg, tool):
+        self.msg = msg
+        self.tool = tool
 
 
 class Bluetube(object):
@@ -115,41 +120,17 @@ class Bluetube(object):
 
         return pls
 
-    def run(self, show_all=False):
-        ''' The main method. It does everything.'''
-
-        feed = Feeds(self._get_bt_dir())
-        pls = self._get_list(feed)
-
-        if len(pls):
-            self.event_listener.inform('feeds updated')
-        else:
-            self.event_listener.inform('empty database')
-            return
-
-        def proccess_playlist(pls):
+    def proccess_playlists(self, pls, show_all):
             self.event_listener.inform(pls['author'])
             return [self._process_playlist(pl, show_all)
                     for pl in pls['playlists']]
-        pls = [proccess_playlist(pl) for pl in pls]
-        pls = [p for pl in pls for p in pl]  # make the list flat
 
-        try:
-            profiles = Profiles(self._get_bt_dir())
-        except ProfilesException as e:
-            self.event_listener.error(e)
-            return
-
-        download_dir = self._fetch_download_dir()
-        if not self._check_downloader():
-            return
+    def _download_list(self, pls, profiles, download_dir):
         for pl in pls:
             if not len(pl.links):
                 continue
             if pl.output_format is OutputFormatType.audio:
                 dl_op = profiles.get_audio_options(pl.profile)
-                if not dl_op:
-                    pass  # TODO inform and set mp3
             elif pl.output_format is OutputFormatType.video:
                 dl_op = profiles.get_video_options(pl.profile)
                 if 'output_format' in dl_op and 'codecs_options' in dl_op:
@@ -159,7 +140,7 @@ class Bluetube(object):
                 assert 0, 'unexpected output format type'
             self._download(pl, dl_op, download_dir)
 
-        self._check_vidoe_converter()
+    def _convert_list(self, pls, profiles, download_dir):
         for pl in pls:
             if not len(pl.links):
                 continue
@@ -171,6 +152,7 @@ class Bluetube(object):
                     # the downloader
                     self._convert_video(pl, v_op, download_dir)
 
+    def _send_list(self, pls, profiles, download_dir):
         for pl in pls:
             if not len(pl.links):
                 continue
@@ -183,6 +165,47 @@ class Bluetube(object):
                 del pl.links
             for f in sent:
                 os.remove(f)
+
+    def run(self, show_all=False):
+        ''' The main method. It does everything.'''
+
+        feed = Feeds(self._get_bt_dir())
+        pls = self._get_list(feed)
+
+        if len(pls):
+            self.event_listener.inform('feeds updated')
+        else:
+            self.event_listener.inform('empty database')
+            return
+
+        pls = [self.proccess_playlists(pl, show_all) for pl in pls]
+        pls = [p for pl in pls for p in pl]  # make the list flat
+
+        try:
+            profiles = Profiles(self._get_bt_dir())
+        except ProfilesException as e:
+            self.event_listener.error(e)
+            return
+
+        for pl in pls:
+            assert profiles.check_profile(pl.profile)
+
+        if not self._check_downloader():
+            self.event_listener.error('downloader not found',
+                                      Bluetube.DOWNLOADER)
+            return
+
+        download_dir = self._fetch_download_dir()
+        self._download_list(pls, profiles, download_dir)
+
+        if not self._check_vidoe_converter():
+            self.event_listener.error('converter not found', Bluetube.CONVERTER)
+            self.event_listener.inform('converter not found')
+            if not self.event_listener.do_continue():
+                return
+        self._convert_list(pls, profiles, download_dir)
+
+        self._send_list(pls, profiles, download_dir)
 
         feed.set_all_playlists(pls)
         feed.sync()
@@ -208,7 +231,7 @@ class Bluetube(object):
     def _get_sender(self, configs, download_dir):
         '''return a sender from the cache for a device ID if possible
         or create a new one'''
-        device_id = configs['deviceID']
+        device_id = configs['bluetooth_device_id']
         if device_id in self.senders:
             return self.senders[device_id]
         else:
@@ -221,16 +244,7 @@ class Bluetube(object):
                 return sender
 
     def _check_vidoe_converter(self):
-        if self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
-            return True
-        else:
-            # TODO: move to CLI
-#             Bcolors.warn('ERROR: The tool for converting video "{}"'
-#                          ' is not found in PATH'
-#                          .format(Bluetube.CONVERTER))
-#             Bcolors.warn('Please install the converter.')
-#             input('Press Enter to continue, Ctrl+c to interrupt.')
-            return False
+        return self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1)
 
     def _convert_video(self, pl, configs, download_dir):
         options = ('-y',  # overwrite output files
@@ -255,18 +269,8 @@ class Bluetube(object):
                 self.event_listener.inform('Command: \n{}'.format(' '.join(args)))
                 self.event_listener.inform('Check {} after the script is done.'.format(d))
 
-    def _get_configs(self):
-        parser = SafeConfigParser()
-        return None if len(parser.read(Bluetube.CONFIG_FILES)) == 0 else parser
-
-
     def _check_downloader(self):
-        if self.executor.does_command_exist(Bluetube.DOWNLOADER):
-            return True
-        else:
-            self.event_listener.error('downloader not found',
-                                      Bluetube.DOWNLOADER)
-            return False
+        return self.executor.does_command_exist(Bluetube.DOWNLOADER)
 
     def _get_feed_url(self, url):
         p1 = re.compile(r'^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')

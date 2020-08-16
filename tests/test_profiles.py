@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
         self.assertTrue(exp_msg in str(e.exception))
 
     def test_get_video_options(self):
-        v_op = self.sut.get_video_options('_default')
+        v_op = self.sut.get_video_options('mobile')
         self.assertTrue(v_op, 'no video options')
         self.assertTrue('output_format' in v_op, 'a key not found')
 
