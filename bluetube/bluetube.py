@@ -19,6 +19,7 @@
 
 
 import argparse
+import copy
 import io
 import os
 import re
@@ -27,6 +28,7 @@ import tempfile
 import time
 import urllib
 import feedparser
+import shutil
 
 from bluetube import __version__
 from bluetube.bluetoothclient import BluetoothClient
@@ -127,44 +129,93 @@ class Bluetube(object):
 
     def _download_list(self, pls, profiles, download_dir):
         for pl in pls:
-            if not len(pl.links):
-                continue
-            if pl.output_format is OutputFormatType.audio:
-                dl_op = profiles.get_audio_options(pl.profile)
-            elif pl.output_format is OutputFormatType.video:
-                dl_op = profiles.get_video_options(pl.profile)
-                if 'output_format' in dl_op and 'codecs_options' in dl_op:
-                    # download video as is, it will be converted later
-                    dl_op = {}
-            else:
-                assert 0, 'unexpected output format type'
-            self._download(pl, dl_op, download_dir)
+            # keep path to successfully downloaded files for all profiles here
+            cache = {}
+
+            for profile, entities in pl.entities.items():
+                if pl.output_format is OutputFormatType.audio:
+                    dl_op = profiles.get_audio_options(profile)
+                elif pl.output_format is OutputFormatType.video:
+                    dl_op = profiles.get_video_options(profile)
+                else:
+                    assert 0, 'unexpected output format type'
+
+                s, f = self._download(entities,
+                                      pl.output_format,
+                                      dl_op,
+                                      cache,
+                                      download_dir)
+                pl.entities[profile] = s
+                pl.add_failed_entities({profile: f})
+
 
     def _convert_list(self, pls, profiles, download_dir):
         for pl in pls:
-            if not len(pl.links):
-                continue
             # convert video, audio has been converted by the downloader
             if pl.output_format is OutputFormatType.video:
-                v_op = profiles.get_video_options(pl.profile)
-                if 'codecs_options' in v_op:
-                    # if no codecs_options, the video has been converted by
-                    # the downloader
-                    self._convert_video(pl, v_op, download_dir)
+                for profile, entities in pl.entities.items():
+                    c_op = profiles.get_convert_options(profile)
+                    v_op = profiles.get_video_options(profile)
+                    # convert unless the video has not been downloaded in
+                    # proper format
+                    if not c_op['output_format'] == v_op['output_format']:
+                        s, f = self._convert_video(entities,
+                                                   c_op,
+                                                   download_dir)
+                        pl.entities[profile] = s
+                        pl.add_failed_entities({profile: f})
+
 
     def _send_list(self, pls, profiles, download_dir):
         for pl in pls:
-            if not len(pl.links):
-                continue
-            s_op = profiles.get_sender_options(pl.profile)
-            sender = self._get_sender(s_op, download_dir)
-            sent = []
-            if sender.found and sender.connect():
-                sent += sender.send(pl.links)
-                sender.disconnect()
-                del pl.links
-            for f in sent:
-                os.remove(f)
+            for profile, entities in pl.entities.items():
+                s_op = profiles.get_send_options(profile)
+                links = [e['link'] for e in entities]
+                if not s_op or not links:
+                    continue
+                sent, copied = [], []
+
+                # send via bluetooth
+                device_id = s_op.get('bluetooth_device_id')
+                if device_id:
+                    sent = self._send_bt(device_id, links, download_dir)
+
+                # move to local directory
+                local_path = s_op.get('local_path')
+                if local_path:
+                    copied = self._copy_to_local_path(local_path, links)
+
+                # select failed entities
+                failure = []
+                for en in entities:
+                    lnk = en['link']
+                    if lnk in sent and lnk in copied:
+                        os.remove(lnk)
+                    else:
+                        failure.append(en)
+                pl.add_failed_entities({profile: failure})
+
+    def _send_bt(self, device_id, links, download_dir):
+        '''sent all files defined by the links
+        to the device defined by device_id'''
+        sent = []
+        sender = self._get_sender(device_id, download_dir)
+        if sender and sender.found and sender.connect():
+            sent += sender.send(links)
+            sender.disconnect()
+        return sent
+
+    def _copy_to_local_path(self, local_path, links):
+        '''copy files defined by links to the local path'''
+        copied = []
+        for l in links:
+            try:
+                shutil.copy2(l, local_path)
+                copied.append(l)
+            except shutil.SameFileError as e:
+                self.event_listener.error(e)
+        return copied
+
 
     def run(self, show_all=False):
         ''' The main method. It does everything.'''
@@ -187,12 +238,23 @@ class Bluetube(object):
             self.event_listener.error(e)
             return
 
+        # check if profiles do exist in the configurations
         for pl in pls:
-            assert profiles.check_profile(pl.profile)
+            for profile in pl.profiles:
+                # TODO: ask to edit configurations
+                assert profiles.check_profile(profile)
+            
+        # combine entities (links with metadata to download) with profiles
+        for pl in pls:
+            en = {}
+            for profile in pl.profiles:
+                en[profile] = copy.deepcopy(pl.entities)
+            pl.entities = en
 
         if not self._check_downloader():
             self.event_listener.error('downloader not found',
                                       Bluetube.DOWNLOADER)
+            # TODO: move all entities to failed.
             return
 
         download_dir = self._fetch_download_dir()
@@ -228,10 +290,9 @@ class Bluetube(object):
             #Bcolors.warn('Nothing to send.')
         self._return_download_dir(download_dir)
 
-    def _get_sender(self, configs, download_dir):
+    def _get_sender(self, device_id, download_dir):
         '''return a sender from the cache for a device ID if possible
         or create a new one'''
-        device_id = configs['bluetooth_device_id']
         if device_id in self.senders:
             return self.senders[device_id]
         else:
@@ -246,28 +307,33 @@ class Bluetube(object):
     def _check_vidoe_converter(self):
         return self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1)
 
-    def _convert_video(self, pl, configs, download_dir):
+    def _convert_video(self, entities, configs, download_dir):
+        '''convert all videos in the playlist,
+        return a list of succeeded an and a list failed links''' 
         options = ('-y',  # overwrite output files
                    '-hide_banner',)
         codecs_options = configs['codecs_options']
         codecs_options = tuple(codecs_options.split())
         output_format = configs['output_format']
-        for idx in range(len(pl.links)):
-            orig = pl.links[idx]
-            new = os.path.splitext(pl.links[idx])[0] + '.' + output_format
+        success, failure = [], []
+        for en in entities:
+            orig = en['link']
+            new = os.path.splitext(orig)[0] + '.' + output_format
             args = (Bluetube.CONVERTER,) + ('-i', orig) + options + \
                 codecs_options + (new,)
             if not 1 == self.executor.call(args, cwd=download_dir):
                 os.remove(os.path.join(download_dir, orig))
-                pl.links[idx] = new
+                en['link'] = new
+                success.append(en)
             else:
-                del pl.links[idx]
+                failure.append(en)
                 d = os.path.join(download_dir, Bluetube.NOT_CONV_DIR)
                 os.makedirs(d, Bluetube.ACCESS_MODE, exist_ok=True)
                 os.rename(orig, os.path.join(d, os.path.basename(orig)))
                 self.event_listener.error(os.path.basename(orig))
                 self.event_listener.inform('Command: \n{}'.format(' '.join(args)))
                 self.event_listener.inform('Check {} after the script is done.'.format(d))
+        return success, failure
 
     def _check_downloader(self):
         return self.executor.does_command_exist(Bluetube.DOWNLOADER)
@@ -307,7 +373,7 @@ class Bluetube(object):
 
     def _process_playlist(self, pl, show_all):
         '''process the playlist'''
-        urls = []
+        entities = []
         is_need_update = False
         new_last_update = last_update = pl.last_update
         assert pl.feedparser_data is not None, 'fetch RSS first'
@@ -317,52 +383,67 @@ class Bluetube(object):
                 if not is_need_update:
                     is_need_update = True
                 if self.event_listener.ask(e):
-                    urls.append(e['link'])
+                    entities.append(e)
                 if new_last_update < e_update:
                     new_last_update = e_update
         pl.last_update = new_last_update
-        pl.links = urls
+        pl.entities = entities
         return pl
 
-    def _download(self, pl, configs, download_dir):
-        options = self._build_converter_options(pl, configs)
+    def _download(self, entities, output_format, configs, cache, download_dir):
+        options = self._build_converter_options(output_format, configs)
         # create a temporal directory to download a file by its link
         # to be sure that the file belongs to the link 
         tmp = os.path.join(download_dir, 'tmp')
         os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
+        success, failure = [], []
 
-        for idx in range(len(pl.links)):
-            status = self.executor.call(options + (pl.links[idx],), cwd=tmp)
-            if status:
-                pl.add_failed_links(pl.links[idx])
-                pl.links[idx] = None
-                for f in os.listdir(tmp):  # clear the tmp directory
-                    os.unlink(os.path.join(tmp, f))
+        for en in entities:
+            options = options + (en['link'],)
+
+            # check the value in the given cache
+            # to avoid downloading the same file twice
+            new_link = cache.get(' '.join(options))
+            if new_link:
+                en['link'] = new_link
+                success.append(en)
             else:
-                fs = os.listdir(tmp)
-                assert len(fs) == 1, 'one link should march one file in tmp'
-                new_link = os.path.join(download_dir, os.path.basename(fs[0]))
-                # move the file out of the tmp directory
-                os.rename(os.path.join(tmp, fs[0]), new_link)
-                pl.links[idx] = new_link
-        os.rmdir(tmp)
+                status = self.executor.call(options, cwd=tmp)
+                if status:
+                    failure.append(en)
+                    # clear the tmp directory that may have parts of
+                    # not completely downloaded file. 
+                    for f in os.listdir(tmp):
+                        os.unlink(os.path.join(tmp, f))
+                else:
+                    fs = os.listdir(tmp)
+                    assert len(fs) == 1, 'one link should march one file in tmp'
+                    new_link = os.path.join(download_dir,
+                                            os.path.basename(fs[0]))
+                    # move the file out of the tmp directory
+                    os.rename(os.path.join(tmp, fs[0]), new_link)
+                    en['link'] = new_link
+                    success.append(en)
 
-    def _build_converter_options(self, pl, configs):
+                    # put the link to just downloaded file into the cache 
+                    cache[' '.join(options)] = new_link
+
+        os.rmdir(tmp)
+        return success, failure
+
+    def _build_converter_options(self, output_format, configs):
         options = ('--ignore-config',
                    '--ignore-errors',
                    '--mark-watched',)
-        if pl.output_format == OutputFormatType.audio:
+        if output_format == OutputFormatType.audio:
             output_format = configs['output_format']
             spec_options = ('--extract-audio',
                             '--audio-format={}'.format(output_format),
                             '--audio-quality=9',  # 9 means worse
                             )
-        elif pl.output_format == OutputFormatType.video:
-            if 'output_format' in configs:
-                video_format = configs['output_format']
-                spec_options = ('--format', video_format,)
-            else:
-                spec_options = ()
+        elif output_format == OutputFormatType.video:
+            of = configs.get('output_format')
+            spec_options = ('--format', of,) if of else ()
         else:
             assert 0, 'unexpected output format'
 
@@ -392,14 +473,6 @@ class Bluetube(object):
             os.mkdir(bluetube_dir)
         else:
             fs = os.listdir(bluetube_dir)
-            if Bluetube.NOT_CONV_DIR in fs:
-                msg = 'Not converted.\n {}'\
-                    .format(' '.join(
-                        os.listdir(
-                            os.path.join(bluetube_dir,
-                                         Bluetube.NOT_CONV_DIR))))
-                self.event_listener.warn(msg)
-                fs.remove(Bluetube.NOT_CONV_DIR)
             if len(fs):
                 msg = 'Ready to be sent:\n{}'.format(' '.join(fs))
                 self.event_listener.warn(msg)

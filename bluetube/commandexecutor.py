@@ -15,8 +15,24 @@
     along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import functools
 import os
 import subprocess
+
+
+def cache(func):
+    '''a method decorator for cache'''
+    cache.cache = {}
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        str_args = ' '.join(args[0])
+        if str_args in cache.cache:
+            return cache.cache[str_args]
+        else:
+            ret = func(self, *args, **kwargs)
+            cache.cache[str_args] = ret
+            return ret
+    return wrapper
 
 
 class CommandExecutor(object):
@@ -24,7 +40,9 @@ class CommandExecutor(object):
 
     def __init__(self, verbose):
         self._verbose = verbose
+        cache.cache = {}
 
+    @cache
     def call(self, args, cwd=None,
              suppress_stdout=False, suppress_stderr=False):
         if cwd is None:

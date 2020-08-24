@@ -1,21 +1,29 @@
 ### FOR TESTS ONLY
 
 
-[__base__]
+[__download__]
 
-    [__base__.audio]
+    [__download__.audio]
     output_format = "mp3"
 
-    [__base__.video]
+    [__download__.video]
     output_format = "mp4"
 
 
 [mobile]
 
-    [mobile.video]
+    [mobile.convert]
     output_format = "3gp"
     codecs_options = "-vcodec h263 -acodec aac -s 352x288"
-    
+
     [mobile.send]
     bluetooth_device_id = "00:22:66:D1:DB:E6"
+    local_path = "/tmp/bluetube_tests"
+
+[local]
+
+    [local.convert]
+    output_format = "mp4"
+
+    [local.send]
     local_path = "/tmp/bluetube_tests"

@@ -1,62 +1,30 @@
 # This is a test DB.
-# It has 2 authors with 1 + 9 = 10 playlists.
+# It has 2 authors with 1 + 2 = 3 playlists.
 # NOTE. It it is changed, *mocked_data.zip*
 #     and all asserts related to this should be updated.
+
+# mocked_data.zip has 10 new videos in case THESE last update values. 
+NEW_LINKS = 10
 
 FAKE_DB = '''
 [{"playlists": [
     {"url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCemEkBcOpHNi1yZ4UjVi9EA",
-    "out_format": "audio",
+    "out_format": "video",
     "title": "ТаТоТаке",
     "last_update": 1595950278.0,
-    "profiles": "mobile"}],
+    "profiles": ["mobile", "local"]}],
 "author": "ТаТоТаке"
 },
 {"playlists": [
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLtTFwiVKY6Hpk7YaoJucsK",
-    "out_format": "audio",
-    "last_update": 1595433768.0,
-    "title": "Безумный мир",
-    "profiles": "mobile"},
     {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvKejzvt2yclyZfJ-461xHB4",
     "out_format": "audio",
-    "last_update": 1591785510.0,
+    "last_update": 1590085510.0,
     "title": "Право на гідність",
-    "profiles": "mobile"},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvIetxWpnNeAAfkm6XRVkmCg",
-    "out_format": "video",
-    "title": "Диктатори",
-    "profiles": "mobile",
-    "last_update": 1583842878.0},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvIdr0SM0yU4OEEOQV4JorVa",
-    "out_format": "audio",
-    "title": "Финансовая грамотность",
-    "profiles": "mobile",
-    "last_update": 1592806397.0},
+    "profiles": ["mobile"]},
     {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLV7m3tATsU1Fodjy7ZGxXM",
     "out_format": "audio",
-    "last_update": 1595914123.0,
+    "last_update": 1595014123.0,
     "title": "Чесна політика",
-    "profiles": "mobile"},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvLX5jNrxI6LLI2-8t61Y5ql",
-    "out_format": "audio",
-    "last_update": 1595669945.0,
-    "title": "Право на правду",
-    "profiles": "mobile"},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvKDg0QIffdd2u2oYKXpg2lY",
-    "out_format": "audio",
-    "last_update": 1579761625.0,
-    "title": "Що це було ?",
-    "profiles": "mobile"},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvK1kz-Vifj4XSbg0ezMllJV",
-    "out_format": "video",
-    "last_update": 1595868497.0,
-    "title": "Конфлікти",
-    "profiles": "mobile"},
-    {"url": "https://www.youtube.com/feeds/videos.xml?playlist_id=PL9o6bQUWYNvJFiB30Tg_nNDKE3-T0ImI8",
-    "out_format": "audio",
-    "title": "Корпорації світу",
-    "profiles": "mobile",
-    "last_update": 1592143016.0}],
+    "profiles": ["mobile"]}],
 "author": "24 Канал"}]
 '''

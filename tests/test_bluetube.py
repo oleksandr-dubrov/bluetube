@@ -6,8 +6,9 @@ from zipfile import ZipFile
 
 from bluetube import Bluetube
 from bluetube.bluetube import CLI
+from bluetube.commandexecutor import cache
 
-from tests.fake_db import FAKE_DB
+from tests.fake_db import FAKE_DB, NEW_LINKS
 
 
 def read_mocked_data():
@@ -26,29 +27,15 @@ def read_mocked_data():
         return pls
 
 
-def get_nbr_of_new_links():
-    '''get number of new videos, it's 3.'''
-    return 3
-
-def call_side_effect(*args, **kwargs):
-    ''' create a files from the URL as the call does'''
-    fake_name = args[0][-1].split('=')[1]
-    open(os.path.join(kwargs['cwd'], fake_name), 'w').close()
-    return 0
-
-
-def bt_side_effect(*args):
-    assert len(args) == 1
-    # return the link we have got
-    return args[0]
-
-
 class TestBluetube(unittest.TestCase):
 
     def setUp(self):
+        self.args = []
         self.sut = Bluetube(verbose=True)
         self.sut._get_bt_dir = lambda: os.path.dirname(os.path.abspath(__file__))
-
+        self.nbr_downloaded = 0
+        self.nbr_converted = 0
+        self.nbr_sent = 0
 
     def tearDown(self):
         patch.stopall()  # @UndefinedVariable
@@ -73,10 +60,29 @@ class TestBluetube(unittest.TestCase):
         self.sut.event_listener = cli
         return cli
 
+    @cache
+    def call_side_effect(self, *args, **kwargs):
+        ''' create a files from the URL as the youtube-dl does
+            or
+            create a file with the extension as ffmpeg does'''
+        str_args = ' '.join(args[0])
+        if str_args in self.args:
+            self.fail('called twice: {}'.format(str_args))
+        self.args.append(str_args)
+
+        if args[0][0] == 'youtube-dl':
+            fake_name = args[0][-1].split('=')[1]
+            open(os.path.join(kwargs['cwd'], fake_name), 'w').close()
+            self.nbr_downloaded += 1
+        elif args[0][0] == 'ffmpeg':
+            open(args[0][-1], 'w').close()
+            self.nbr_converted += 1
+        return 0
+
     def mock_executor(self):
         '''mock the command executor'''
         self.sut.executor = MagicMock()
-        self.sut.executor.call.side_effect = call_side_effect
+        self.sut.executor.call.side_effect = self.call_side_effect
 
     def mock_sender(self, found, connect, send):
         '''mock the bluetooth client'''
@@ -89,6 +95,12 @@ class TestBluetube(unittest.TestCase):
         bt.return_value = type('mocked_BluetoothClient', (object,), attrs)
         return bt
 
+    def bt_side_effect(self, *args):
+        assert len(args) == 1
+        # return the link we have got
+        self.nbr_sent += len(args[0])
+        return args[0]
+
     def mock_remote_data(self):
         '''mock remote data returned by urlopen'''
         patcher = patch('urllib.request.urlopen')
@@ -98,34 +110,50 @@ class TestBluetube(unittest.TestCase):
         uo.return_value.read.side_effect = [l.encode() for l in md]
         return uo
 
-    def testRun(self):
+    def mock_shutil_copy(self):
+        ''' mock shutil.copy2'''
+        patcher = patch('shutil.copy2')
+        return patcher.start()
+
+    def test_run(self):
         '''an origin good usage'''
         mdb = self.mock_db(FAKE_DB)
         cli = self.mock_cli()
         self.mock_executor()
-        mock_send = MagicMock(side_effect=bt_side_effect)
+        mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         urlopen = self.mock_remote_data()
+        mock_copy = self.mock_shutil_copy()
 
         self.sut.run()
 
-        nbr_urls = FAKE_DB.count('"url"')
         mdb.assert_called_once()
+
+        nbr_urls = FAKE_DB.count('"url"')
         self.assertEqual(urlopen.return_value.read.call_count, nbr_urls)
-        self.assertEqual(cli.ask.call_count, get_nbr_of_new_links())
+
+        self.assertEqual(cli.ask.call_count, NEW_LINKS)
+
+        self.assertEqual(NEW_LINKS, self.nbr_downloaded)
+        self.assertEqual(self.nbr_downloaded + self.nbr_converted,
+                         self.sut.executor.call.call_count)
+
         bt.assert_called()
-        self.assertEqual(mock_send.call_count, 2,
+        self.assertEqual(3, mock_send.call_count,
                          'it should be called if one or more links chosen')
+        self.assertEqual(NEW_LINKS, self.nbr_sent)
+        self.assertEqual(NEW_LINKS+2, mock_copy.call_count,
+                         'wrong number of copies, see profiles.toml')
 
     @patch('bluetube.bluetube.CLI')
-    def testRunNothigSelected(self, cli):
+    def test_run_nothig_selected(self, cli):
         '''no selected videos to process'''
         cli.ask.return_value = False
         self.sut.event_listener = cli
 
         mdb = self.mock_db(FAKE_DB)
         self.mock_executor()
-        mock_send = MagicMock(side_effect=bt_side_effect)
+        mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         urlopen = self.mock_remote_data()
 
@@ -135,7 +163,7 @@ class TestBluetube(unittest.TestCase):
         cli.inform.assert_any_call('feeds updated')
         self.assertEqual(urlopen.return_value.read.call_count,
                          FAKE_DB.count('"url"'))
-        self.assertEqual(cli.ask.call_count, get_nbr_of_new_links())
+        self.assertEqual(cli.ask.call_count, NEW_LINKS)
         bt.assert_not_called()
         self.assertEqual(mock_send.call_count, 0)
 

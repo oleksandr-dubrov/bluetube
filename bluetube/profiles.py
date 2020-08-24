@@ -15,6 +15,7 @@
     along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import copy
 import os
 
 import toml
@@ -26,14 +27,13 @@ class Profiles(object):
     '''
 
     PROFILES_NAME = 'profiles.toml'
-    BASE_PROFILE = '__base__'
+    BASE_PROFILE = '__download__'
 
     def __init__(self, bt_dir):
         path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
         try:
             configs = toml.load(path)
             self._verify_configurations(configs)
-            base = configs[Profiles.BASE_PROFILE]
         except TypeError:
             raise ProfilesException('Cannot open {}'.format(path))
         except toml.TomlDecodeError:
@@ -41,35 +41,69 @@ class Profiles(object):
         except FileNotFoundError as e:
             raise ProfilesException(e)
 
+        base = configs[Profiles.BASE_PROFILE]
         self._profiles = {}
+        del configs[Profiles.BASE_PROFILE]
         for c in configs:
-            base.update(configs[c])
-            self._profiles[c] = base
+            b = copy.deepcopy(base)
+            b.update(configs[c])
+            self._profiles[c] = b
 
     def get_audio_options(self, profile):
+        '''get options for audio'''
         if profile in self._profiles:
             return self._profiles[profile].get('audio', {})
         return None
 
     def get_video_options(self, profile):
+        '''get options for video'''
         if profile in self._profiles:
             return self._profiles[profile].get('video', {})
         return None
 
-    def get_sender_options(self, profile):
+    def get_convert_options(self, profile):
+        if profile in self._profiles:
+            return self._profiles[profile].get('convert')
+        return None
+
+    def get_send_options(self, profile):
         if profile in self._profiles:
             return self._profiles[profile].get('send')
+        return None
 
     def check_profile(self, profile):
         '''check if the given profile exists'''
         return profile in self._profiles.keys()
 
     def _verify_configurations(self, configs):
+        self.check_base_download_configurations(configs)
+        self.check_require_converter_configurations(configs)
+        self.check_send_configurations(configs)
+
+    def check_base_download_configurations(self, configs):
         if configs and Profiles.BASE_PROFILE in configs:
             base = configs[Profiles.BASE_PROFILE]
             if 'audio' in base and 'video' in base:
-                return 
+                return
         raise ProfilesException('the base profile not found')
+
+    def check_require_converter_configurations(self, configs):
+        msg = 'no required "convert.output_format" in {}'
+        for d in configs:
+            if 'convert' in configs[d] \
+                and 'output_format' not in configs[d]['convert']:
+                    raise ProfilesException(msg.format(d))
+
+    def check_send_configurations(self, configs):
+        for d in configs:
+            if 'send' in d and 'local_path' in d['send']:
+                local_path = d['send']['local_path']
+                if not os.path.exists(local_path):
+                    msg = 'local path does not exist in {}'
+                    raise ProfilesException(msg.format(d))
+                if not os.path.isdir(local_path):
+                    msg = 'local path must be a directory, see {}'
+                    raise ProfilesException(msg.format(d))
 
 
 class ProfilesException(Exception):

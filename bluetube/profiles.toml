@@ -2,37 +2,39 @@
 # TOML. https://pypi.org/project/toml/
 
 
-# The base mandatory profile.
-# Other profile inherits this one.
-[__base__]
+# The download options.
+# Other profile inherits these options.
+[__download__]
 
-    [__base__.audio]
+    [__download__.audio]
     # Specify audio format: "best", "aac", "flac", "mp3", "m4a",
     #                       "opus", "vorbis", or "wav"; "best" by default;
     output_format = "mp3"
 
-    [__base__.video]
-    # Encode the video to another format.
-    # If *<your profile>.codecs_options* is not set then the downloader
-    # tries to convert video to this format.
+    [__download__.video]
+    # Download the video in this format. The source might not allow it!
+    # If this option is empty, download it in the best quality.
     # Currently supported by the downloader: mp4|flv|ogg|webm|mkv|avi.
-    output_format = "mp4"
+    # For more information see:
+    #   https://github.com/ytdl-org/youtube-dl/blob/master/README.md#format-selection
+    output_format = ""
 
 
 # Default profile.
 # Use it as an example for new profiles as well.
-[<your profile name>]
+[profile_1]
 
-    [<your profile name>.video]
-    # to convert video configure audio and video codecs
-    # e.g.:
-    #    codecs_options=-vcodec h263 -acodec aac -s 352x288
-    # for more info see "ffmpeg --help"
-    # codecs_options = "OPTIONS"
+    [profile_1.convert]
+    # Convert to this format.
+    # output_format = "3gp"
 
-    [<your profile name>.send]
-    # enter your device ID in the line below
-    # deviceID="YOUR_RECEIVER_DEVICE_ID"
+    # other ffmpeg option can be set here.
+    # For more info see "ffmpeg --help"
+    # codecs_options = "-vcodec h263 -acodec aac -s 352x288"
 
-    # save downloaded and converted video here:
+    [profile_1.send]
+    # Enter your pair bluetooth device ID here.
+    # bluetooth_device_id = "YOUR_RECEIVER_DEVICE_ID"
+
+    # Save downloaded and/or converted video here:
     # local_path = "~/Downloads"

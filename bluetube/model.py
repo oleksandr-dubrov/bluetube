@@ -48,10 +48,10 @@ class Playlist(object):
         self._url = url
         self._last_update = None
         self._output_format = OutputFormatType.audio
-        self._profile = None
+        self._profiles = []
         self._feedparser_data = None
-        self._failed_links = []
-        self._links = []
+        self._failed_entities = []
+        self._entities = []
 
     def set_output_format_type(self, output_format_type):
         if isinstance(output_format_type, str):
@@ -94,33 +94,35 @@ class Playlist(object):
         return self._output_format
 
     @property
-    def profile(self):
-        return self._profile
+    def profiles(self):
+        return self._profiles
 
-    @profile.setter
-    def profile(self, p):
-        self._profile = p
-
-    @property
-    def links(self):
-        # TODO: dont! self._links.extend(self.failed_links)
-        return self._links
-
-    @links.setter
-    def links(self, ln):
-        self._links = ln
-
-    @links.deleter
-    def links(self):
-        self._links = []
+    @profiles.setter
+    def profiles(self, p):
+        self._profiles = p
 
     @property
-    def failed_links(self):
-        return self._failed_links
+    def entities(self):
+        # TODO: dont! self._entities.extend(self.failed_entities)
+        return self._entities
 
-    def add_failed_links(self, fl):
-        self._failed_links.append(fl)
+    @entities.setter
+    def entities(self, ln):
+        self._entities = ln
 
-    @failed_links.deleter
-    def failed_links(self):
-        self._failed_links.clear()
+    @entities.deleter
+    def entities(self):
+        self._entities = []
+
+    @property
+    def failed_entities(self):
+        return self._failed_entities
+
+    def add_failed_entities(self, fl):
+        for p in fl:
+            if len(fl[p]):
+                self._failed_entities.append(fl)
+
+    @failed_entities.deleter
+    def failed_entities(self):
+        self._failed_entities.clear()

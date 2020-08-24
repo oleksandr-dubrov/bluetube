@@ -1,4 +1,5 @@
 import dbm
+import functools
 import os
 import shelve
 
@@ -31,6 +32,7 @@ class Feeds(object):
     class Decor(object):
         @staticmethod
         def pull_if_needed(func):
+            @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 self = args[0]
                 if not len(self._feeds):
@@ -85,7 +87,7 @@ class Feeds(object):
                     pl = Playlist(raw_pl['title'], raw_pl['url'])
                     pl.last_update = raw_pl['last_update']
                     pl.set_output_format_type(raw_pl['out_format'])
-                    pl.profile = raw_pl['profiles']
+                    pl.profiles = raw_pl['profiles']
                     pls.append(pl)
                 self._feeds.append({'author': author['author'],
                                     'playlists': pls})
@@ -105,8 +107,8 @@ class Feeds(object):
                              'url': ls.url,
                              'last_update': ls.last_update,
                              'out_format': ls.output_format,
-                             'profile': ls.profile,
-                             'failed_links': ls.failed_links})
+                             'profiles': ls.profiles,
+                             'failed_entities': ls.failed_entities})
                     res.append(o)
                 db['feeds'] = res
                 self._close(db)
