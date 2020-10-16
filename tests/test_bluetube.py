@@ -233,9 +233,9 @@ class TestBluetube(unittest.TestCase):
                           {'feed': type('mocked_pl',
                                     (object,),
                                     {'author': a, 'title': t})})
-        with patch('feedparser.parse', return_value = parsed):
-            self.sut.add_playlist(url, out_format, profiles)
-            self.assertTrue(check_author_title(d['feeds'], a, t))
+            with patch('feedparser.parse', return_value = parsed):
+                self.sut.add_playlist(url, out_format, profiles)
+                self.assertTrue(check_author_title(d['feeds'], a, t))
 
 
 class TestCli(unittest.TestCase):
