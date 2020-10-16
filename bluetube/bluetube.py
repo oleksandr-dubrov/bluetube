@@ -69,21 +69,18 @@ class Bluetube(object):
         self.executor = CommandExecutor(verbose)
         self.event_listener = CLI(self.executor)
 
-    def add_playlist(self, url, out_format):
+    def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
         feed_url = self._get_feed_url(url)
-        if out_format and feed_url:
-            f = feedparser.parse(feed_url)
-            title = f.feed.title
-            author = f.feed.author
-            feeds = Feeds(self._get_bt_dir())
-            if feeds.has_playlist(author, title):
-                self.event_listener.error('playlist exists'. title, author)
-            else:
-                feeds.add_playlist(author, title, feed_url, out_format)
-                self.event_listener.success('added', title, author)
-            return True
-        return False
+        f = feedparser.parse(feed_url)
+        title = f.feed.title
+        author = f.feed.author
+        feeds = Feeds(self._get_bt_dir())
+        if feeds.has_playlist(author, title):
+            self.event_listener.error('playlist exists'. title, author)
+        else:
+            feeds.add_playlist(author, title, feed_url, out_format, profiles)
+            self.event_listener.success('added', title, author)
 
     def list_playlists(self):
         ''' list all playlists in RSS feeds '''

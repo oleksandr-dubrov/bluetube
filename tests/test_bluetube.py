@@ -193,7 +193,7 @@ class TestBluetube(unittest.TestCase):
         bt.assert_not_called()
         self.assertEqual(mock_send.call_count, 0)
 
-    def testEmptyDB(self):
+    def test_empty_DB(self):
         '''inform about the empty DB and do nothing'''
         mdb = self.mock_db({})
         cli = self.mock_cli()
@@ -205,6 +205,37 @@ class TestBluetube(unittest.TestCase):
         mdb.assert_called_once()
         cli.inform.assert_any_call('empty database')
         cli.feeds_updated.assert_not_called()
+
+    def test_add_playlist(self):
+        def check_author_title(feeds, author, title):
+            for a in feeds:
+                if a['author'] == author:
+                    for t in a['playlists']:
+                        if t['title'] == title:
+                            return True
+            return False
+
+        self.mock_cli()
+        mock_db = MagicMock()
+        mock_db.get.return_value = json.loads(FAKE_DB)
+        d = {'feeds': []}
+        mock_db.__setitem__.side_effect = d.__setitem__
+        patcher = patch('shelve.open', return_value=mock_db)
+        patcher.start()
+
+        url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
+        out_format = 'video'
+        profiles = ['profile_1', ]
+
+        for a, t in (('author1', 'title1'), ('ТаТоТаке', 'ТаТоТаке')):
+            parsed = type('mocked_feed',
+                          (object,),
+                          {'feed': type('mocked_pl',
+                                    (object,),
+                                    {'author': a, 'title': t})})
+        with patch('feedparser.parse', return_value = parsed):
+            self.sut.add_playlist(url, out_format, profiles)
+            self.assertTrue(check_author_title(d['feeds'], a, t))
 
 
 class TestCli(unittest.TestCase):

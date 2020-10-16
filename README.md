@@ -235,11 +235,7 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
     }
 
 
-### 7.4 Error handling.
-If a method fails it returns **False**. Otherwise - **True**.
-
-
-### 7.5 Bluetooth.
+### 7.4 Bluetooth.
 ------------------
 The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
 A few experiments showed that the most appropriate socket timeout is 120 seconds.
@@ -262,8 +258,3 @@ Unlike the base implementation, the extended version of the method reads the dat
 [setuptools](https://setuptools.readthedocs.io/en/latest/).
 
 [TOML](https://pypi.org/project/toml/).
-
-
-0 TODO
-------
-Nothing to do.

@@ -83,15 +83,14 @@ Check the config file. It must have something like this
         '''show an error to the user'''
         Bcolors.error(self._get_msg(msg, CLI.ERROR, args))
 
-    def success(self, msg, *args):
+    def success(self, msg, *args):  # @DontTrace
         '''inform about success'''
-        Bcolors.intense(self._get_msg(msg, CLI.SUCCESS, args))
+        Bcolors.intense(self._get_msg(msg, CLI.SUCCESS, *args))
 
     def _get_msg(self, msg, msg_collection, *args):
         if msg in msg_collection:
             msg = msg_collection[msg].format(*args)
         return msg
-
 
     def sound(self):
         ''' inform the user by voice'''

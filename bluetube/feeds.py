@@ -46,10 +46,17 @@ class Feeds(object):
         self._feeds = []
 
     @Decor.pull_if_needed
-    def add_playlist(self, author, title, url, out_format):
+    def add_playlist(self, author, title, url, out_format, profiles):
         pl = Playlist(title, url)
         pl.set_output_format_type(out_format)
-        self._feeds[author].append(pl)
+        pl.profiles = profiles
+        for a in self._feeds:
+            if a['author'] == author:
+                a['playlists'].append(pl)
+                break
+        else:
+            self._feeds.append({'author': author,
+                                'playlists': [pl]})
         self._push()
 
     @Decor.pull_if_needed
@@ -69,10 +76,9 @@ class Feeds(object):
     def get_authors(self):
         return [a['author'] for a in self._feeds]
 
+    @Decor.pull_if_needed
     def has_playlist(self, author, title):
-        if not len(self._feeds):
-            self._pull()
-        a_t = [{a['author']: [ p['title'] for p in a['playlists']]}
+        a_t = [{a['author']: [ p.title for p in a['playlists']]}
                for a in self._feeds]
         return author in a_t and title in a_t[author]
 
