@@ -95,13 +95,13 @@ class Feeds(object):
 
     def _push(self):
         'push data to the db'
-        if not len(self._feeds):
+        if len(self._feeds):
             db = self._create_rw_connector()
             if db:
                 res = []
-                for author, pllst in self._feeds:
-                    o = {'author': author, 'playlists': []}
-                    for ls in pllst:
+                for author in self._feeds:
+                    o = {'author': author['author'], 'playlists': []}
+                    for ls in author['playlists']:
                         o['playlists'].append(
                             {'title': ls.title,
                              'url': ls.url,
@@ -112,6 +112,8 @@ class Feeds(object):
                     res.append(o)
                 db['feeds'] = res
                 self._close(db)
+            else:
+                assert 0
 
     def _create_rw_connector(self):
         '''create DB connector in read/write mode'''
@@ -128,5 +130,6 @@ class Feeds(object):
         try:
             db.close()
         except ValueError as e:
+            # TODO: re-throw an exception
             Bcolors.error('Probably your changes were lost. Try again')
             raise e

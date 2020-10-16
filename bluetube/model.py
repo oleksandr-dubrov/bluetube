@@ -44,6 +44,7 @@ class Playlist(object):
     '''
 
     def __init__(self, title, url):
+        self.author = None
         self._title = title
         self._url = url
         self._last_update = None

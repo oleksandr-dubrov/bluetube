@@ -127,7 +127,8 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.run()
 
-        mdb.assert_called_once()
+        self.assertEqual(2, mdb.call_count,
+                         'should be called for read and write')
 
         nbr_urls = FAKE_DB.count('"url"')
         self.assertEqual(urlopen.return_value.read.call_count, nbr_urls)
@@ -145,6 +146,29 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(NEW_LINKS+2, mock_copy.call_count,
                          'wrong number of copies, see profiles.toml')
 
+    def test_run_download_failed(self):
+        '''failed all downloads'''
+        self.mock_db(FAKE_DB)
+        self.mock_cli()
+        self.sut.executor = MagicMock()
+        self.sut.executor.call.side_effect = lambda *args, **kwargs: 1  # @UnusedVariable
+        mock_send = MagicMock(side_effect=self.bt_side_effect)
+        bt = self.mock_sender(found=True, connect=True, send=mock_send)
+        self.mock_remote_data()
+        mock_copy = self.mock_shutil_copy()
+
+        self.sut.run()
+
+        self.assertEqual(0, self.nbr_downloaded)
+        self.assertEqual(NEW_LINKS + 2, self.sut.executor.call.call_count,
+                         'download does not cache failed attempts,'
+                         'so it should called for every link in every profile')
+        bt.assert_not_called()
+        mock_send.assert_not_called()
+        self.assertEqual(0, self.nbr_sent)
+        self.assertEqual(0, mock_copy.call_count)
+
+
     @patch('bluetube.bluetube.CLI')
     def test_run_nothig_selected(self, cli):
         '''no selected videos to process'''
@@ -159,7 +183,9 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.run()
 
-        mdb.assert_called_once()
+        self.assertEqual(2, mdb.call_count,
+                 'should be called for read and write')
+
         cli.inform.assert_any_call('feeds updated')
         self.assertEqual(urlopen.return_value.read.call_count,
                          FAKE_DB.count('"url"'))
@@ -191,7 +217,7 @@ class TestCli(unittest.TestCase):
             self.sut.inform('empty database')
             self.sut.inform('feed is fetching', 'a message')
             self.sut.inform('feed updated')
-            self.sut.inform('an abitrary message')
+            self.sut.inform('an arbitrary message')
         self.sut._executor.call.assert_called_once()
 
 

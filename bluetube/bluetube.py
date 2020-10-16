@@ -119,13 +119,16 @@ class Bluetube(object):
             self.event_listener.inform(a['author'])
             for pl in a['playlists']:
                 fetch_rss(pl)
-
+                pl.author = a['author']
+        pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
 
     def proccess_playlists(self, pls, show_all):
-            self.event_listener.inform(pls['author'])
-            return [self._process_playlist(pl, show_all)
-                    for pl in pls['playlists']]
+        ret = []
+        for pl in pls:
+            self.event_listener.inform(pl.author)
+            ret.append(self._process_playlist(pl, show_all))
+        return ret
 
     def _download_list(self, pls, profiles, download_dir):
         for pl in pls:
@@ -229,8 +232,7 @@ class Bluetube(object):
             self.event_listener.inform('empty database')
             return
 
-        pls = [self.proccess_playlists(pl, show_all) for pl in pls]
-        pls = [p for pl in pls for p in pl]  # make the list flat
+        pls = self.proccess_playlists(pls, show_all)
 
         try:
             profiles = Profiles(self._get_bt_dir())
@@ -269,7 +271,7 @@ class Bluetube(object):
 
         self._send_list(pls, profiles, download_dir)
 
-        feed.set_all_playlists(pls)
+        feed.set_all_playlists(self._prepare_list(pls))
         feed.sync()
         self._return_download_dir(download_dir)
 
@@ -371,6 +373,14 @@ class Bluetube(object):
 
         return fetch_rss
 
+    def _prepare_list(self, pls):
+        ret = {}
+        for pl in pls:
+            ret.setdefault(pl.author, [])
+            ret[pl.author].append(pl)
+            del pl.author
+        return [{'author': a, 'playlists': ret[a]} for a in ret]
+
     def _process_playlist(self, pl, show_all):
         '''process the playlist'''
         entities = []
@@ -393,7 +403,7 @@ class Bluetube(object):
     def _download(self, entities, output_format, configs, cache, download_dir):
         options = self._build_converter_options(output_format, configs)
         # create a temporal directory to download a file by its link
-        # to be sure that the file belongs to the link 
+        # to be sure that the file belongs to the link
         tmp = os.path.join(download_dir, 'tmp')
         os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
         success, failure = [], []
