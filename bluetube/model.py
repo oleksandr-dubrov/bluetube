@@ -51,7 +51,7 @@ class Playlist(object):
         self._output_format = OutputFormatType.audio
         self._profiles = []
         self._feedparser_data = None
-        self._failed_entities = []
+        self._failed_entities = {}
         self._entities = []
 
     def set_output_format_type(self, output_format_type):
@@ -122,7 +122,7 @@ class Playlist(object):
     def add_failed_entities(self, fl):
         for p in fl:
             if len(fl[p]):
-                self._failed_entities.append(fl)
+                self._failed_entities.setdefault(p, []).extend(fl[p])
 
     @failed_entities.deleter
     def failed_entities(self):

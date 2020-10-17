@@ -43,6 +43,7 @@ class CLI(object):
     ERRORS = {
         'downloader not found': 'The tool for downloading "{}"'
                                 ' is not found in PATH',
+        'failed to download': 'Failed to download {} for {}',
         'converter not found': 'The tool for converting video "{}"'
                                ' is not found in PATH',
         'failed to convert': 'Failed to convert the file {}.',
@@ -77,13 +78,13 @@ Check the config file. It must have something like this
         if msg == 'feed updated':
             self.sound()
             return
-        print(self._get_msg(msg, CLI.INFORMS, args))
+        print(self._get_msg(msg, CLI.INFORMS, *args))
 
     def error(self, msg, *args):
         '''show an error to the user'''
-        Bcolors.error(self._get_msg(msg, CLI.ERROR, args))
+        Bcolors.error(self._get_msg(msg, CLI.ERRORS, *args))
 
-    def success(self, msg, *args):  # @DontTrace
+    def success(self, msg, *args):
         '''inform about success'''
         Bcolors.intense(self._get_msg(msg, CLI.SUCCESS, *args))
 

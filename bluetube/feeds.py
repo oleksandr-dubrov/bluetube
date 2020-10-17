@@ -110,6 +110,7 @@ class Feeds(object):
                     pl.last_update = raw_pl['last_update']
                     pl.set_output_format_type(raw_pl['out_format'])
                     pl.profiles = raw_pl['profiles']
+                    pl.add_failed_entities(raw_pl.get('failed_entities', {}))
                     pls.append(pl)
                 self._feeds.append({'author': author['author'],
                                     'playlists': pls})

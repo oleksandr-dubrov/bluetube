@@ -77,7 +77,7 @@ class Bluetube(object):
         author = f.feed.author
         feeds = Feeds(self._get_bt_dir())
         if feeds.has_playlist(author, title):
-            self.event_listener.error('playlist exists'. title, author)
+            self.event_listener.error('playlist exists', title, author)
         else:
             feeds.add_playlist(author, title, feed_url, out_format, profiles)
             self.event_listener.success('added', title, author)
@@ -110,6 +110,7 @@ class Bluetube(object):
             # Bcolors.error('{} by {} not found'.format(title, author))
 
     def _get_list(self, feed):
+        '''fetch and parse RSS data for all lists'''
         pls = feed.get_all_playlists()
         fetch_rss = self._get_rss_fetcher()
         for a in pls:
@@ -121,6 +122,7 @@ class Bluetube(object):
         return pls
 
     def proccess_playlists(self, pls, show_all):
+        '''ask the user what to do with the entities'''
         ret = []
         for pl in pls:
             self.event_listener.inform(pl.author)
@@ -146,6 +148,11 @@ class Bluetube(object):
                                       cache,
                                       download_dir)
                 pl.entities[profile] = s
+                if f:
+                    ens = [e.title for e in f]
+                    ens = ', '.join(ens)
+                    self.event_listener.error('failed to download',
+                                              ens, profile)
                 pl.add_failed_entities({profile: f})
 
 
@@ -250,6 +257,13 @@ class Bluetube(object):
                 en[profile] = copy.deepcopy(pl.entities)
             pl.entities = en
 
+        # prepend previously failed entities
+        for pl in pls:
+            for pr in pl.entities:
+                if pr in pl.failed_entities:
+                    pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
+                    del pl.failed_entities[pr]
+
         if not self._check_downloader():
             self.event_listener.error('downloader not found',
                                       Bluetube.DOWNLOADER)
@@ -265,7 +279,7 @@ class Bluetube(object):
             if not self.event_listener.do_continue():
                 return
         self._convert_list(pls, profiles, download_dir)
-
+ 
         self._send_list(pls, profiles, download_dir)
 
         feed.set_all_playlists(self._prepare_list(pls))
@@ -406,16 +420,17 @@ class Bluetube(object):
         success, failure = [], []
 
         for en in entities:
-            options = options + (en['link'],)
+            all_options = options + (en['link'],)
 
             # check the value in the given cache
             # to avoid downloading the same file twice
-            new_link = cache.get(' '.join(options))
+            new_link = cache.get(' '.join(all_options))
             if new_link:
+                self._dbg('this link has been downloaded - {}'.format(new_link))
                 en['link'] = new_link
                 success.append(en)
             else:
-                status = self.executor.call(options, cwd=tmp)
+                status = self.executor.call(all_options, cwd=tmp)
                 if status:
                     failure.append(en)
                     # clear the tmp directory that may have parts of
@@ -433,7 +448,7 @@ class Bluetube(object):
                     success.append(en)
 
                     # put the link to just downloaded file into the cache 
-                    cache[' '.join(options)] = new_link
+                    cache[' '.join(all_options)] = new_link
 
         os.rmdir(tmp)
         return success, failure
@@ -499,6 +514,11 @@ class Bluetube(object):
             or not os.path.isdir(Bluetube.CUR_DIR):
                 os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
         return Bluetube.CUR_DIR
+
+    def _dbg(self, msg):
+        '''print debug info to console'''
+        if self.verbose:
+            print(msg)
 
 # ============================================================================ #
 
