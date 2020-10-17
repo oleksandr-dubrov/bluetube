@@ -64,7 +64,7 @@ class Bluetube(object):
     NOT_CONV_DIR = 'not_converted'
 
     def __init__(self, verbose=False):
-        self.verbose = verbose,
+        self.verbose = verbose
         self.senders = {}
         self.executor = CommandExecutor(verbose)
         self.event_listener = CLI(self.executor)
@@ -162,6 +162,9 @@ class Bluetube(object):
             if pl.output_format is OutputFormatType.video:
                 for profile, entities in pl.entities.items():
                     c_op = profiles.get_convert_options(profile)
+                    if not c_op:
+                        self._dbg('no converter options for {}'.format(profile))
+                        return
                     v_op = profiles.get_video_options(profile)
                     # convert unless the video has not been downloaded in
                     # proper format
@@ -172,7 +175,6 @@ class Bluetube(object):
                         pl.entities[profile] = s
                         pl.add_failed_entities({profile: f})
 
-
     def _send_list(self, pls, profiles, download_dir):
         for pl in pls:
             for profile, entities in pl.entities.items():
@@ -180,27 +182,36 @@ class Bluetube(object):
                 links = [e['link'] for e in entities]
                 if not s_op or not links:
                     continue
-                sent, copied = [], []
+                processed = []
 
                 # send via bluetooth
                 device_id = s_op.get('bluetooth_device_id')
                 if device_id:
                     sent = self._send_bt(device_id, links, download_dir)
+                    processed.append(sent)
 
                 # move to local directory
                 local_path = s_op.get('local_path')
                 if local_path:
+                    try:
+                        os.makedirs(local_path,
+                                    Bluetube.ACCESS_MODE,
+                                    exist_ok=True)
+                    except PermissionError as e:
+                        self.event_listener.error(e)
+                        continue
                     copied = self._copy_to_local_path(local_path, links)
+                    processed.append(copied)
 
-                # select failed entities
-                failure = []
                 for en in entities:
                     lnk = en['link']
-                    if lnk in sent and lnk in copied:
-                        os.remove(lnk)
+                    if all([lnk in pr for pr in processed]):
+                        try:
+                            os.remove(lnk)
+                        except FileNotFoundError:
+                            pass # ignore this exception
                     else:
-                        failure.append(en)
-                pl.add_failed_entities({profile: failure})
+                        self._dbg('{} has not been sent'.format(lnk))
 
     def _send_bt(self, device_id, links, download_dir):
         '''sent all files defined by the links
@@ -216,6 +227,7 @@ class Bluetube(object):
         '''copy files defined by links to the local path'''
         copied = []
         for l in links:
+            self._dbg('copying {} to {}'.format(l, local_path))
             try:
                 shutil.copy2(l, local_path)
                 copied.append(l)
@@ -518,7 +530,7 @@ class Bluetube(object):
     def _dbg(self, msg):
         '''print debug info to console'''
         if self.verbose:
-            print(msg)
+            print('[debug] {}'.format(msg))
 
 # ============================================================================ #
 

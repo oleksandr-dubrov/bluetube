@@ -31,7 +31,7 @@ class TestBluetube(unittest.TestCase):
 
     def setUp(self):
         self.args = []
-        self.sut = Bluetube(verbose=True)
+        self.sut = Bluetube(verbose=False)
         self.sut._get_bt_dir = lambda: os.path.dirname(os.path.abspath(__file__))
         self.nbr_downloaded = 0
         self.nbr_converted = 0
