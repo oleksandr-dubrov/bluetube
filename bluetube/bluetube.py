@@ -504,30 +504,51 @@ class Bluetube(object):
 
 
 def main():
+
+    def add(bluetube, args):
+        profiles = args.profiles if args.profiles else ['__download__']
+        if not bluetube.add_playlist(args.add,
+                                     OutputFormatType.from_char(args.type),
+                                     profiles):
+            sys.exit(-1)
+
     description='The script downloads youtube video as video or audio and sends to a bluetooth client device.'
     epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth client.'
     parser = argparse.ArgumentParser(prog='bluetube', description=description)
     parser.epilog = epilog
-    me_group = parser.add_mutually_exclusive_group()
 
-    me_group.add_argument('--add', '-a',
-                        help='add a URL to youtube playlist', type=str)
-    parser.add_argument('-t',
-                    dest='type',
-                    help='a type of a file you want to get (for --add)',
-                    choices=['a', 'v'],
-                    default='v')
-    me_group.add_argument('-p', nargs='*',
-                          dest='profiles',
-                          help='specify one or multiple profiles (for --add)')
-    me_group.add_argument('--list', '-l',
-                        help='list all playlists', action='store_true')
-    me_group.add_argument('--remove', '-r',
-                        nargs=2,
-                        help='remove a playlist by names of the author and the playlist',
-                        type=lambda s: str(s, 'utf8'))
+    subparsers = parser.add_subparsers(title='Commands',
+                                       description='Use the commands below to'
+                                       'modify or show subscribed playlists.',
+                                        help='')
+    parser_add = subparsers.add_parser('add',
+                                       help='add a URL to youtube playlist')
+    parser_add.add_argument('-t', dest='type',
+                            choices=['a', 'v'],
+                            default='v',
+                            help='a type of a file you want to get')
+    parser_add.add_argument('-p', nargs='*',
+                        dest='profiles',
+                        help='one or multiple profiles')
+    parser_add.set_defaults(func=add)
 
-    me_group.add_argument('--send', '-s',
+    parser_list = subparsers.add_parser('list', help='list all playlists')
+    parser_list.set_defaults(func=lambda bt, _: bt.list_playlists())
+    
+
+    parser_remove = subparsers.add_parser('remove',
+            help='remove a playlist by names of the author and the playlist')
+    parser_remove.add_argument('--author', '-a',
+                               type=str,
+                               help='an author of a playlist to be removed')
+    parser_remove.add_argument('--playlist', '-p',
+                               type=str,
+                               help='a playlist to be removed')
+    parser_remove.set_defaults(func=lambda bt, args:
+                                bt.remove_playlist(args.remove[0].strip(),
+                                                   args.remove[1].strip()))
+
+    parser.add_argument('--send', '-s',
                         help='send already downloaded files',
                         action='store_true')
 
@@ -542,18 +563,10 @@ def main():
 
     args = parser.parse_args()
     bluetube = Bluetube(args.verbose)
-    if args.add:
-        profiles = args.profiles if args.profiles else ['__download__']
-        if not bluetube.add_playlist(args.add,
-                                     OutputFormatType.from_char(args.type),
-                                     profiles):
-            sys.exit(-1)
-    elif args.list:
-        bluetube.list_playlists()
-    elif args.remove:
-        bluetube.remove_playlist(args.remove[0].strip(),
-                                 args.remove[1].strip())
-    elif args.send:
+    if hasattr(args, 'func'):
+        args.func(bluetube, args)
+
+    if args.send:
         bluetube.send()
     else:
         bluetube.run(args.show_all)
