@@ -40,9 +40,11 @@ class TestBluetube(unittest.TestCase):
     def tearDown(self):
         patch.stopall()  # @UndefinedVariable
 
-    def mock_db(self, fake_db):
+    def mock_db(self, fake_db, dct=None):
         '''mock shelve DB with the fake DB''' 
         mock_db = MagicMock()
+        if dct:
+            mock_db.__setitem__.side_effect = dct.__setitem__
         if isinstance(fake_db, dict):
             mock_db.get.return_value = fake_db
         elif isinstance(fake_db, str):
@@ -114,6 +116,16 @@ class TestBluetube(unittest.TestCase):
         ''' mock shutil.copy2'''
         patcher = patch('shutil.copy2')
         return patcher.start()
+
+    def check_author_title(self, feeds, author, title):
+        for a in feeds:
+            if a['author'] == author:
+                for t in a['playlists']:
+                    if t['title'] == title:
+                        return True
+        return False
+
+###############################################################################
 
     def test_run(self):
         '''an origin good usage'''
@@ -207,27 +219,16 @@ class TestBluetube(unittest.TestCase):
         cli.feeds_updated.assert_not_called()
 
     def test_add_playlist(self):
-        def check_author_title(feeds, author, title):
-            for a in feeds:
-                if a['author'] == author:
-                    for t in a['playlists']:
-                        if t['title'] == title:
-                            return True
-            return False
-
         self.mock_cli()
-        mock_db = MagicMock()
-        mock_db.get.return_value = json.loads(FAKE_DB)
         d = {'feeds': []}
-        mock_db.__setitem__.side_effect = d.__setitem__
-        patcher = patch('shelve.open', return_value=mock_db)
-        patcher.start()
+        self.mock_db(FAKE_DB, d)
 
         url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
         out_format = 'video'
         profiles = ['profile_1', ]
 
-        for a, t in (('author1', 'title1'), ('ТаТоТаке', 'ТаТоТаке')):
+        a = t = 'ТаТоТаке'
+        for a, t in (('author1', 'title1'), (a, t)):
             parsed = type('mocked_feed',
                           (object,),
                           {'feed': type('mocked_pl',
@@ -235,7 +236,16 @@ class TestBluetube(unittest.TestCase):
                                     {'author': a, 'title': t})})
             with patch('feedparser.parse', return_value = parsed):
                 self.sut.add_playlist(url, out_format, profiles)
-                self.assertTrue(check_author_title(d['feeds'], a, t))
+                self.assertTrue(self.check_author_title(d['feeds'], a, t))
+
+    def test_remove_playlist(self):
+        self.mock_cli()
+        d = {'feeds': []}
+        self.mock_db(FAKE_DB, d)
+        a = t = 'ТаТоТаке'
+        self.sut.remove_playlist(a, t)
+        self.assertTrue(len(d['feeds']))
+        self.assertFalse(self.check_author_title(d['feeds'], a, t))
 
 
 class TestCli(unittest.TestCase):

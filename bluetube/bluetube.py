@@ -517,6 +517,9 @@ def main():
                     help='a type of a file you want to get (for --add)',
                     choices=['a', 'v'],
                     default='v')
+    me_group.add_argument('-p', nargs='*',
+                          dest='profiles',
+                          help='specify one or multiple profiles (for --add)')
     me_group.add_argument('--list', '-l',
                         help='list all playlists', action='store_true')
     me_group.add_argument('--remove', '-r',
@@ -540,8 +543,10 @@ def main():
     args = parser.parse_args()
     bluetube = Bluetube(args.verbose)
     if args.add:
+        profiles = args.profiles if args.profiles else ['__download__']
         if not bluetube.add_playlist(args.add,
-                                     OutputFormatType.from_char(args.type)):
+                                     OutputFormatType.from_char(args.type),
+                                     profiles):
             sys.exit(-1)
     elif args.list:
         bluetube.list_playlists()

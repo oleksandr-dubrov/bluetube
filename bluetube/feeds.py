@@ -78,9 +78,25 @@ class Feeds(object):
 
     @Decor.pull_if_needed
     def has_playlist(self, author, title):
-        a_t = [{a['author']: [ p.title for p in a['playlists']]}
-               for a in self._feeds]
+        a_t = {a['author']: [ p.title for p in a['playlists']]
+               for a in self._feeds}
         return author in a_t and title in a_t[author]
+
+    @Decor.pull_if_needed
+    def remove_playlist(self, author, title):
+        '''remove the title of the author;
+        remove the author if it has no more titles'''
+        f = self._feeds
+        for idx in range(len(f)):
+            if f[idx]['author'] == author:
+                l = f[idx]['playlists']
+                for jdx in range(len(l)):
+                    if l[jdx].title == title:
+                        del l[jdx]
+                        if not len(l):
+                            del f[idx]
+                        self._push()
+                        return
 
     def _pull(self):
         'pull data from the DB'
