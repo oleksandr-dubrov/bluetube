@@ -247,6 +247,14 @@ class TestBluetube(unittest.TestCase):
         self.assertTrue(len(d['feeds']))
         self.assertFalse(self.check_author_title(d['feeds'], a, t))
 
+    def test_send(self):
+        self.mock_db(FAKE_DB)
+        cli = self.mock_cli()
+
+        self.sut.send()
+        cli.warn.assert_any_call('Nothing to send.')
+
+
 
 class TestCli(unittest.TestCase):
     

@@ -65,7 +65,6 @@ class BluetoothClient(Client):
             if self.in_progress:
                 sys.stdout.write('.')
             else:
-                filename = filename.decode('utf-8')
                 if len(filename) > 45:
                     filename = filename[:42] + '...'
                 sys.stdout.write('[sending] "{}" to {}...'.format(filename,
@@ -130,17 +129,17 @@ class BluetoothClient(Client):
             full_path = os.path.join(self.bluetube_dir, fm)
             self.file_data_stream = open(full_path, 'rb')
             try:
-                resp = self.put(fm.decode('utf-8'),
+                resp = self.put(fm,
                                 full_path,
                                 callback=lambda resp: self._callback(resp, fm))
                 if resp:
                     pass  # print(resp)
                 else:
-                    print('\n{} sent.'.format(fm.decode('utf-8')))
+                    print('\n{} sent.'.format(fm))
                     sent.append(full_path)
             except socket.error as e:
                 Bcolors.error(str(e))
-                Bcolors.error('{} didn\'t send'.format(fm.decode('utf-8')))
+                Bcolors.error('{} didn\'t send'.format(fm))
                 print('Trying to reconnect...')
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
@@ -152,7 +151,7 @@ class BluetoothClient(Client):
                     sent += self.send([fm, ])
             except KeyboardInterrupt:
                 Bcolors.error('Sending of {} stopped because of KeyboardInterrupt'
-                                .format(fm.decode('utf-8')))
+                                .format(fm))
             finally:
                 self.in_progress = False
                 self.file_data_stream.close()

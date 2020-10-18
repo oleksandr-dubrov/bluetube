@@ -75,6 +75,10 @@ class Profiles(object):
         '''check if the given profile exists'''
         return profile in self._profiles.keys()
 
+    def get_profiles(self):
+        '''get names of profiles'''
+        return self._profiles.keys()
+
     def _verify_configurations(self, configs):
         self.check_base_download_configurations(configs)
         self.check_require_converter_configurations(configs)

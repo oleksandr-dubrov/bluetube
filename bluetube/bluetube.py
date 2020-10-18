@@ -109,6 +109,116 @@ class Bluetube(object):
             pass
             # Bcolors.error('{} by {} not found'.format(title, author))
 
+    def run(self, show_all=False):
+        ''' The main method. It does everything.'''
+
+        feed = Feeds(self._get_bt_dir())
+        pls = self._get_list(feed)
+
+        if len(pls):
+            self.event_listener.inform('feeds updated')
+        else:
+            self.event_listener.inform('empty database')
+            return
+
+        pls = self._proccess_playlists(pls, show_all)
+
+        profiles = self._get_profiles(self._get_bt_dir())
+
+        # check if profiles do exist in the configurations
+        for pl in pls:
+            for profile in pl.profiles:
+                # TODO: ask to edit configurations
+                assert profiles.check_profile(profile)
+            
+        # combine entities (links with metadata to download) with profiles
+        for pl in pls:
+            en = {}
+            for profile in pl.profiles:
+                en[profile] = copy.deepcopy(pl.entities)
+            pl.entities = en
+
+        # prepend previously failed entities
+        for pl in pls:
+            for pr in pl.entities:
+                if pr in pl.failed_entities:
+                    pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
+                    del pl.failed_entities[pr]
+
+        if not self._check_downloader():
+            self.event_listener.error('downloader not found',
+                                      Bluetube.DOWNLOADER)
+            # TODO: move all entities to failed.
+            return
+
+        download_dir = self._fetch_download_dir()
+        self._download_list(pls, profiles, download_dir)
+
+        if not self._check_vidoe_converter():
+            self.event_listener.error('converter not found', Bluetube.CONVERTER)
+            self.event_listener.inform('converter not found')
+            if not self.event_listener.do_continue():
+                return
+        self._convert_list(pls, profiles, download_dir)
+ 
+        self._send_list(pls, profiles, download_dir)
+
+        feed.set_all_playlists(self._prepare_list(pls))
+        feed.sync()
+        self._return_download_dir(download_dir)
+
+    def send(self):
+        '''send files from the bluetube download directory
+        to all bluetooth devices'''
+        profiles = self._get_profiles(self._get_bt_dir())
+        download_dir = self._fetch_download_dir()
+        if os.listdir(download_dir):
+            sent = []
+            nbr_divices = 0
+            for profile in profiles.get_profiles():
+                s_op = profiles.get_send_options(profile)
+                if s_op and 'bluetooth_device_id' in s_op:
+                    sender = self._get_sender(s_op['bluetooth_device_id'],
+                                              download_dir)
+                    if sender.found:
+                        nbr_divices += 1
+                        sent += self._send_all_in_dir(sender, download_dir)
+                    else:
+                        msg = 'Your bluetooth device is not accessible.'
+                        self.event_listener.error(msg)
+
+            #remove the files that have been sent to all devices
+            counts = { x: sent.count(x) for x in sent}
+            for f, n in counts.items():
+                if n == nbr_divices:
+                    os.remove(f)
+        else:
+            self.event_listener.warn('Nothing to send.')
+        self._return_download_dir(download_dir)
+
+    def _send_all_in_dir(self, sender, download_dir):
+        '''send all files in the given directory'''
+        sent = []
+        files = os.listdir(download_dir)
+        for fl in files:
+            if fl.endswith('.part') or fl.endswith('.ytdl'):
+                # remove:
+                #        partially downloaded files
+                #        youtube-dl service files
+                os.remove(os.path.join(download_dir, fl))
+        files = os.listdir(download_dir)  # update the list of files
+        if sender.found and sender.connect():
+                sent += sender.send(files)
+                sender.disconnect()
+        return sent
+
+    def _get_profiles(self, bt_dir):
+        try:
+            return Profiles(bt_dir)
+        except ProfilesException as e:
+            self.event_listener.error(e)
+            return
+
     def _get_list(self, feed):
         '''fetch and parse RSS data for all lists'''
         pls = feed.get_all_playlists()
@@ -121,7 +231,7 @@ class Bluetube(object):
         pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
 
-    def proccess_playlists(self, pls, show_all):
+    def _proccess_playlists(self, pls, show_all):
         '''ask the user what to do with the entities'''
         ret = []
         for pl in pls:
@@ -235,86 +345,6 @@ class Bluetube(object):
                 self.event_listener.error(e)
         return copied
 
-
-    def run(self, show_all=False):
-        ''' The main method. It does everything.'''
-
-        feed = Feeds(self._get_bt_dir())
-        pls = self._get_list(feed)
-
-        if len(pls):
-            self.event_listener.inform('feeds updated')
-        else:
-            self.event_listener.inform('empty database')
-            return
-
-        pls = self.proccess_playlists(pls, show_all)
-
-        try:
-            profiles = Profiles(self._get_bt_dir())
-        except ProfilesException as e:
-            self.event_listener.error(e)
-            return
-
-        # check if profiles do exist in the configurations
-        for pl in pls:
-            for profile in pl.profiles:
-                # TODO: ask to edit configurations
-                assert profiles.check_profile(profile)
-            
-        # combine entities (links with metadata to download) with profiles
-        for pl in pls:
-            en = {}
-            for profile in pl.profiles:
-                en[profile] = copy.deepcopy(pl.entities)
-            pl.entities = en
-
-        # prepend previously failed entities
-        for pl in pls:
-            for pr in pl.entities:
-                if pr in pl.failed_entities:
-                    pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
-                    del pl.failed_entities[pr]
-
-        if not self._check_downloader():
-            self.event_listener.error('downloader not found',
-                                      Bluetube.DOWNLOADER)
-            # TODO: move all entities to failed.
-            return
-
-        download_dir = self._fetch_download_dir()
-        self._download_list(pls, profiles, download_dir)
-
-        if not self._check_vidoe_converter():
-            self.event_listener.error('converter not found', Bluetube.CONVERTER)
-            self.event_listener.inform('converter not found')
-            if not self.event_listener.do_continue():
-                return
-        self._convert_list(pls, profiles, download_dir)
- 
-        self._send_list(pls, profiles, download_dir)
-
-        feed.set_all_playlists(self._prepare_list(pls))
-        feed.sync()
-        self._return_download_dir(download_dir)
-
-    def send(self):
-        '''send files from the bluetube download directory
-        to a bluetooth device'''
-        self.configs = self._get_configs()
-        download_dir = self._fetch_download_dir()
-        if os.listdir(download_dir):
-            sender = self._get_sender(download_dir)
-            if sender.found:
-                self._send(sender, download_dir)
-            else:
-                pass
-                #Bcolors.warn('Your bluetooth device is not accessible.')
-        else:
-            pass
-            #Bcolors.warn('Nothing to send.')
-        self._return_download_dir(download_dir)
-
     def _get_sender(self, device_id, download_dir):
         '''return a sender from the cache for a device ID if possible
         or create a new one'''
@@ -323,7 +353,7 @@ class Bluetube(object):
         else:
             sender = BluetoothClient(device_id, download_dir)
             if not sender.found:
-                self.event_listener.device_not_found(download_dir)
+                self.event_listener.error('device not found')
                 return None
             else:
                 self.senders[device_id] = sender
@@ -334,7 +364,7 @@ class Bluetube(object):
 
     def _convert_video(self, entities, configs, download_dir):
         '''convert all videos in the playlist,
-        return a list of succeeded an and a list failed links''' 
+        return a list of succeeded an and a list failed links'''
         options = ('-y',  # overwrite output files
                    '-hide_banner',)
         codecs_options = configs['codecs_options']
@@ -483,23 +513,6 @@ class Bluetube(object):
 
         all_options = (Bluetube.DOWNLOADER,) + options + spec_options
         return all_options
-
-    def _send(self, sender, download_dir):
-        '''Send all files in the given directory'''
-        sent = []
-        files = os.listdir(download_dir)
-        for fl in files:
-            if fl.endswith('.part') or fl.endswith('.ytdl'):
-                # remove:
-                #        partially downloaded files
-                #        youtube-dl service files
-                os.remove(os.path.join(download_dir, fl))
-        files = os.listdir(download_dir)  # update the list of files
-        if sender.found and sender.connect():
-                sent += sender.send(files)
-                sender.disconnect()
-        for f in sent:
-            os.remove(f)
 
     def _fetch_download_dir(self):
         bluetube_dir = os.path.join(tempfile.gettempdir(), 'bluetube')
