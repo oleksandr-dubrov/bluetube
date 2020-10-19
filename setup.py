@@ -75,7 +75,7 @@ setup(
     license="GNU GPL",
     packages=['bluetube'],
     package_data={
-        '': ['*.py', ],
+        '': ['*.py', 'profiles.toml'],
     },
     entry_points={
         "console_scripts": [
@@ -83,7 +83,7 @@ setup(
             ]
     },
     keywords="Youtube, bluetooth, RSS",
-    python_requires='>3.5',
+    python_requires='>3.6',
     install_requires=['feedparser', 'PyBluez', 'PyOBEX', 'toml'],
     cmdclass={
         'clean': CleanCommand,

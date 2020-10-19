@@ -47,7 +47,7 @@ class Playlist(object):
         self.author = None
         self._title = title
         self._url = url
-        self._last_update = None
+        self._last_update = 0
         self._output_format = OutputFormatType.audio
         self._profiles = []
         self._feedparser_data = None

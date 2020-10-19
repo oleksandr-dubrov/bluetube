@@ -16,8 +16,9 @@ class TestProfile(unittest.TestCase):
 
     def test_file_not_found(self):
         fn = 'bad_dirrr'
-        with self.assertRaises(ProfilesException) as e:
-            Profiles(fn)
+        with patch('builtins.open'):
+            with self.assertRaises(FileNotFoundError) as e:
+                Profiles(fn)
         exp_msg = 'No such file or directory'
         self.assertTrue(exp_msg in str(e.exception))
 
@@ -37,8 +38,9 @@ class TestProfile(unittest.TestCase):
             with patch(TestProfile.TOML, return_value = no_base):
                 with self.assertRaises(ProfilesException) as e:
                     Profiles('')
-                exp_msg = 'Profiles exception: the base profile not found'
-                self.assertTrue(exp_msg == str(e.exception))
+                    exp_msg = f'ProfilesException: the ' \
+                                f'{Profiles.BASE_PROFILE} profile not found'
+                    self.assertTrue(exp_msg == str(e.exception))
 
             no_base = {Profiles.BASE_PROFILE:
                        { 'audio': {'output_format': 'mp3'},
@@ -46,10 +48,12 @@ class TestProfile(unittest.TestCase):
                         'profile': {'convert': {}} }
             with patch(TestProfile.TOML, return_value = no_base):
                 with self.assertRaises(ProfilesException) as e:
-                    Profiles('')
-                exp_msg = 'Profiles exception: ' +\
-                'no required "convert.output_format" in profile'
-                self.assertTrue(exp_msg == str(e.exception))
+                    sut = Profiles('')
+                    sut.check_send_configurations('profile')
+                    sut.check_require_converter_configurations('profile')
+                    exp_msg = 'Profiles exception: ' +\
+                        'no required "convert.output_format" in profile'
+                    self.assertTrue(exp_msg == str(e.exception))
 
     def test_merge_profile_to_base(self):
         configs = {Profiles.BASE_PROFILE:

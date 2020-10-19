@@ -27,8 +27,8 @@ class CLI(object):
     MEDIA_PLAYER = 'vlc'
 
     INFORMS = {
-        'empty database': 'The list of playlist is empty.\n'
-                          'Use --add to add a playlist.',
+        'empty database': 'No subscribed playlists.\n'
+                          'Run "bluetube add -h" for more info',
         'feed is fetching': ' ' * INDENTATION + '{}',
         'converter not found': 'Please install the converter.',
         }
@@ -41,6 +41,8 @@ class CLI(object):
         }
 
     ERRORS = {
+        'profile not found': 'The profile "{}" for "{}"({}) not found',
+        'playlist not found': '"{}" by "{}" not found',
         'downloader not found': 'The tool for downloading "{}"'
                                 ' is not found in PATH',
         'failed to download': 'Failed to download {} for {}',

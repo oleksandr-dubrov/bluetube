@@ -62,6 +62,13 @@ class TestBluetube(unittest.TestCase):
         self.sut.event_listener = cli
         return cli
 
+    def mock_listdir(self, ret=None):
+        '''mock os.listdir'''
+        patcher = patch('os.listdir')
+        osls = patcher.start()
+        osls.return_value = ret
+        return osls
+
     @cache
     def call_side_effect(self, *args, **kwargs):
         ''' create a files from the URL as the youtube-dl does
@@ -69,7 +76,7 @@ class TestBluetube(unittest.TestCase):
             create a file with the extension as ffmpeg does'''
         str_args = ' '.join(args[0])
         if str_args in self.args:
-            self.fail('called twice: {}'.format(str_args))
+            self.fail(f'called twice: {str_args}')
         self.args.append(str_args)
 
         if args[0][0] == 'youtube-dl':
@@ -250,10 +257,10 @@ class TestBluetube(unittest.TestCase):
     def test_send(self):
         self.mock_db(FAKE_DB)
         cli = self.mock_cli()
+        self.mock_listdir([])
 
         self.sut.send()
         cli.warn.assert_any_call('Nothing to send.')
-
 
 
 class TestCli(unittest.TestCase):

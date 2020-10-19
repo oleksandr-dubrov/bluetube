@@ -17,8 +17,13 @@
 
 import copy
 import os
-
 import toml
+import re
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    # for to PY < 37
+    import importlib_resources as pkg_resources  # @UnusedImport
 
 
 class Profiles(object):
@@ -28,18 +33,22 @@ class Profiles(object):
 
     PROFILES_NAME = 'profiles.toml'
     BASE_PROFILE = '__download__'
+    BT_DEVICE_ID = re.compile('^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$')
 
     def __init__(self, bt_dir):
         path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
         try:
-            configs = toml.load(path)
-            self._verify_configurations(configs)
-        except TypeError:
-            raise ProfilesException('Cannot open {}'.format(path))
-        except toml.TomlDecodeError:
-            raise ProfilesException('Error while decoding TOML')
-        except FileNotFoundError as e:
-            raise ProfilesException(e)
+            configs = self._read_file(path)
+        except FileNotFoundError:
+            # probably the script has just been installed
+            # create the file from the template
+            template = pkg_resources.read_text(__package__,
+                                               Profiles.PROFILES_NAME)
+            with open(path, 'w') as f:
+                f.write(template)
+
+            # retry
+            configs = self._read_file(path)
 
         base = configs[Profiles.BASE_PROFILE]
         self._profiles = {}
@@ -48,6 +57,16 @@ class Profiles(object):
             b = copy.deepcopy(base)
             b.update(configs[c])
             self._profiles[c] = b
+
+    def _read_file(self, path):
+        try:
+            configs = toml.load(path)
+            self.check_base_download_configurations(configs)
+            return configs
+        except TypeError:
+            raise ProfilesException(f'Cannot open {path}')
+        except toml.TomlDecodeError:
+            raise ProfilesException('Error while decoding TOML')
 
     def get_audio_options(self, profile):
         '''get options for audio'''
@@ -79,42 +98,44 @@ class Profiles(object):
         '''get names of profiles'''
         return self._profiles.keys()
 
-    def _verify_configurations(self, configs):
-        self.check_base_download_configurations(configs)
-        self.check_require_converter_configurations(configs)
-        self.check_send_configurations(configs)
-
     def check_base_download_configurations(self, configs):
         if configs and Profiles.BASE_PROFILE in configs:
             base = configs[Profiles.BASE_PROFILE]
-            if 'audio' in base and 'video' in base:
+            if 'audio' in base and 'video' in base \
+                and 'output_format' in base['audio'] \
+                and 'output_format' in base['video']:
                 return
-        raise ProfilesException('the base profile not found')
+        raise ProfilesException(f'the {Profiles.BASE_PROFILE} profile not found')
 
-    def check_require_converter_configurations(self, configs):
-        msg = 'no required "convert.output_format" in {}'
-        for d in configs:
-            if 'convert' in configs[d] \
-                and 'output_format' not in configs[d]['convert']:
-                    raise ProfilesException(msg.format(d))
+    def check_require_converter_configurations(self, profile):
+        options = self.get_convert_options(profile)
+        msg = f'no required "convert.output_format" in {profile}'
+        if options is not None and 'output_format' not in options:
+                raise ProfilesException(msg)
 
-    def check_send_configurations(self, configs):
-        for d in configs:
-            if 'send' in d and 'local_path' in d['send']:
-                local_path = d['send']['local_path']
+    def check_send_configurations(self, profile):
+        opts = self.get_send_options(profile)
+        if opts is not None:
+            if 'local_path' in opts:
+                local_path = opts['local_path']
                 if not os.path.exists(local_path):
-                    msg = 'local path does not exist in {}'
-                    raise ProfilesException(msg.format(d))
+                    msg = f'local path does not exist in {profile}'
+                    raise ProfilesException(msg)
                 if not os.path.isdir(local_path):
-                    msg = 'local path must be a directory, see {}'
-                    raise ProfilesException(msg.format(d))
+                    msg = f'local path must be a directory, see {profile}'
+                    raise ProfilesException(msg)
+            if 'bluetooth_device_id' in opts:
+                bt_id = opts['bluetooth_device_id']
+                if not Profiles.BT_DEVICE_ID.match(bt_id):
+                    msg = f'bluetooth device ID is malformatted in {profile}'
+                    raise ProfilesException(msg)
 
 
 class ProfilesException(Exception):
     '''The exception class for Profiles'''
 
     def __init__(self, msg):
-        self._msg = 'Profiles exception: {}'.format(msg)
+        self._msg = msg
 
     def __str__(self):
         return self._msg

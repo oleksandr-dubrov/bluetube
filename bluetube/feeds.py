@@ -118,25 +118,21 @@ class Feeds(object):
 
     def _push(self):
         'push data to the db'
-        if len(self._feeds):
-            db = self._create_rw_connector()
-            if db:
-                res = []
-                for author in self._feeds:
-                    o = {'author': author['author'], 'playlists': []}
-                    for ls in author['playlists']:
-                        o['playlists'].append(
-                            {'title': ls.title,
-                             'url': ls.url,
-                             'last_update': ls.last_update,
-                             'out_format': ls.output_format,
-                             'profiles': ls.profiles,
-                             'failed_entities': ls.failed_entities})
-                    res.append(o)
-                db['feeds'] = res
-                self._close(db)
-            else:
-                assert 0
+        db = self._create_rw_connector()
+        res = []
+        for author in self._feeds:
+            o = {'author': author['author'], 'playlists': []}
+            for ls in author['playlists']:
+                o['playlists'].append(
+                    {'title': ls.title,
+                     'url': ls.url,
+                     'last_update': ls.last_update,
+                     'out_format': ls.output_format,
+                     'profiles': ls.profiles,
+                     'failed_entities': ls.failed_entities})
+            res.append(o)
+        db['feeds'] = res
+        self._close(db)
 
     def _create_rw_connector(self):
         '''create DB connector in read/write mode'''
