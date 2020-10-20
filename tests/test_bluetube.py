@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 from zipfile import ZipFile
@@ -29,6 +30,8 @@ def read_mocked_data():
 
 class TestBluetube(unittest.TestCase):
 
+    TMP_DIR = '/tmp/bluetube_tests' #  sa: profiles.toml
+
     def setUp(self):
         self.args = []
         self.sut = Bluetube(verbose=False)
@@ -36,9 +39,13 @@ class TestBluetube(unittest.TestCase):
         self.nbr_downloaded = 0
         self.nbr_converted = 0
         self.nbr_sent = 0
+        os.makedirs(TestBluetube.TMP_DIR, Bluetube.ACCESS_MODE, exist_ok=True)
 
     def tearDown(self):
         patch.stopall()  # @UndefinedVariable
+        if os.path.exists(TestBluetube.TMP_DIR) \
+            and os.path.isdir(TestBluetube.TMP_DIR):
+            shutil.rmtree(TestBluetube.TMP_DIR)
 
     def mock_db(self, fake_db, dct=None):
         '''mock shelve DB with the fake DB''' 
@@ -69,6 +76,16 @@ class TestBluetube(unittest.TestCase):
         osls.return_value = ret
         return osls
 
+    def mock_check_file(self):
+        '''mock os.path.exists and os.path.isdir'''
+        patcher1 = patch('os.path.exists')
+        patcher2 = patch('os.path.isdir')
+        ex = patcher1.start()
+        isdir = patcher2.start()
+        ex.return_value = True
+        isdir.return_value = True
+        return ex, isdir
+ 
     @cache
     def call_side_effect(self, *args, **kwargs):
         ''' create a files from the URL as the youtube-dl does
@@ -92,6 +109,7 @@ class TestBluetube(unittest.TestCase):
         '''mock the command executor'''
         self.sut.executor = MagicMock()
         self.sut.executor.call.side_effect = self.call_side_effect
+        self.sut.executor.does_command_exist.return_value = True
 
     def mock_sender(self, found, connect, send):
         '''mock the bluetooth client'''
@@ -215,6 +233,7 @@ class TestBluetube(unittest.TestCase):
     def test_empty_DB(self):
         '''inform about the empty DB and do nothing'''
         mdb = self.mock_db({})
+        self.mock_executor()
         cli = self.mock_cli()
         cli.inform = MagicMock()
         cli.feeds_updated = MagicMock()
@@ -268,7 +287,7 @@ class TestCli(unittest.TestCase):
     def setUp(self):
         self.sut = CLI(executor=MagicMock())
 
-    def testInforms(self):
+    def test_informs(self):
         with patch('builtins.print'):
             self.sut.inform('empty database')
             self.sut.inform('feed is fetching', 'a message')

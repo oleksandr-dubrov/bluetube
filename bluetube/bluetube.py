@@ -110,6 +110,13 @@ class Bluetube(object):
     def run(self, show_all=False):
         ''' The main method. It does everything.'''
 
+        if not self._check_downloader():
+            self.event_listener.error('downloader not found',
+                                      Bluetube.DOWNLOADER)
+            return
+        if not self._check_vidoe_converter():
+            return
+
         feed = Feeds(self._get_bt_dir())
         pls = self._get_list(feed)
 
@@ -121,51 +128,29 @@ class Bluetube(object):
 
         profiles = self._get_profiles(self._get_bt_dir())
 
-        for pl in pls:
-            for profile in pl.profiles:
-                if not profiles.check_profile(profile):
-                    self.event_listener.error('profile not found',
-                                              profile,
-                                              pl.title,
-                                              pl.author)
-                    all_pr = ', '.join(profiles.get_profiles())
-                    self.event_listener.warn(f'Possible profiles - {all_pr}.')
-                    self.event_listener.inform('This playlist is skipped.')
-                    pls.remove(pl)
+        temp_dir = self._fetch_temp_dir()
 
         pls = self._proccess_playlists(pls, show_all)
 
-        # combine entities (links with metadata to download) with profiles
         for pl in pls:
-            en = {}
-            for profile in pl.profiles:
-                en[profile] = copy.deepcopy(pl.entities)
-            pl.entities = en
+            if not self._check_profiles(pl, profiles):
+                continue
 
-        # prepend previously failed entities
-        for pl in pls:
+            # combine entities (links with metadata to download) with profiles
+            pl.entities = { profile: copy.deepcopy(pl.entities)
+                           for profile in pl.profiles }
+
+            # prepend previously failed entities
             for pr in pl.entities:
                 if pr in pl.failed_entities:
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
-        if not self._check_downloader():
-            self.event_listener.error('downloader not found',
-                                      Bluetube.DOWNLOADER)
-            # TODO: move all entities to failed.
-            return
+            self._download_list(pl, profiles, temp_dir)
 
-        temp_dir = self._fetch_temp_dir()
-        self._download_list(pls, profiles, temp_dir)
-
-        if not self._check_vidoe_converter():
-            self.event_listener.error('converter not found', Bluetube.CONVERTER)
-            self.event_listener.inform('converter not found')
-            if not self.event_listener.do_continue():
-                return
-        self._convert_list(pls, profiles, temp_dir)
+            self._convert_list(pl, profiles, temp_dir)
  
-        self._send_list(pls, profiles, temp_dir)
+            self._send_list(pl, profiles, temp_dir)
 
         feed.set_all_playlists(self._prepare_list(pls))
         feed.sync()
@@ -258,89 +243,85 @@ class Bluetube(object):
             ret.append(self._process_playlist(pl, show_all))
         return ret
 
-    def _download_list(self, pls, profiles, temp_dir):
-        for pl in pls:
-            # keep path to successfully downloaded files for all profiles here
-            cache = {}
+    def _download_list(self, pl, profiles, temp_dir):
+        # keep path to successfully downloaded files for all profiles here
+        cache = {}
+        for profile, entities in pl.entities.items():
+            if pl.output_format is OutputFormatType.audio:
+                dl_op = profiles.get_audio_options(profile)
+            elif pl.output_format is OutputFormatType.video:
+                dl_op = profiles.get_video_options(profile)
+            else:
+                assert 0, 'unexpected output format type'
 
+            s, f = self._download(entities,
+                                  pl.output_format,
+                                  dl_op,
+                                  cache,
+                                  temp_dir)
+            pl.entities[profile] = s
+            if f:
+                ens = [e.title for e in f]
+                ens = ', '.join(ens)
+                self.event_listener.error('failed to download',
+                                          ens, profile)
+            pl.add_failed_entities({profile: f})
+
+
+    def _convert_list(self, pl, profiles, temp_dir):
+        # convert video, audio has been converted by the downloader
+        if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
-                if pl.output_format is OutputFormatType.audio:
-                    dl_op = profiles.get_audio_options(profile)
-                elif pl.output_format is OutputFormatType.video:
-                    dl_op = profiles.get_video_options(profile)
-                else:
-                    assert 0, 'unexpected output format type'
+                c_op = profiles.get_convert_options(profile)
+                if not c_op:
+                    self._dbg('no converter options for {}'.format(profile))
+                    return
+                v_op = profiles.get_video_options(profile)
+                # convert unless the video has not been downloaded in
+                # proper format
+                if not c_op['output_format'] == v_op['output_format']:
+                    s, f = self._convert_video(entities,
+                                               c_op,
+                                               temp_dir)
+                    pl.entities[profile] = s
+                    pl.add_failed_entities({profile: f})
 
-                s, f = self._download(entities,
-                                      pl.output_format,
-                                      dl_op,
-                                      cache,
-                                      temp_dir)
-                pl.entities[profile] = s
-                if f:
-                    ens = [e.title for e in f]
-                    ens = ', '.join(ens)
-                    self.event_listener.error('failed to download',
-                                              ens, profile)
-                pl.add_failed_entities({profile: f})
+    def _send_list(self, pl, profiles, temp_dir):
+        for profile, entities in pl.entities.items():
+            s_op = profiles.get_send_options(profile)
+            links = [e['link'] for e in entities]
+            if not s_op or not links:
+                continue
+            processed = []
 
+            # send via bluetooth
+            device_id = s_op.get('bluetooth_device_id')
+            if device_id:
+                sent = self._send_bt(device_id, links, temp_dir)
+                processed.append(sent)
 
-    def _convert_list(self, pls, profiles, temp_dir):
-        for pl in pls:
-            # convert video, audio has been converted by the downloader
-            if pl.output_format is OutputFormatType.video:
-                for profile, entities in pl.entities.items():
-                    c_op = profiles.get_convert_options(profile)
-                    if not c_op:
-                        self._dbg('no converter options for {}'.format(profile))
-                        return
-                    v_op = profiles.get_video_options(profile)
-                    # convert unless the video has not been downloaded in
-                    # proper format
-                    if not c_op['output_format'] == v_op['output_format']:
-                        s, f = self._convert_video(entities,
-                                                   c_op,
-                                                   temp_dir)
-                        pl.entities[profile] = s
-                        pl.add_failed_entities({profile: f})
-
-    def _send_list(self, pls, profiles, temp_dir):
-        for pl in pls:
-            for profile, entities in pl.entities.items():
-                s_op = profiles.get_send_options(profile)
-                links = [e['link'] for e in entities]
-                if not s_op or not links:
+            # move to local directory
+            local_path = s_op.get('local_path')
+            if local_path:
+                try:
+                    os.makedirs(local_path,
+                                Bluetube.ACCESS_MODE,
+                                exist_ok=True)
+                except PermissionError as e:
+                    self.event_listener.error(e)
                     continue
-                processed = []
+                copied = self._copy_to_local_path(local_path, links)
+                processed.append(copied)
 
-                # send via bluetooth
-                device_id = s_op.get('bluetooth_device_id')
-                if device_id:
-                    sent = self._send_bt(device_id, links, temp_dir)
-                    processed.append(sent)
-
-                # move to local directory
-                local_path = s_op.get('local_path')
-                if local_path:
+            for en in entities:
+                lnk = en['link']
+                if all([lnk in pr for pr in processed]):
                     try:
-                        os.makedirs(local_path,
-                                    Bluetube.ACCESS_MODE,
-                                    exist_ok=True)
-                    except PermissionError as e:
-                        self.event_listener.error(e)
-                        continue
-                    copied = self._copy_to_local_path(local_path, links)
-                    processed.append(copied)
-
-                for en in entities:
-                    lnk = en['link']
-                    if all([lnk in pr for pr in processed]):
-                        try:
-                            os.remove(lnk)
-                        except FileNotFoundError:
-                            pass # ignore this exception
-                    else:
-                        self._dbg('{} has not been sent'.format(lnk))
+                        os.remove(lnk)
+                    except FileNotFoundError:
+                        pass  # ignore this exception
+                else:
+                    self._dbg('{} has not been sent'.format(lnk))
 
     def _send_bt(self, device_id, links, temp_dir):
         '''sent all files defined by the links
@@ -379,7 +360,28 @@ class Bluetube(object):
                 return sender
 
     def _check_vidoe_converter(self):
-        return self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1)
+        if not self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
+            self.event_listener.error('converter not found', Bluetube.CONVERTER)
+            self.event_listener.inform('converter not found')
+            return self.event_listener.do_continue()
+        return True
+
+    def _check_profiles(self, pl, profiles):
+        '''check if profiles if the playlist do exist'''
+        def check_profiles_internal(profile):
+            if not profiles.check_profile(profile):
+                self.event_listener.error('profile not found',
+                                          profile,
+                                          pl.title,
+                                          pl.author)
+                all_pr = ', '.join(profiles.get_profiles())
+                self.event_listener.warn(f'Possible profiles - {all_pr}.')
+                self.event_listener.inform('This playlist is skipped.\n'
+                                        'Edit the playlist and try again')
+                return False
+            return True
+
+        return all([check_profiles_internal(pr) for pr in pl.profiles])
 
     def _check_profiles_consistency(self, profiles):
         '''check if profiles are configured properly'''
@@ -420,7 +422,7 @@ class Bluetube(object):
         return a list of succeeded an and a list failed links'''
         options = ('-y',  # overwrite output files
                    '-hide_banner',)
-        codecs_options = configs['codecs_options']
+        codecs_options = configs.get('codecs_options', '')
         codecs_options = tuple(codecs_options.split())
         output_format = configs['output_format']
         success, failure = [], []
