@@ -45,7 +45,7 @@ class CLI(object):
         'playlist not found': '"{}" by "{}" not found',
         'downloader not found': 'The tool for downloading "{}"'
                                 ' is not found in PATH',
-        'failed to download': 'Failed to download {} for {}',
+        'failed to download': 'Failed to download "{}" for "{}"',
         'converter not found': 'The tool for converting video "{}"'
                                ' is not found in PATH',
         'failed to convert': 'Failed to convert the file {}.',
@@ -63,8 +63,9 @@ Check the config file. It must have something like this
 ''',
         }
 
-    SUCCESS = {
-        'added': '{} by {} added successfully.'
+    SUCCESSES  = {
+        'added': '{} by {} added successfully.',
+        'feeds updated': "Feeds have been updated successfully."
         }
 
     def __init__(self, executor):
@@ -73,22 +74,26 @@ Check the config file. It must have something like this
 
     def warn(self, msg, *args):
         '''warn the user by an arbitrary or predefined message'''
-        Bcolors.warn(self._get_msg(msg, CLI.WARNS, args))
+        Bcolors.warn('[WARNING] {}'.format(self._get_msg(msg,
+                                                         CLI.WARNS, *args)))
 
     def inform(self, msg, *args):
         '''inform the user by an arbitrary or predefined message'''
         if msg == 'feed updated':
             self.sound()
             return
-        print(self._get_msg(msg, CLI.INFORMS, *args))
+        print('[info] {}'.format(self._get_msg(msg, CLI.INFORMS, *args)))
 
     def error(self, msg, *args):
         '''show an error to the user'''
-        Bcolors.error(self._get_msg(msg, CLI.ERRORS, *args))
+        Bcolors.error('[ERROR] {}'.format(self._get_msg(msg,
+                                                        CLI.ERRORS, *args)))
 
     def success(self, msg, *args):
         '''inform about success'''
-        Bcolors.intense(self._get_msg(msg, CLI.SUCCESS, *args))
+        Bcolors.intense('[INFO] {}'.format(self._get_msg(msg,
+                                                         CLI.SUCCESSES,
+                                                         *args)))
 
     def _get_msg(self, msg, msg_collection, *args):
         if msg in msg_collection:

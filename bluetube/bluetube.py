@@ -61,7 +61,7 @@ class Bluetube(object):
     CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
     # keep files that failed to be converted here
-    NOT_CONV_DIR = 'not_converted'
+    NOT_CONV_DIR = '[not yes converted files]'
 
     def __init__(self, verbose=False):
         self.verbose = verbose
@@ -120,7 +120,7 @@ class Bluetube(object):
         pls = self._get_list(feed)
 
         if len(pls):
-            self.event_listener.inform('feeds updated')
+            self.event_listener.success('feeds updated')
         else:
             self.event_listener.inform('empty database')
             return
@@ -282,7 +282,8 @@ class Bluetube(object):
                                                c_op,
                                                temp_dir)
                     pl.entities[profile] = s
-                    pl.add_failed_entities({profile: f})
+                    if not f and self.event_listener.do_continue():
+                        return
 
     def _send_list(self, pl, profiles, temp_dir):
         for profile, entities in pl.entities.items():
