@@ -224,7 +224,6 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(2, mdb.call_count,
                          'should be called for read and write')
 
-        cli.inform.assert_any_call('feeds updated')
         self.assertEqual(urlopen.return_value.read.call_count,
                          FAKE_DB.count('"url"'))
         self.assertEqual(cli.ask.call_count, NEW_LINKS)

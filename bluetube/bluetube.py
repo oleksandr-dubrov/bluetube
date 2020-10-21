@@ -68,6 +68,7 @@ class Bluetube(object):
         self.senders = {}
         self.executor = CommandExecutor(verbose)
         self.event_listener = CLI(self.executor)
+        self.temp_dir = None
 
     def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
@@ -127,7 +128,7 @@ class Bluetube(object):
 
         profiles = self._get_profiles(self._get_bt_dir())
 
-        temp_dir = self._fetch_temp_dir()
+        self._fetch_temp_dir()
 
         pls = self._proccess_playlists(pls, show_all)
 
@@ -145,32 +146,31 @@ class Bluetube(object):
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
-            self._download_list(pl, profiles, temp_dir)
+            self._download_list(pl, profiles)
 
-            self._convert_list(pl, profiles, temp_dir)
+            self._convert_list(pl, profiles)
 
-            self._send_list(pl, profiles, temp_dir)
+            self._send_list(pl, profiles)
 
         feed.set_all_playlists(self._prepare_list(pls))
         feed.sync()
-        self._return_temp_dir(temp_dir)
+        self._return_temp_dir()
 
     def send(self):
         '''send files from the bluetube download directory
         to all bluetooth devices'''
         profiles = self._get_profiles(self._get_bt_dir())
-        temp_dir = self._fetch_temp_dir()
-        if os.listdir(temp_dir):
+        self._fetch_temp_dir()
+        if os.listdir(self.temp_dir):
             sent = []
             nbr_divices = 0
             for profile in profiles.get_profiles():
                 s_op = profiles.get_send_options(profile)
                 if s_op and 'bluetooth_device_id' in s_op:
-                    sender = self._get_sender(s_op['bluetooth_device_id'],
-                                              temp_dir)
+                    sender = self._get_sender(s_op['bluetooth_device_id'])
                     if sender.found:
                         nbr_divices += 1
-                        sent += self._send_all_in_dir(sender, temp_dir)
+                        sent += self._send_all_in_dir(sender)
                     else:
                         msg = 'Your bluetooth device is not accessible.'
                         self.event_listener.error(msg)
@@ -182,19 +182,19 @@ class Bluetube(object):
                     os.remove(f)
         else:
             self.event_listener.warn('Nothing to send.')
-        self._return_temp_dir(temp_dir)
+        self._return_temp_dir()
 
-    def _send_all_in_dir(self, sender, temp_dir):
+    def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''
         sent = []
-        files = os.listdir(temp_dir)
+        files = os.listdir(self.temp_dir)
         for fl in files:
             if fl.endswith('.part') or fl.endswith('.ytdl'):
                 # remove:
                 #        partially downloaded files
                 #        youtube-dl service files
-                os.remove(os.path.join(temp_dir, fl))
-        files = os.listdir(temp_dir)  # update the list of files
+                os.remove(os.path.join(self.temp_dir, fl))
+        files = os.listdir(self.temp_dir)  # update the list of files
         if sender.found and sender.connect():
             sent += sender.send(files)
             sender.disconnect()
@@ -242,7 +242,7 @@ class Bluetube(object):
             ret.append(self._process_playlist(pl, show_all))
         return ret
 
-    def _download_list(self, pl, profiles, temp_dir):
+    def _download_list(self, pl, profiles):
         # keep path to successfully downloaded files for all profiles here
         cache = {}
         for profile, entities in pl.entities.items():
@@ -256,8 +256,7 @@ class Bluetube(object):
             s, f = self._download(entities,
                                   pl.output_format,
                                   dl_op,
-                                  cache,
-                                  temp_dir)
+                                  cache)
             pl.entities[profile] = s
             if f:
                 ens = [e.title for e in f]
@@ -266,7 +265,7 @@ class Bluetube(object):
                                           ens, profile)
             pl.add_failed_entities({profile: f})
 
-    def _convert_list(self, pl, profiles, temp_dir):
+    def _convert_list(self, pl, profiles):
         # convert video, audio has been converted by the downloader
         if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
@@ -278,14 +277,12 @@ class Bluetube(object):
                 # convert unless the video has not been downloaded in
                 # proper format
                 if not c_op['output_format'] == v_op['output_format']:
-                    s, f = self._convert_video(entities,
-                                               c_op,
-                                               temp_dir)
+                    s, f = self._convert_video(entities, c_op)
                     pl.entities[profile] = s
-                    if not f and self.event_listener.do_continue():
+                    if f and self.event_listener.do_continue():
                         return
 
-    def _send_list(self, pl, profiles, temp_dir):
+    def _send_list(self, pl, profiles):
         for profile, entities in pl.entities.items():
             s_op = profiles.get_send_options(profile)
             links = [e['link'] for e in entities]
@@ -296,7 +293,7 @@ class Bluetube(object):
             # send via bluetooth
             device_id = s_op.get('bluetooth_device_id')
             if device_id:
-                sent = self._send_bt(device_id, links, temp_dir)
+                sent = self._send_bt(device_id, links)
                 processed.append(sent)
 
             # move to local directory
@@ -322,11 +319,11 @@ class Bluetube(object):
                 else:
                     self._dbg(f'{lnk} has not been sent')
 
-    def _send_bt(self, device_id, links, temp_dir):
+    def _send_bt(self, device_id, links):
         '''sent all files defined by the links
         to the device defined by device_id'''
         sent = []
-        sender = self._get_sender(device_id, temp_dir)
+        sender = self._get_sender(device_id)
         if sender and sender.found and sender.connect():
             sent += sender.send(links)
             sender.disconnect()
@@ -344,13 +341,13 @@ class Bluetube(object):
                 self.event_listener.error(e)
         return copied
 
-    def _get_sender(self, device_id, temp_dir):
+    def _get_sender(self, device_id):
         '''return a sender from the cache for a device ID if possible
         or create a new one'''
         if device_id in self.senders:
             return self.senders[device_id]
         else:
-            sender = BluetoothClient(device_id, temp_dir)
+            sender = BluetoothClient(device_id, self.temp_dir)
             if not sender.found:
                 self.event_listener.error('device not found')
                 return None
@@ -417,7 +414,7 @@ class Bluetube(object):
                 return False
         return True
 
-    def _convert_video(self, entities, configs, temp_dir):
+    def _convert_video(self, entities, configs):
         '''convert all videos in the playlist,
         return a list of succeeded an and a list failed links'''
         options = ('-y',  # overwrite output files
@@ -431,13 +428,13 @@ class Bluetube(object):
             new = os.path.splitext(orig)[0] + '.' + output_format
             args = (Bluetube.CONVERTER,) + ('-i', orig) + options + \
                 codecs_options + (new,)
-            if not 1 == self.executor.call(args, cwd=temp_dir):
-                os.remove(os.path.join(temp_dir, orig))
+            if not 1 == self.executor.call(args, cwd=self.temp_dir):
+                os.remove(os.path.join(self.temp_dir, orig))
                 en['link'] = new
                 success.append(en)
             else:
                 failure.append(en)
-                d = os.path.join(temp_dir, Bluetube.NOT_CONV_DIR)
+                d = os.path.join(self.temp_dir, Bluetube.NOT_CONV_DIR)
                 os.makedirs(d, Bluetube.ACCESS_MODE, exist_ok=True)
                 os.rename(orig, os.path.join(d, os.path.basename(orig)))
                 self.event_listener.error(os.path.basename(orig))
@@ -509,11 +506,11 @@ class Bluetube(object):
         pl.entities = entities
         return pl
 
-    def _download(self, entities, output_format, configs, cache, temp_dir):
+    def _download(self, entities, output_format, configs, cache):
         options = self._build_converter_options(output_format, configs)
         # create a temporal directory to download a file by its link
         # to be sure that the file belongs to the link
-        tmp = os.path.join(temp_dir, 'tmp')
+        tmp = os.path.join(self.temp_dir, 'tmp')
         os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
         success, failure = [], []
 
@@ -539,7 +536,7 @@ class Bluetube(object):
                     fs = os.listdir(tmp)
                     assert len(fs) == 1, \
                         'one link should match one file in tmp'
-                    new_link = os.path.join(temp_dir,
+                    new_link = os.path.join(self.temp_dir,
                                             os.path.basename(fs[0]))
                     # move the file out of the tmp directory
                     os.rename(os.path.join(tmp, fs[0]), new_link)
@@ -572,24 +569,28 @@ class Bluetube(object):
         return all_options
 
     def _fetch_temp_dir(self):
-        bluetube_dir = os.path.join(tempfile.gettempdir(), 'bluetube')
-        if not os.path.isdir(bluetube_dir):
-            os.mkdir(bluetube_dir)
+        '''fetch a temporal directory;
+        don't forget to return'''
+        temp_dir = os.path.join(tempfile.gettempdir(), 'bluetube')
+        if not os.path.isdir(temp_dir):
+            os.mkdir(temp_dir)
         else:
-            fs = os.listdir(bluetube_dir)
+            fs = os.listdir(temp_dir)
             if len(fs):
                 msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
                 self.event_listener.warn(msg)
-        return bluetube_dir
+        self.temp_dir = temp_dir
 
-    def _return_temp_dir(self, bluetube_dir):
-        if os.path.isdir(bluetube_dir):
+    def _return_temp_dir(self):
+        assert self.temp_dir, 'nothing to return, call fetch'
+        if os.path.isdir(self.temp_dir):
             try:
-                os.rmdir(bluetube_dir)
+                os.rmdir(self.temp_dir)
             except OSError:
                 self.event_listener.warn('download directory not empty',
-                                         bluetube_dir)
-                self.event_listener.warn('\n  '.join(os.listdir(bluetube_dir)))
+                                         self.temp_dir)
+                self.event_listener.warn('\n  '.join(os.listdir(self.temp_dir))
+                                         )
 
     def _get_bt_dir(self):
         if not os.path.exists(Bluetube.CUR_DIR) or \
@@ -600,7 +601,7 @@ class Bluetube(object):
     def _dbg(self, msg):
         '''print debug info to console'''
         if self.verbose:
-            print(f'[debug] {msg}')
+            print(f'[verbose] {msg}')
 
 # =========================================================================== #
 
