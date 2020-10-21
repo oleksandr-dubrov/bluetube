@@ -31,6 +31,12 @@ class CleanCommand(Command):
 
     user_options = []
 
+    def initialize_options(self):
+        pass  # an empty implementation for the abstract method
+
+    def finalize_options(self):
+        pass  # an empty implementation for the abstract method
+
     def run(self):
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -76,7 +82,7 @@ setup(
             ]
     },
     keywords="Youtube, bluetooth, RSS",
-    python_requires='>3.6',
+    python_requires='>3.7',
     install_requires=['feedparser', 'PyBluez', 'PyOBEX', 'toml'],
     cmdclass={
         'clean': CleanCommand,

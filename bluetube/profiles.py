@@ -21,11 +21,7 @@ import re
 
 import toml
 
-try:
-    import importlib.resources as pkg_resources
-except ImportError:
-    # for to PY < 37
-    import importlib_resources as pkg_resources  # @UnusedImport
+import importlib.resources as pkg_resources
 
 
 class Profiles(object):

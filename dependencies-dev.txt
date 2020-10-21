@@ -1,6 +1,2 @@
-feedparser==5.2.1
 flake8==3.8.3
 isort==5.2.2
-PyBluez==0.23
-PyOBEX==0.27
-toml==0.10.1
