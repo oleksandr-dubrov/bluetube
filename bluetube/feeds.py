@@ -40,7 +40,6 @@ class Feeds(object):
                 return func(*args, **kwargs)
             return wrapper
 
-
     def __init__(self, db_dir):
         self.db_file = os.path.join(db_dir, Feeds.DBFILENAME)
         self._feeds = []
@@ -78,7 +77,7 @@ class Feeds(object):
 
     @Decor.pull_if_needed
     def has_playlist(self, author, title):
-        a_t = {a['author']: [ p.title for p in a['playlists']]
+        a_t = {a['author']: [p.title for p in a['playlists']]
                for a in self._feeds}
         return author in a_t and title in a_t[author]
 
@@ -86,15 +85,14 @@ class Feeds(object):
     def remove_playlist(self, author, title):
         '''remove the title of the author;
         remove the author if it has no more titles'''
-        f = self._feeds
-        for idx in range(len(f)):
-            if f[idx]['author'] == author:
-                l = f[idx]['playlists']
-                for jdx in range(len(l)):
-                    if l[jdx].title == title:
-                        del l[jdx]
-                        if not len(l):
-                            del f[idx]
+        for a in self._feeds:
+            if a['author'] == author:
+                playlists = a['playlists']
+                for ls in playlists:
+                    if ls.title == title:
+                        playlists.remove(ls)
+                        if not len(playlists):
+                            self._feeds.remove(a)
                         self._push()
                         return
 
@@ -149,6 +147,5 @@ class Feeds(object):
         try:
             db.close()
         except ValueError as e:
-            # TODO: re-throw an exception
             Bcolors.error('Probably your changes were lost. Try again')
             raise e

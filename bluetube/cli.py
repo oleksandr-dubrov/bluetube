@@ -49,7 +49,7 @@ class CLI(object):
         'converter not found': 'The tool for converting video "{}"'
                                ' is not found in PATH',
         'failed to convert': 'Failed to convert the file {}.',
-        'misformatted URL':'''Misformatted URL of the youtube list.
+        'misformatted URL': '''Misformatted URL of the youtube list.
 Should be https://www.youtube.com/watch?v=XXX&list=XXX for a playlist,
 or https://www.youtube.com/feeds/videos.xml?playlist_id=XXX for a channel.''',
         'playlist exists': 'The playlist {} by {} has already existed',
@@ -130,7 +130,7 @@ Check the config file. It must have something like this
                 print('Opening the link in the default browser...')
                 webbrowser.open(link, new=2)
             elif i in open_player:
-                print('Opening the link by {}...'.format(CLI.MEDIA_PLAYER))
+                print(f'Opening the link by {CLI.MEDIA_PLAYER}...')
                 self._executor.call((CLI.MEDIA_PLAYER, link),
                                     suppress_stderr=True)
             else:

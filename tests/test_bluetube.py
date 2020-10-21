@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import shutil
@@ -8,34 +9,34 @@ from zipfile import ZipFile
 from bluetube import Bluetube
 from bluetube.bluetube import CLI
 from bluetube.commandexecutor import cache
-
 from tests.fake_db import FAKE_DB, NEW_LINKS
 
 
 def read_mocked_data():
     d = os.path.dirname(os.path.abspath(__file__))
-    zf = ZipFile(os.path.join(d,'mocked_data.zip'))
-    with open(os.path.join(d, ZipFile.namelist(zf)[0]), 'r') as f:
+    with ZipFile(os.path.join(d, 'mocked_data.zip')) as zf:
+        f = io.StringIO(zf.read(ZipFile.namelist(zf)[0]).decode("utf-8"))
         pls = []
         p = f.readline()
-        for l in f.readlines():
-            if '<?xml version="1.0" encoding="UTF-8"?>' in l:
+        for ln in f.readlines():
+            if '<?xml version="1.0" encoding="UTF-8"?>' in ln:
                 pls.append(p)
-                p = l
+                p = ln
             else:
-                p += l
+                p += ln
         pls.append(p)
         return pls
 
 
 class TestBluetube(unittest.TestCase):
 
-    TMP_DIR = '/tmp/bluetube_tests' #  sa: profiles.toml
+    TMP_DIR = '/tmp/bluetube_tests'  # sa: profiles.toml
 
     def setUp(self):
         self.args = []
         self.sut = Bluetube(verbose=False)
-        self.sut._get_bt_dir = lambda: os.path.dirname(os.path.abspath(__file__))
+        self.sut._get_bt_dir = lambda: \
+            os.path.dirname(os.path.abspath(__file__))
         self.nbr_downloaded = 0
         self.nbr_converted = 0
         self.nbr_sent = 0
@@ -44,11 +45,11 @@ class TestBluetube(unittest.TestCase):
     def tearDown(self):
         patch.stopall()  # @UndefinedVariable
         if os.path.exists(TestBluetube.TMP_DIR) \
-            and os.path.isdir(TestBluetube.TMP_DIR):
+                and os.path.isdir(TestBluetube.TMP_DIR):
             shutil.rmtree(TestBluetube.TMP_DIR)
 
     def mock_db(self, fake_db, dct=None):
-        '''mock shelve DB with the fake DB''' 
+        '''mock shelve DB with the fake DB'''
         mock_db = MagicMock()
         if dct:
             mock_db.__setitem__.side_effect = dct.__setitem__
@@ -85,7 +86,7 @@ class TestBluetube(unittest.TestCase):
         ex.return_value = True
         isdir.return_value = True
         return ex, isdir
- 
+
     @cache
     def call_side_effect(self, *args, **kwargs):
         ''' create a files from the URL as the youtube-dl does
@@ -118,7 +119,7 @@ class TestBluetube(unittest.TestCase):
         attrs = dict(found=found,
                      connect=lambda: connect,
                      send=lambda *args: send(*args),
-                     disconnect= lambda: None)
+                     disconnect=lambda: None)
         bt.return_value = type('mocked_BluetoothClient', (object,), attrs)
         return bt
 
@@ -134,7 +135,7 @@ class TestBluetube(unittest.TestCase):
         uo = patcher.start()
         md = read_mocked_data()
         uo.return_value = MagicMock()
-        uo.return_value.read.side_effect = [l.encode() for l in md]
+        uo.return_value.read.side_effect = [ln.encode() for ln in md]
         return uo
 
     def mock_shutil_copy(self):
@@ -188,7 +189,8 @@ class TestBluetube(unittest.TestCase):
         self.mock_db(FAKE_DB)
         self.mock_cli()
         self.sut.executor = MagicMock()
-        self.sut.executor.call.side_effect = lambda *args, **kwargs: 1  # @UnusedVariable
+        self.sut.executor.call.side_effect = \
+            lambda *args, **kwargs: 1  # @UnusedVariable
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         self.mock_remote_data()
@@ -205,7 +207,6 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(0, self.nbr_sent)
         self.assertEqual(0, mock_copy.call_count)
 
-
     @patch('bluetube.bluetube.CLI')
     def test_run_nothig_selected(self, cli):
         '''no selected videos to process'''
@@ -221,7 +222,7 @@ class TestBluetube(unittest.TestCase):
         self.sut.run()
 
         self.assertEqual(2, mdb.call_count,
-                 'should be called for read and write')
+                         'should be called for read and write')
 
         cli.inform.assert_any_call('feeds updated')
         self.assertEqual(urlopen.return_value.read.call_count,
@@ -258,9 +259,9 @@ class TestBluetube(unittest.TestCase):
             parsed = type('mocked_feed',
                           (object,),
                           {'feed': type('mocked_pl',
-                                    (object,),
-                                    {'author': a, 'title': t})})
-            with patch('feedparser.parse', return_value = parsed):
+                                        (object,),
+                                        {'author': a, 'title': t})})
+            with patch('feedparser.parse', return_value=parsed):
                 self.sut.add_playlist(url, out_format, profiles)
                 self.assertTrue(self.check_author_title(d['feeds'], a, t))
 
@@ -283,7 +284,7 @@ class TestBluetube(unittest.TestCase):
 
 
 class TestCli(unittest.TestCase):
-    
+
     def setUp(self):
         self.sut = CLI(executor=MagicMock())
 

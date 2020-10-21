@@ -23,6 +23,7 @@ import subprocess
 def cache(func):
     '''a method decorator for cache'''
     cache.cache = {}
+
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         str_args = ' '.join(args[0])
@@ -66,7 +67,7 @@ class CommandExecutor(object):
             return_code = e.errno
             print(e.strerror)
         if self._verbose:
-            print('Return code: {}'.format(return_code))
+            print(f'Return code: {return_code}')
         return return_code
 
     def does_command_exist(self, name, dashes=2):

@@ -2,6 +2,7 @@ import os
 import shutil
 
 from setuptools import Command, setup
+
 from bluetube import __version__
 
 
@@ -30,20 +31,12 @@ class CleanCommand(Command):
 
     user_options = []
 
-    def initialize_options(self):
-        '''This method must be implemented by all command classes.'''
-        pass
-
-    def finalize_options(self):
-        '''This method must be implemented by all command classes.'''
-        pass
-
     def run(self):
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         def remove(path):
             if os.path.exists(path):
-                print("Removing {}".format(path))
+                print(f"Removing {path}")
                 if os.path.isdir(path):
                     shutil.rmtree(os.path.join(dirname, path), onerror=onerror)
                 else:

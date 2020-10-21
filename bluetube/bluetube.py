@@ -23,16 +23,17 @@ import copy
 import io
 import os
 import re
+import shutil
 import tempfile
 import time
 import urllib
+
 import feedparser
-import shutil
 
 from bluetube import __version__
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.commandexecutor import CommandExecutor
 from bluetube.cli import CLI
+from bluetube.commandexecutor import CommandExecutor
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
@@ -89,15 +90,13 @@ class Bluetube(object):
             for a in all_playlists:
                 print(a['author'])
                 for c in a['playlists']:
-                    o = '{}{}'.format(' ' * 10, c.title)  # TODO: INDENTATION
+                    o = f"{' ' * 10}{c.title}"
                     t = time.strftime('%Y-%m-%d %H:%M:%S',
                                       time.localtime(c.last_update))
-                    o = '{} ({})'.format(o, t)
+                    o = f'{o} ({t})'
                     print(o)
         else:
-            pass
-            # Bcolors.warn('The list of playlist is empty.\n'
-            #             'Use --add to add a playlist.')
+            self.event_listener.inform('empty database')
 
     def remove_playlist(self, author, title):
         ''' remove the playlist of the given author'''
@@ -137,8 +136,8 @@ class Bluetube(object):
                 continue
 
             # combine entities (links with metadata to download) with profiles
-            pl.entities = { profile: copy.deepcopy(pl.entities)
-                           for profile in pl.profiles }
+            pl.entities = {profile: copy.deepcopy(pl.entities)
+                           for profile in pl.profiles}
 
             # prepend previously failed entities
             for pr in pl.entities:
@@ -149,7 +148,7 @@ class Bluetube(object):
             self._download_list(pl, profiles, temp_dir)
 
             self._convert_list(pl, profiles, temp_dir)
- 
+
             self._send_list(pl, profiles, temp_dir)
 
         feed.set_all_playlists(self._prepare_list(pls))
@@ -176,8 +175,8 @@ class Bluetube(object):
                         msg = 'Your bluetooth device is not accessible.'
                         self.event_listener.error(msg)
 
-            #remove the files that have been sent to all devices
-            counts = { x: sent.count(x) for x in sent}
+            # remove the files that have been sent to all devices
+            counts = {x: sent.count(x) for x in sent}
             for f, n in counts.items():
                 if n == nbr_divices:
                     os.remove(f)
@@ -197,8 +196,8 @@ class Bluetube(object):
                 os.remove(os.path.join(temp_dir, fl))
         files = os.listdir(temp_dir)  # update the list of files
         if sender.found and sender.connect():
-                sent += sender.send(files)
-                sender.disconnect()
+            sent += sender.send(files)
+            sender.disconnect()
         return sent
 
     def _get_profiles(self, bt_dir):
@@ -267,14 +266,13 @@ class Bluetube(object):
                                           ens, profile)
             pl.add_failed_entities({profile: f})
 
-
     def _convert_list(self, pl, profiles, temp_dir):
         # convert video, audio has been converted by the downloader
         if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
                 c_op = profiles.get_convert_options(profile)
                 if not c_op:
-                    self._dbg('no converter options for {}'.format(profile))
+                    self._dbg(f'no converter options for {profile}')
                     return
                 v_op = profiles.get_video_options(profile)
                 # convert unless the video has not been downloaded in
@@ -321,7 +319,7 @@ class Bluetube(object):
                     except FileNotFoundError:
                         pass  # ignore this exception
                 else:
-                    self._dbg('{} has not been sent'.format(lnk))
+                    self._dbg(f'{lnk} has not been sent')
 
     def _send_bt(self, device_id, links, temp_dir):
         '''sent all files defined by the links
@@ -336,11 +334,11 @@ class Bluetube(object):
     def _copy_to_local_path(self, local_path, links):
         '''copy files defined by links to the local path'''
         copied = []
-        for l in links:
-            self._dbg('copying {} to {}'.format(l, local_path))
+        for ln in links:
+            self._dbg(f'copying {ln} to {local_path}')
             try:
-                shutil.copy2(l, local_path)
-                copied.append(l)
+                shutil.copy2(ln, local_path)
+                copied.append(ln)
             except shutil.SameFileError as e:
                 self.event_listener.error(e)
         return copied
@@ -361,7 +359,8 @@ class Bluetube(object):
 
     def _check_vidoe_converter(self):
         if not self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
-            self.event_listener.error('converter not found', Bluetube.CONVERTER)
+            self.event_listener.error('converter not found',
+                                      Bluetube.CONVERTER)
             self.event_listener.inform('converter not found')
             return self.event_listener.do_continue()
         return True
@@ -377,7 +376,7 @@ class Bluetube(object):
                 all_pr = ', '.join(profiles.get_profiles())
                 self.event_listener.warn(f'Possible profiles - {all_pr}.')
                 self.event_listener.inform('This playlist is skipped.\n'
-                                        'Edit the playlist and try again')
+                                           'Edit the playlist and try again')
                 return False
             return True
 
@@ -392,8 +391,8 @@ class Bluetube(object):
                 profiles.check_send_configurations(pr)
             except ProfilesException as e:
                 self.event_listener.error(e)
-                msg = 'Profile "{}" are not configured properly'
-                self.event_listener.warn(msg.format(pr))
+                msg = f'Profile "{pr}" are not configured properly'
+                self.event_listener.warn(msg)
                 return False
 
         return True
@@ -441,8 +440,9 @@ class Bluetube(object):
                 os.makedirs(d, Bluetube.ACCESS_MODE, exist_ok=True)
                 os.rename(orig, os.path.join(d, os.path.basename(orig)))
                 self.event_listener.error(os.path.basename(orig))
-                self.event_listener.inform('Command: \n{}'.format(' '.join(args)))
-                self.event_listener.inform('Check {} after the script is done.'.format(d))
+                self.event_listener.inform(f'Command: \n{" ".join(args)}')
+                self.event_listener.inform(f'Check {d} after '
+                                           f'the script is done.')
         return success, failure
 
     def _check_downloader(self):
@@ -523,7 +523,7 @@ class Bluetube(object):
             # to avoid downloading the same file twice
             new_link = cache.get(' '.join(all_options))
             if new_link:
-                self._dbg('this link has been downloaded - {}'.format(new_link))
+                self._dbg(f'this link has been downloaded - {new_link}')
                 en['link'] = new_link
                 success.append(en)
             else:
@@ -531,12 +531,13 @@ class Bluetube(object):
                 if status:
                     failure.append(en)
                     # clear the tmp directory that may have parts of
-                    # not completely downloaded file. 
+                    # not completely downloaded file.
                     for f in os.listdir(tmp):
                         os.unlink(os.path.join(tmp, f))
                 else:
                     fs = os.listdir(tmp)
-                    assert len(fs) == 1, 'one link should march one file in tmp'
+                    assert len(fs) == 1, \
+                        'one link should match one file in tmp'
                     new_link = os.path.join(temp_dir,
                                             os.path.basename(fs[0]))
                     # move the file out of the tmp directory
@@ -544,7 +545,7 @@ class Bluetube(object):
                     en['link'] = new_link
                     success.append(en)
 
-                    # put the link to just downloaded file into the cache 
+                    # put the link to just downloaded file into the cache
                     cache[' '.join(all_options)] = new_link
 
         os.rmdir(tmp)
@@ -557,7 +558,7 @@ class Bluetube(object):
         if output_format == OutputFormatType.audio:
             output_format = configs['output_format']
             spec_options = ('--extract-audio',
-                            '--audio-format={}'.format(output_format),
+                            f'--audio-format={output_format}',
                             '--audio-quality=9',  # 9 means worse
                             )
         elif output_format == OutputFormatType.video:
@@ -576,7 +577,7 @@ class Bluetube(object):
         else:
             fs = os.listdir(bluetube_dir)
             if len(fs):
-                msg = 'Ready to be sent:\n{}'.format(' '.join(fs))
+                msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
                 self.event_listener.warn(msg)
         return bluetube_dir
 
@@ -590,17 +591,17 @@ class Bluetube(object):
                 self.event_listener.warn('\n  '.join(os.listdir(bluetube_dir)))
 
     def _get_bt_dir(self):
-        if not os.path.exists(Bluetube.CUR_DIR) \
-            or not os.path.isdir(Bluetube.CUR_DIR):
-                os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
+        if not os.path.exists(Bluetube.CUR_DIR) or \
+                not os.path.isdir(Bluetube.CUR_DIR):
+            os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
         return Bluetube.CUR_DIR
 
     def _dbg(self, msg):
         '''print debug info to console'''
         if self.verbose:
-            print('[debug] {}'.format(msg))
+            print(f'[debug] {msg}')
 
-# ============================================================================ #
+# =========================================================================== #
 
 
 def main():
@@ -608,18 +609,20 @@ def main():
     def add(bluetube, args):
         profiles = args.profiles if args.profiles else ['profile_1']
         bluetube.add_playlist(args.url,
-                            OutputFormatType.from_char(args.type),
-                            profiles)
+                              OutputFormatType.from_char(args.type),
+                              profiles)
 
-    description='The script downloads youtube video as video or audio and sends to a bluetooth client device.'
-    epilog = 'If no option specified the script shows feeds to choose, downloads and sends via bluetooth client.'
+    description = 'The script downloads youtube video as video or audio ' \
+                  'and sends to a bluetooth client device.'
+    epilog = 'If no option specified the script shows feeds to choose, ' \
+             'downloads and sends via bluetooth client.'
     parser = argparse.ArgumentParser(prog='bluetube', description=description)
     parser.epilog = epilog
 
     subparsers = parser.add_subparsers(title='Commands',
                                        description='Use the commands below to'
                                        'modify or show subscribed playlists.',
-                                        help='')
+                                       help='')
 
     parser_add = subparsers.add_parser('add',
                                        help='add a URL to youtube playlist')
@@ -630,18 +633,19 @@ def main():
                             default='v',
                             help='a type of a file you want to get')
     parser_add.add_argument('-p', nargs='*',
-                        dest='profiles',
-                        help='one or multiple profiles')
+                            dest='profiles',
+                            help='one or multiple profiles')
     parser_add.set_defaults(func=add)
 
     parser_list = subparsers.add_parser('list',
                                         aliases=['l'],
                                         help='list all playlists')
     parser_list.set_defaults(func=lambda bt, _: bt.list_playlists())
-    
 
     parser_remove = subparsers.add_parser('remove',
-            help='remove a playlist by names of the author and the playlist')
+                                          help='remove a playlist by names '
+                                               'of the author and '
+                                               'the playlist')
     parser_remove.add_argument('--author', '-a',
                                type=str,
                                help='an author of a playlist to be removed')
@@ -649,21 +653,21 @@ def main():
                                type=str,
                                help='a playlist to be removed')
     parser_remove.set_defaults(func=lambda bt, args:
-                                bt.remove_playlist(args.author.strip(),
-                                                   args.playlist.strip()))
+                               bt.remove_playlist(args.author.strip(),
+                                                  args.playlist.strip()))
 
     parser.add_argument('--send', '-s',
                         help='send already downloaded files',
                         action='store_true')
 
     parser.add_argument('--show_all',
-                    action='store_true',
-                    help='show all available feed items despite last update time')
+                        action='store_true',
+                        help='show all available feed items despite last update time')
     parser.add_argument('--verbose', '-v',
-                    action='store_true',
-                    help='print more information')
+                        action='store_true',
+                        help='print more information')
     parser.add_argument('--version', action='version',
-                    version='%(prog)s {}'.format(__version__))
+                        version=f'%(prog)s {__version__}')
 
     args = parser.parse_args()
     bluetube = Bluetube(args.verbose)

@@ -35,14 +35,13 @@ class BluetoothClient(Client):
     def __init__(self, device_id, bluetube_dir):
         self.found = self._find_device(device_id)
         if self.found:
-            print("Checking connection to \"%s\" on %s"
-                  % (self.name, self.host))
+            print(f'Checking connection to "{self.name}" on "{self.host}"')
             # Client is old style class, so don't use super
             Client.__init__(self, self.host, self.port)
             self.bluetube_dir = bluetube_dir
             self.in_progress = False
         else:
-            Bcolors.error('Device {} is not found.'.format(device_id))
+            Bcolors.error(f'Device {device_id} is not found.')
 
     def _find_device(self, device_id):
         service_matches = bluetooth.find_service(address=device_id)
@@ -67,19 +66,18 @@ class BluetoothClient(Client):
             else:
                 if len(filename) > 45:
                     filename = filename[:42] + '...'
-                sys.stdout.write('[sending] "{}" to {}...'.format(filename,
-                                                                 self.name))
+                sys.stdout.write(f'[sending] "{filename}" to {self.name}...')
                 self.in_progress = True
             sys.stdout.flush()
 
-    def _put(self, name, file_data, header_list=()):  # @UnusedVariable
+    def _put(self, name, file_data, header_list=()):
         '''Modify the method from the base class
         to allow getting data from the file stream.'''
 
         header_list = [
             headers.Name(name),
             headers.Length(os.path.getsize(file_data))
-            ]
+            ] + list(header_list)
 
         max_length = self.remote_info.max_packet_length
         request = requests.Put()
@@ -131,7 +129,8 @@ class BluetoothClient(Client):
             try:
                 resp = self.put(fm,
                                 full_path,
-                                callback=lambda resp: self._callback(resp, fm))
+                                callback=lambda resp, fm: self._callback(resp,
+                                                                         fm))
                 if resp:
                     pass  # print(resp)
                 else:
@@ -139,7 +138,7 @@ class BluetoothClient(Client):
                     sent.append(full_path)
             except socket.error as e:
                 Bcolors.error(str(e))
-                Bcolors.error('{} didn\'t send'.format(fm))
+                Bcolors.error(f"{fm} didn't send")
                 print('Trying to reconnect...')
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
@@ -150,8 +149,8 @@ class BluetoothClient(Client):
                 else:
                     sent += self.send([fm, ])
             except KeyboardInterrupt:
-                Bcolors.error('Sending of {} stopped because of KeyboardInterrupt'
-                                .format(fm))
+                msg = f'Sending of {fm} stopped because of KeyboardInterrupt'
+                Bcolors.error(msg)
             finally:
                 self.in_progress = False
                 self.file_data_stream.close()

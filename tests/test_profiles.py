@@ -1,6 +1,5 @@
 import os
 import unittest
-
 from unittest.mock import patch
 
 from bluetube.bluetube import Profiles, ProfilesException
@@ -35,18 +34,18 @@ class TestProfile(unittest.TestCase):
     def test_no_required_configs(self):
         with patch('os.path.join'):
             no_base = {}
-            with patch(TestProfile.TOML, return_value = no_base):
+            with patch(TestProfile.TOML, return_value=no_base):
                 with self.assertRaises(ProfilesException) as e:
                     Profiles('')
                     exp_msg = f'ProfilesException: the ' \
-                                f'{Profiles.BASE_PROFILE} profile not found'
+                              f'{Profiles.BASE_PROFILE} profile not found'
                     self.assertTrue(exp_msg == str(e.exception))
 
             no_base = {Profiles.BASE_PROFILE:
-                       { 'audio': {'output_format': 'mp3'},
-                                    'video': {'output_format': ''}},
-                        'profile': {'convert': {}} }
-            with patch(TestProfile.TOML, return_value = no_base):
+                       {'audio': {'output_format': 'mp3'},
+                        'video': {'output_format': ''}},
+                       'profile': {'convert': {}}}
+            with patch(TestProfile.TOML, return_value=no_base):
                 with self.assertRaises(ProfilesException) as e:
                     sut = Profiles('')
                     sut.check_send_configurations('profile')
@@ -57,12 +56,11 @@ class TestProfile(unittest.TestCase):
 
     def test_merge_profile_to_base(self):
         configs = {Profiles.BASE_PROFILE:
-                   { 'audio': {'output_format': 'mp3'},
-                                    'video': {'output_format': 'mp4'}},
-                    'profile1': {'convert': {'output_format': '3gp'}},
-                    'profile2': {'send': {'local': 'path'}}
-        }
-        with patch(TestProfile.TOML, return_value = configs):
+                   {'audio': {'output_format': 'mp3'},
+                    'video': {'output_format': 'mp4'}},
+                   'profile1': {'convert': {'output_format': '3gp'}},
+                   'profile2': {'send': {'local': 'path'}}}
+        with patch(TestProfile.TOML, return_value=configs):
             sut = Profiles(' ')
         self.assertEqual(len(sut._profiles['profile1']), 3)
         self.assertEqual(len(sut._profiles['profile2']), 3)

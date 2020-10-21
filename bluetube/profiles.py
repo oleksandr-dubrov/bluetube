@@ -17,8 +17,10 @@
 
 import copy
 import os
-import toml
 import re
+
+import toml
+
 try:
     import importlib.resources as pkg_resources
 except ImportError:
@@ -103,15 +105,16 @@ class Profiles(object):
             base = configs[Profiles.BASE_PROFILE]
             if 'audio' in base and 'video' in base \
                 and 'output_format' in base['audio'] \
-                and 'output_format' in base['video']:
+                    and 'output_format' in base['video']:
                 return
-        raise ProfilesException(f'the {Profiles.BASE_PROFILE} profile not found')
+        raise ProfilesException(f'the {Profiles.BASE_PROFILE}'
+                                'profile not found')
 
     def check_require_converter_configurations(self, profile):
         options = self.get_convert_options(profile)
         msg = f'no required "convert.output_format" in {profile}'
         if options is not None and 'output_format' not in options:
-                raise ProfilesException(msg)
+            raise ProfilesException(msg)
 
     def check_send_configurations(self, profile):
         opts = self.get_send_options(profile)
