@@ -39,4 +39,4 @@
     # bluetooth_device_id = "00:00:00:00:00:00"
 
     # Save downloaded and/or converted video here:
-    # local_path = "~/Downloads"
+    local_path = "~/Downloads"

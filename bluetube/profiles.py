@@ -85,6 +85,9 @@ class Profiles(object):
 
     def get_send_options(self, profile):
         if profile in self._profiles:
+            opt = self._profiles[profile].get('send')
+            if 'local_path' in opt:
+                opt['local_path'] = os.path.expanduser(opt['local_path'])
             return self._profiles[profile].get('send')
         return None
 
@@ -116,7 +119,7 @@ class Profiles(object):
         opts = self.get_send_options(profile)
         if opts is not None:
             if 'local_path' in opts:
-                local_path = opts['local_path']
+                local_path = os.path.expanduser(opts['local_path'])
                 if not os.path.exists(local_path):
                     msg = f'local path does not exist in {profile}'
                     raise ProfilesException(msg)

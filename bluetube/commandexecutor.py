@@ -53,7 +53,7 @@ class CommandExecutor(object):
         stdout, stderr = None, None
         try:
             if self._verbose:
-                print('RUN: {}'.format([a for a in args]))
+                print('RUN: {}'.format(' '.join([a for a in args])))
             if suppress_stdout:
                 stdout = open(os.devnull, 'wb')
             if suppress_stderr:

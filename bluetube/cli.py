@@ -38,6 +38,8 @@ class CLI(object):
                             'The script will download files to {} directory.',
         'download directory not empty': 'The download directory {} '
                                         'is not empty. Cannot delete it.',
+        'conversion is not needed': 'The files is in required format. '
+                                    'No conversion needed.'
         }
 
     ERRORS = {

@@ -426,6 +426,10 @@ class Bluetube(object):
         for en in entities:
             orig = en['link']
             new = os.path.splitext(orig)[0] + '.' + output_format
+            if orig == new:
+                self.event_listener.warn('conversion is not needed')
+                success.append(en)
+                continue
             args = (Bluetube.CONVERTER,) + ('-i', orig) + options + \
                 codecs_options + (new,)
             if not 1 == self.executor.call(args, cwd=self.temp_dir):
