@@ -184,6 +184,21 @@ class Bluetube(object):
             self.event_listener.warn('Nothing to send.')
         self._return_temp_dir()
 
+    def edit_profiles(self):
+        '''open a profiles file and check after edit'''
+        bt_dir = self._get_bt_dir()
+        Profiles.create_profiles_if_not_exist(bt_dir)
+        if self._edit_profiles():
+            profiles = Profiles(bt_dir)
+            for pr in profiles.get_profiles():
+                try:
+                    profiles.check_require_converter_configurations(pr)
+                    profiles.check_send_configurations(pr)
+                except ProfilesException as e:
+                    self.event_listener.error(e)
+                    msg = f'Profile "{pr}" are not configured properly'
+                    self.event_listener.warn(msg)
+
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''
         sent = []
@@ -662,10 +677,15 @@ def main():
                                bt.remove_playlist(args.author.strip(),
                                                   args.playlist.strip()))
 
-    parser.add_argument('--send', '-s',
-                        help='send already downloaded files',
-                        action='store_true')
+    me_group = parser.add_mutually_exclusive_group()
 
+    me_group.add_argument('--send', '-s',
+                          help='send already downloaded files',
+                          action='store_true')
+
+    me_group.add_argument('--edit_profiles', '-p',
+                        action='store_true',
+                        help='edit profiles in a text editor')
     parser.add_argument('--show_all',
                         action='store_true',
                         help='show all available feed items despite last update time')
@@ -682,6 +702,8 @@ def main():
     else:
         if args.send:
             bluetube.send()
+        elif args.edit_profiles:
+            bluetube.edit_profiles()
         else:
             bluetube.run(args.show_all)
     print('Done')

@@ -12,6 +12,10 @@ class TestProfile(unittest.TestCase):
     def setUp(self):
         this_path = os.path.dirname(os.path.abspath(__file__))
         self.sut = Profiles(os.path.normpath(this_path))
+        patch('os.path.exists', return_value=True).start()
+
+    def tearDown(self):
+        patch.stopall()  # @UndefinedVariable
 
     def test_file_not_found(self):
         fn = 'bad_dirrr'

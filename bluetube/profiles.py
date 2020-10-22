@@ -34,20 +34,8 @@ class Profiles(object):
     BT_DEVICE_ID = re.compile('^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$')
 
     def __init__(self, bt_dir):
-        path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
-        try:
-            configs = self._read_file(path)
-        except FileNotFoundError:
-            # probably the script has just been installed
-            # create the file from the template
-            template = pkg_resources.read_text(__package__,
-                                               Profiles.PROFILES_NAME)
-            with open(path, 'w') as f:
-                f.write(template)
-
-            # retry
-            configs = self._read_file(path)
-
+        path = Profiles.create_profiles_if_not_exist(bt_dir)
+        configs = self._read_file(path)
         base = configs[Profiles.BASE_PROFILE]
         self._profiles = {}
         del configs[Profiles.BASE_PROFILE]
@@ -55,6 +43,21 @@ class Profiles(object):
             b = copy.deepcopy(base)
             b.update(configs[c])
             self._profiles[c] = b
+
+    @staticmethod
+    def create_profiles_if_not_exist(bt_dir):
+        '''create a profiles file
+        from the provided template - profiles.toml
+        if it does not exist'''
+        path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
+        if not os.path.exists(path):
+            # probably the script has just been installed
+            # create the file from the template
+            template = pkg_resources.read_text(__package__,
+                                           Profiles.PROFILES_NAME)
+            with open(path, 'w') as f:
+                f.write(template)
+        return path
 
     def _read_file(self, path):
         try:
@@ -86,7 +89,7 @@ class Profiles(object):
     def get_send_options(self, profile):
         if profile in self._profiles:
             opt = self._profiles[profile].get('send')
-            if 'local_path' in opt:
+            if opt and 'local_path' in opt:
                 opt['local_path'] = os.path.expanduser(opt['local_path'])
             return self._profiles[profile].get('send')
         return None
@@ -106,7 +109,7 @@ class Profiles(object):
                 and 'output_format' in base['audio'] \
                     and 'output_format' in base['video']:
                 return
-        raise ProfilesException(f'the {Profiles.BASE_PROFILE}'
+        raise ProfilesException(f'the {Profiles.BASE_PROFILE} '
                                 'profile not found')
 
     def check_require_converter_configurations(self, profile):
