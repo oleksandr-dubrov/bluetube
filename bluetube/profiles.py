@@ -16,12 +16,11 @@
 '''
 
 import copy
+import importlib.resources as pkg_resources
 import os
 import re
 
 import toml
-
-import importlib.resources as pkg_resources
 
 
 class Profiles(object):
@@ -54,7 +53,7 @@ class Profiles(object):
             # probably the script has just been installed
             # create the file from the template
             template = pkg_resources.read_text(__package__,
-                                           Profiles.PROFILES_NAME)
+                                               Profiles.PROFILES_NAME)
             with open(path, 'w') as f:
                 f.write(template)
         return path

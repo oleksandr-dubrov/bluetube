@@ -1,3 +1,4 @@
+import datetime
 import io
 import json
 import os
@@ -9,9 +10,8 @@ from zipfile import ZipFile
 from bluetube import Bluetube
 from bluetube.bluetube import CLI
 from bluetube.commandexecutor import cache
-from tests.fake_db import FAKE_DB, NEW_LINKS
 from bluetube.model import OutputFormatType
-import datetime
+from tests.fake_db import FAKE_DB, NEW_LINKS
 
 
 def read_mocked_data():
@@ -36,7 +36,7 @@ class TestBluetube(unittest.TestCase):
 
     def setUp(self):
         self.args = []
-        Bluetube._get_bt_dir = lambda _ : \
+        Bluetube._get_bt_dir = lambda _: \
             os.path.dirname(os.path.abspath(__file__))
         self.sut = Bluetube(verbose=False)
         self.nbr_downloaded = 0
@@ -289,7 +289,7 @@ class TestBluetube(unittest.TestCase):
         self.mock_db(FAKE_DB, d)
         a = '24 Канал'
         t = 'Чесна політика'
- 
+
         self.sut.edit_playlist(a, t)
         mcli.warn.assert_called_once()
         mcli.reset_mock()

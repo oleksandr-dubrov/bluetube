@@ -22,8 +22,6 @@ def onerror(func, path, exc_info):
         # Is the error an access error ?
         os.chmod(path, stat.S_IWUSR)
         func(path)
-    else:
-        raise
 
 
 class CleanCommand(Command):

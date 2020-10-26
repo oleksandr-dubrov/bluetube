@@ -20,6 +20,7 @@
 
 import argparse
 import copy
+import datetime
 import io
 import os
 import re
@@ -37,7 +38,6 @@ from bluetube.commandexecutor import CommandExecutor
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
-import datetime
 
 
 class ToolNotFoundException(Exception):
@@ -205,7 +205,8 @@ class Bluetube(object):
                       profiles=None, reset_failed=None, days_back=None):
         '''edit a playlist'''
         def print_help():
-            output_types = ' | '.join([str(v) for v in OutputFormatType.get_values()])
+            output_types = ' | '.join([str(v)
+                                       for v in OutputFormatType.get_values()])
             prs = ' | '.join(Profiles(self.bt_dir).get_profiles())
             msg = f'''Run this command with one or all options below:
 -o {output_types}
@@ -223,12 +224,14 @@ class Bluetube(object):
                 print_help()
             else:
                 if output_type in OutputFormatType.get_values() \
-                    and all([p in Profiles(self.bt_dir).get_profiles() for p in profiles]):
+                    and all([p in Profiles(self.bt_dir).get_profiles()
+                             for p in profiles]):
                     pl.output_format = output_type
                     pl.profiles = profiles
                     if reset_failed:
                         del pl.failed_entities
-                    pl.last_update -= datetime.timedelta(days=int(days_back)).total_seconds()
+                    delta = datetime.timedelta(days=int(days_back))
+                    pl.last_update -= delta.total_seconds()
                     feed.sync()
                 else:
                     print_help()
@@ -688,8 +691,8 @@ def main():
     parser_add.add_argument('-t', dest='type',
                             choices=['a', 'v'],
                             default='v',
-                            help='a type of a file you want to get;' \
-                                '(a)udio or (v)ideo')
+                            help='a type of a file you want to get;'
+                                 '(a)udio or (v)ideo')
     parser_add.add_argument('-p', nargs='*',
                             dest='profiles',
                             help='one or multiple profiles')
@@ -721,8 +724,8 @@ def main():
                           action='store_true')
 
     me_group.add_argument('--edit_profiles', '-p',
-                        action='store_true',
-                        help='edit profiles in a text editor')
+                          action='store_true',
+                          help='edit profiles in a text editor')
     parser.add_argument('--show_all',
                         action='store_true',
                         help='show all available feed items despite last update time')

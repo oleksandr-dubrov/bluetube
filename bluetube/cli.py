@@ -65,7 +65,7 @@ Check the config file. It must have something like this
 ''',
         }
 
-    SUCCESSES  = {
+    SUCCESSES = {
         'added': '{} by {} added successfully.',
         'feeds updated': "Feeds have been updated successfully."
         }
