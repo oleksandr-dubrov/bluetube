@@ -10,6 +10,8 @@ from bluetube import Bluetube
 from bluetube.bluetube import CLI
 from bluetube.commandexecutor import cache
 from tests.fake_db import FAKE_DB, NEW_LINKS
+from bluetube.model import OutputFormatType
+import datetime
 
 
 def read_mocked_data():
@@ -34,9 +36,9 @@ class TestBluetube(unittest.TestCase):
 
     def setUp(self):
         self.args = []
-        self.sut = Bluetube(verbose=False)
-        self.sut._get_bt_dir = lambda: \
+        Bluetube._get_bt_dir = lambda _ : \
             os.path.dirname(os.path.abspath(__file__))
+        self.sut = Bluetube(verbose=False)
         self.nbr_downloaded = 0
         self.nbr_converted = 0
         self.nbr_sent = 0
@@ -280,6 +282,29 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.send()
         cli.warn.assert_any_call('Nothing to send.')
+
+    def test_edit_playlist(self):
+        mcli = self.mock_cli()
+        d = {'feeds': []}
+        self.mock_db(FAKE_DB, d)
+        a = '24 Канал'
+        t = 'Чесна політика'
+ 
+        self.sut.edit_playlist(a, t)
+        mcli.warn.assert_called_once()
+        mcli.reset_mock()
+
+        orig_db = json.loads(FAKE_DB)
+        old_last_update = orig_db[1]['playlists'][1]['last_update']
+        self.sut.edit_playlist(a, t, output_type=OutputFormatType.video,
+                               profiles=('mobile', 'local'),
+                               reset_failed=True,
+                               days_back=90)
+        mcli.warn.assert_not_called()
+        pl = d['feeds'][1]['playlists'][1]
+        self.assertEqual(old_last_update - pl['last_update'],
+                         datetime.timedelta(days=int(90)).total_seconds(),
+                         'unexpected last update')
 
 
 class TestCli(unittest.TestCase):

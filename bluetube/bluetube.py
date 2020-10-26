@@ -37,6 +37,7 @@ from bluetube.commandexecutor import CommandExecutor
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
+import datetime
 
 
 class ToolNotFoundException(Exception):
@@ -69,6 +70,7 @@ class Bluetube(object):
         self.executor = CommandExecutor(verbose)
         self.event_listener = CLI(self.executor)
         self.temp_dir = None
+        self.bt_dir = self._get_bt_dir()
 
     def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
@@ -76,7 +78,7 @@ class Bluetube(object):
         f = feedparser.parse(feed_url)
         title = f.feed.title
         author = f.feed.author
-        feeds = Feeds(self._get_bt_dir())
+        feeds = Feeds(self.bt_dir)
         if feeds.has_playlist(author, title):
             self.event_listener.error('playlist exists', title, author)
         else:
@@ -85,7 +87,7 @@ class Bluetube(object):
 
     def list_playlists(self):
         ''' list all playlists in RSS feeds '''
-        feeds = Feeds(self._get_bt_dir())
+        feeds = Feeds(self.bt_dir)
         all_playlists = feeds.get_all_playlists()
         if len(all_playlists):
             for a in all_playlists:
@@ -101,7 +103,7 @@ class Bluetube(object):
 
     def remove_playlist(self, author, title):
         ''' remove the playlist of the given author'''
-        feeds = Feeds(self._get_bt_dir())
+        feeds = Feeds(self.bt_dir)
         if feeds.has_playlist(author, title):
             feeds.remove_playlist(author, title)
         else:
@@ -117,7 +119,7 @@ class Bluetube(object):
         if not self._check_vidoe_converter():
             return
 
-        feed = Feeds(self._get_bt_dir())
+        feed = Feeds(self.bt_dir)
         pls = self._get_list(feed)
 
         if len(pls):
@@ -126,7 +128,7 @@ class Bluetube(object):
             self.event_listener.inform('empty database')
             return
 
-        profiles = self._get_profiles(self._get_bt_dir())
+        profiles = self._get_profiles(self.bt_dir)
 
         self._fetch_temp_dir()
 
@@ -159,7 +161,7 @@ class Bluetube(object):
     def send(self):
         '''send files from the bluetube download directory
         to all bluetooth devices'''
-        profiles = self._get_profiles(self._get_bt_dir())
+        profiles = self._get_profiles(self.bt_dir)
         self._fetch_temp_dir()
         if os.listdir(self.temp_dir):
             sent = []
@@ -186,7 +188,7 @@ class Bluetube(object):
 
     def edit_profiles(self):
         '''open a profiles file and check after edit'''
-        bt_dir = self._get_bt_dir()
+        bt_dir = self.bt_dir
         Profiles.create_profiles_if_not_exist(bt_dir)
         if self._edit_profiles():
             profiles = Profiles(bt_dir)
@@ -198,6 +200,40 @@ class Bluetube(object):
                     self.event_listener.error(e)
                     msg = f'Profile "{pr}" are not configured properly'
                     self.event_listener.warn(msg)
+
+    def edit_playlist(self, author, title, output_type=None,
+                      profiles=None, reset_failed=None, days_back=None):
+        '''edit a playlist'''
+        def print_help():
+            output_types = ' | '.join([str(v) for v in OutputFormatType.get_values()])
+            prs = ' | '.join(Profiles(self.bt_dir).get_profiles())
+            msg = f'''Run this command with one or all options below:
+-o {output_types}
+-p {prs}
+-r to reset previously failed videos
+-d N to set last updated date to N days before'''
+            self.event_listener.warn(msg)
+
+        feed = Feeds(self.bt_dir)
+        if feed.has_playlist(author, title):
+            pl = feed.get_playlist(author, title)
+            assert pl, 'no playlist'
+
+            if not all((output_type, profiles, days_back)):
+                print_help()
+            else:
+                if output_type in OutputFormatType.get_values() \
+                    and all([p in Profiles(self.bt_dir).get_profiles() for p in profiles]):
+                    pl.output_format = output_type
+                    pl.profiles = profiles
+                    if reset_failed:
+                        del pl.failed_entities
+                    pl.last_update -= datetime.timedelta(days=int(days_back)).total_seconds()
+                    feed.sync()
+                else:
+                    print_help()
+        else:
+            self.event_listener.error('playlist not found', title, author)
 
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''
@@ -416,13 +452,13 @@ class Bluetube(object):
         for ed in editors:
             if self.executor.does_command_exist(ed):
                 self.executor.call((ed, Profiles.PROFILES_NAME),
-                                   self._get_bt_dir(),
+                                   self.bt_dir,
                                    suppress_stdout=False,
                                    suppress_stderr=False)
                 break
         else:
             msg = 'Edit this file in your favorite editor - {}\n and continue.'
-            msg = msg.format(os.path.join(self._get_bt_dir(),
+            msg = msg.format(os.path.join(self.bt_dir,
                                           Profiles.PROFILES_NAME))
             self.event_listener.warn(msg)
             if not self.event_listener.do_continue():
@@ -652,7 +688,8 @@ def main():
     parser_add.add_argument('-t', dest='type',
                             choices=['a', 'v'],
                             default='v',
-                            help='a type of a file you want to get')
+                            help='a type of a file you want to get;' \
+                                '(a)udio or (v)ideo')
     parser_add.add_argument('-p', nargs='*',
                             dest='profiles',
                             help='one or multiple profiles')

@@ -46,6 +46,7 @@ class Feeds(object):
 
     @Decor.pull_if_needed
     def add_playlist(self, author, title, url, out_format, profiles):
+        '''add a playlist'''
         pl = Playlist(title, url)
         pl.set_output_format_type(out_format)
         pl.profiles = profiles
@@ -57,6 +58,20 @@ class Feeds(object):
             self._feeds.append({'author': author,
                                 'playlists': [pl]})
         self._push()
+
+    @Decor.pull_if_needed
+    def get_playlist(self, author, title):
+        '''get a playlist'''
+        for a in self._feeds:
+            if a['author'] == author:
+                pls = a['playlists']
+                break
+        else:
+            return
+
+        for pl in pls:
+            if pl.title == title:
+                return pl
 
     @Decor.pull_if_needed
     def get_all_playlists(self):

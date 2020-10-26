@@ -31,11 +31,17 @@ class OutputFormatType(Enum):
 
     @staticmethod
     def from_char(ch):
+        '''create a value from character'''
         if ch in ['a', 'audio']:
             return OutputFormatType.audio
         elif ch in ['v', 'video']:
             return OutputFormatType.video
         return None
+
+    @staticmethod
+    def get_values():
+        '''get all actual values'''
+        return (OutputFormatType.audio, OutputFormatType.video, )
 
 
 class Playlist(object):
@@ -93,6 +99,10 @@ class Playlist(object):
     @property
     def output_format(self):
         return self._output_format
+
+    @output_format.setter
+    def output_format(self, output_format):
+        self._output_format = output_format
 
     @property
     def profiles(self):

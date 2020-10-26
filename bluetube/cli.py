@@ -174,3 +174,39 @@ Check the config file. It must have something like this
             question += ' | {b}s{e}ummary'.format(b=Bcolors.HEADER,
                                                   e=Bcolors.ENDC)
         return question
+
+    def selection_list(self, msg, lst, default):
+        '''select an item from the list'''
+        self.inform(f'{msg}')
+        for i, e in enumerate(lst):
+            self.inform(f'{i} - {e}')
+        o = input(f'[{default}] -> ')
+        try:
+            if len(o) == 0:
+                return default
+            elif int(o) > len(lst):
+                raise ValueError(o)
+            else:
+                return lst[int(o)]
+        except ValueError as e:
+            self.error(e)
+            return self.selection_list(msg, lst, default)
+
+    def multi_selection_list(self, msg, lst, default):
+        self.inform(f'{msg}')
+        for i, e in enumerate(lst):
+            self.inform(f'{i} - {e}')
+        o = input(f'Choose items, separate by space [{default}]')
+        items = o.split()
+        ret = []
+        try:
+            for i in items:
+                o = int(i.strip())
+                if o > len(lst):
+                    raise ValueError(o)
+                else:
+                    ret.append(lst[o])
+        except ValueError as e:
+            self.error(e)
+            self.multi_selection_list(msg, lst, default)
+        return ret
