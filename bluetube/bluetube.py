@@ -109,7 +109,7 @@ class Bluetube(object):
         else:
             self.event_listener.error('playlist not found', title, author)
 
-    def run(self, show_all=False):
+    def run(self):
         ''' The main method. It does everything.'''
 
         if not self._check_downloader():
@@ -132,7 +132,7 @@ class Bluetube(object):
 
         self._fetch_temp_dir()
 
-        pls = self._proccess_playlists(pls, show_all)
+        pls = self._proccess_playlists(pls)
 
         for pl in pls:
             if not self._check_profiles(pl, profiles):
@@ -288,12 +288,12 @@ class Bluetube(object):
         pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
 
-    def _proccess_playlists(self, pls, show_all):
+    def _proccess_playlists(self, pls):
         '''ask the user what to do with the entities'''
         ret = []
         for pl in pls:
             self.event_listener.inform(pl.author)
-            ret.append(self._process_playlist(pl, show_all))
+            ret.append(self._process_playlist(pl))
         return ret
 
     def _download_list(self, pl, profiles):
@@ -545,7 +545,7 @@ class Bluetube(object):
             del pl.author
         return [{'author': a, 'playlists': ret[a]} for a in ret]
 
-    def _process_playlist(self, pl, show_all):
+    def _process_playlist(self, pl):
         '''process the playlist'''
         entities = []
         is_need_update = False
@@ -553,7 +553,7 @@ class Bluetube(object):
         assert pl.feedparser_data is not None, 'fetch RSS first'
         for e in pl.feedparser_data.entries:
             e_update = time.mktime(e['published_parsed'])
-            if last_update < e_update or show_all:
+            if last_update < e_update:
                 if not is_need_update:
                     is_need_update = True
                 if self.event_listener.ask(e):
@@ -726,9 +726,6 @@ def main():
     me_group.add_argument('--edit_profiles', '-p',
                           action='store_true',
                           help='edit profiles in a text editor')
-    parser.add_argument('--show_all',
-                        action='store_true',
-                        help='show all available feed items despite last update time')
     parser.add_argument('--verbose', '-v',
                         action='store_true',
                         help='print more information')
@@ -745,7 +742,7 @@ def main():
         elif args.edit_profiles:
             bluetube.edit_profiles()
         else:
-            bluetube.run(args.show_all)
+            bluetube.run()
     print('Done')
 
 
