@@ -76,7 +76,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "bluetube=bluetube.bluetube:main",
+            "bluetube=bluetube.app:main",
             ]
     },
     keywords="Youtube, bluetooth, RSS",
