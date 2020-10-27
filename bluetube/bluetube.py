@@ -205,36 +205,34 @@ class Bluetube(object):
                       profiles=None, reset_failed=None, days_back=None):
         '''edit a playlist'''
         def print_help():
-            output_types = ' | '.join([str(v)
-                                       for v in OutputFormatType.get_values()])
             prs = ' | '.join(Profiles(self.bt_dir).get_profiles())
-            msg = f'''Run this command with one or all options below:
--o {output_types}
--p {prs}
--r to reset previously failed videos
--d N to set last updated date to N days before'''
+            msg = 'Run this command with one or all options below:\n' \
+                  f'-t (a or v) -pr ({prs})\n' \
+                  '-r (to reset previously failed videos)' \
+                  ' -d N (to set last updated date to N days before)'
             self.event_listener.warn(msg)
 
         feed = Feeds(self.bt_dir)
         if feed.has_playlist(author, title):
             pl = feed.get_playlist(author, title)
             assert pl, 'no playlist'
-
-            if not all((output_type, profiles, days_back)):
+            if not any((output_type, profiles, days_back)):
+                print_help()
+            elif profiles \
+                and not all([p in Profiles(self.bt_dir).get_profiles()
+                             for p in profiles]):
                 print_help()
             else:
-                if output_type in OutputFormatType.get_values() \
-                    and all([p in Profiles(self.bt_dir).get_profiles()
-                             for p in profiles]):
+                if output_type in OutputFormatType.get_values():
                     pl.output_format = output_type
+                if profiles:
                     pl.profiles = profiles
-                    if reset_failed:
-                        del pl.failed_entities
+                if reset_failed:
+                    del pl.failed_entities
+                if days_back:
                     delta = datetime.timedelta(days=int(days_back))
                     pl.last_update -= delta.total_seconds()
                     feed.sync()
-                else:
-                    print_help()
         else:
             self.event_listener.error('playlist not found', title, author)
 
@@ -672,15 +670,15 @@ def main():
                               OutputFormatType.from_char(args.type),
                               profiles)
 
-    description = 'The script downloads youtube video as video or audio ' \
-                  'and sends to a bluetooth client device.'
+    description = 'The script downloads youtube video as video or audio, ' \
+                  'converts and sends to a destination.'
     epilog = 'If no option specified the script shows feeds to choose, ' \
-             'downloads and sends via bluetooth client.'
+             'downloads and processes according to the profile.'
     parser = argparse.ArgumentParser(prog='bluetube', description=description)
     parser.epilog = epilog
 
     subparsers = parser.add_subparsers(title='Commands',
-                                       description='Use the commands below to'
+                                       description='Use the commands below to '
                                        'modify or show subscribed playlists.',
                                        help='')
 
@@ -691,7 +689,7 @@ def main():
     parser_add.add_argument('-t', dest='type',
                             choices=['a', 'v'],
                             default='v',
-                            help='a type of a file you want to get;'
+                            help='a type of a file you want to get; '
                                  '(a)udio or (v)ideo')
     parser_add.add_argument('-p', nargs='*',
                             dest='profiles',
@@ -699,7 +697,6 @@ def main():
     parser_add.set_defaults(func=add)
 
     parser_list = subparsers.add_parser('list',
-                                        aliases=['l'],
                                         help='list all playlists')
     parser_list.set_defaults(func=lambda bt, _: bt.list_playlists())
 
@@ -716,6 +713,38 @@ def main():
     parser_remove.set_defaults(func=lambda bt, args:
                                bt.remove_playlist(args.author.strip(),
                                                   args.playlist.strip()))
+
+    parser_edit = subparsers.add_parser('edit',
+                                        help='edit a playlist')
+    parser_edit.add_argument('--author', '-a',
+                            type=str,
+                            required=True,
+                            help='an author of a playlist to edit')
+    parser_edit.add_argument('--playlist', '-p',
+                            type=str,
+                            required=True,
+                            help='a playlist to edit')
+    parser_edit.add_argument('--output-type', '-t',
+                             choices=['a', 'v'],
+                             help='a type of a file you want to get;'
+                                  '(a)udio or (v)ideo')
+    parser_edit.add_argument('--profiles', '-pr',
+                             nargs='*',
+                             help='a list of profiles for this playlist')
+    parser_edit.add_argument('--reset-failed', '-r',
+                             action='store_true',
+                             help='discard previously failed videos')
+    parser_edit.add_argument('--days-back', '-d',
+                             type=int,
+                             metavar='N',
+                             help='move last update date to N days back')
+    parser_edit.set_defaults(func=lambda bt, args:
+                             bt.edit_playlist(args.author.strip(),
+                                              args.playlist.strip(),
+                                              args.output_type,
+                                              args.profiles,
+                                              args.reset_failed,
+                                              args.days_back))
 
     me_group = parser.add_mutually_exclusive_group()
 
