@@ -11,3 +11,4 @@ dist/*
 taskboard.txt
 bluetube_cli.egg-info
 
+.tox
