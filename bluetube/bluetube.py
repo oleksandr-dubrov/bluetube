@@ -646,4 +646,3 @@ class Bluetube(object):
         '''print debug info to console'''
         if self.verbose:
             print(f'[verbose] {msg}')
-

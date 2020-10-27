@@ -78,13 +78,13 @@ def main():
     parser_edit = subparsers.add_parser('edit',
                                         help='edit a playlist')
     parser_edit.add_argument('--author', '-a',
-                            type=str,
-                            required=True,
-                            help='an author of a playlist to edit')
+                             type=str,
+                             required=True,
+                             help='an author of a playlist to edit')
     parser_edit.add_argument('--playlist', '-p',
-                            type=str,
-                            required=True,
-                            help='a playlist to edit')
+                             type=str,
+                             required=True,
+                             help='a playlist to edit')
     parser_edit.add_argument('--output-type', '-t',
                              choices=['a', 'v'],
                              help='a type of a file you want to get;'
