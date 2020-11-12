@@ -211,7 +211,7 @@ class Bluetube(object):
                              for p in profiles]):
                 print_help()
             else:
-                if output_type in OutputFormatType.get_values():
+                if isinstance(output_type, OutputFormatType):
                     pl.output_format = output_type
                 if profiles:
                     pl.profiles = profiles

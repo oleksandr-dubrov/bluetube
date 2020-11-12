@@ -102,7 +102,7 @@ def main():
     parser_edit.set_defaults(func=lambda bt, args:
                              bt.edit_playlist(args.author.strip(),
                                               args.playlist.strip(),
-                                              args.output_type,
+                                              OutputFormatType.from_char(args.output_type),
                                               args.profiles,
                                               args.reset_failed,
                                               args.days_back))
