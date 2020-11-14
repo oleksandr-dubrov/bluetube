@@ -417,7 +417,7 @@ class Bluetube(object):
                     f = feedparser.parse(StringIO.StringIO(response))
                     ch['feedparser_data'] = f
                 except urllib2.HTTPError as e:
-                    print ('{}. {} ({})'.format(e, ch['title'], ch['url']))
+                    print (u'{}. {} ({})'.format(e, ch['title'], ch['url']))
                 except urllib2.URLError as e:
                     print ('FATAL. {}. No Internet connection'.format(e))
                     sys.exit(1)
