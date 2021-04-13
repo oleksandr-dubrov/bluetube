@@ -96,7 +96,7 @@ class Bluetube(object):
                     os.path.expanduser(os.path.join('~',
                                                     '.bluetube',
                                                     CONFIG_FILE_NAME))]
-    CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.template')
+    CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.tmplt')
     INDENTATION = 10
     DOWNLOADER = 'youtube-dl'
     CONVERTER = 'ffmpeg'
@@ -262,7 +262,7 @@ class Bluetube(object):
             msg = u'ERROR: The tool for converting video "{}"' +\
                 u' is not found in PATH'
             Bcolors.warn(msg.format(Bluetube.CONVERTER))
-            Bcolors.warn(u'Pease install the converter.')
+            Bcolors.warn(u'Please install the converter.')
             raw_input('Press Enter to continue, Ctrl+c to interrupt.')
             return False
 
@@ -420,6 +420,9 @@ class Bluetube(object):
                     print (u'{}. {} ({})'.format(e, ch['title'], ch['url']))
                 except urllib2.URLError as e:
                     print ('FATAL. {}. No Internet connection'.format(e))
+                    sys.exit(1)
+                except Exception as e:
+                    print ('FATAL. {}.'.format(e))
                     sys.exit(1)
 
         if not self.no_noise:
