@@ -1,5 +1,6 @@
 import os
 import shelve
+
 from bcolors import Bcolors
 
 
@@ -129,7 +130,7 @@ class Feeds(object):
                         return
 
     def migrate_db(self):
-        '''migrate db to Python 3'''
+        '''migrate DB to Python 3'''
         import sys
         assert sys.version_info.major == 2, "Cannot migrate. Use Python 2."
 
@@ -144,5 +145,3 @@ class Feeds(object):
         new_feeds.close()
 
         return new_db_filepath
-
-

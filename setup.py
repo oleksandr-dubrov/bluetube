@@ -31,9 +31,11 @@ class CleanCommand(Command):
     user_options = []
 
     def initialize_options(self):
+        '''This method must be implemented by all command classes.'''
         pass
 
     def finalize_options(self):
+        '''This method must be implemented by all command classes.'''
         pass
 
     def run(self):
@@ -41,7 +43,7 @@ class CleanCommand(Command):
 
         def remove(path):
             if os.path.exists(path):
-                print "Removing {}".format(path)
+                print("Removing {}".format(path))
                 if os.path.isdir(path):
                     shutil.rmtree(os.path.join(dirname, path), onerror=onerror)
                 else:
@@ -60,10 +62,10 @@ class CleanCommand(Command):
 
 setup(
     name="bluetube-cli",
-    version="1.4",
+    version="1.5",
     packages=find_packages(),
     package_data={
-        '': ['*.py', 'bt_config.tmplt', ],
+        '': ['*.py', '*.tmplt', ],
     },
     entry_points={
         "console_scripts": [

@@ -26,6 +26,7 @@ bluetube/bluetube.py \
 bluetube/bcolors.py \
 bluetube/bluetoothclient.py \
 bluetube/bt_config.tmplt \
+bluetube/bt3_config.tmplt \
 bluetube/feeds.py \
 dependencies.txt \
 README.md \
@@ -53,6 +54,7 @@ chmod 400 $DIRECTORY/bluetube.py
 chmod 400 $DIRECTORY/bcolors.py
 chmod 400 $DIRECTORY/bluetoothclient.py
 chmod 400 $DIRECTORY/bt_config.tmplt
+chmod 400 $DIRECTORY/bt3_config.tmplt
 chmod 400 $DIRECTORY/feeds.py
 chmod 400 $DIRECTORY/dependencies.txt
 chmod 400 $DIRECTORY/README.md

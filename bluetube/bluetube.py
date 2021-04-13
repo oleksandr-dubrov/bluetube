@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__version__ = '1.4'
+__version__ = '1.5'
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
     This file is part of Bluetube.
@@ -25,18 +25,17 @@ __license__ = '''
 import argparse
 import os
 import re
+import StringIO
 import subprocess
 import sys
 import tempfile
 import time
+import urllib2
 import webbrowser
 from ConfigParser import SafeConfigParser
 
 from bcolors import Bcolors
 from feeds import Feeds
-
-import urllib2
-import StringIO
 
 try:
     from bluetoothclient import BluetoothClient
@@ -111,11 +110,46 @@ class Bluetube(object):
     def set_yes(self, yes):
         self.yes = yes
 
-    def migrate_db(self):
-        '''Migrate DB to Python compatible one'''
+    def migrate(self):
+        '''migrate to Bluetube 3.0'''
         feeds = Feeds(self._get_bt_dir())
-        p = feeds.migrate_db()
-        print('Python 3 compatible DB is here - {}'.format(p))
+        new_db_path = feeds.migrate_db()
+        print("DB has migrated.")
+
+        self.configs = self._get_configs()
+        self._check_config_file()
+
+        profiles = os.path.join(Bluetube.CUR_DIR, 'bt3_config.tmplt')
+        with open(profiles, 'r') as f:
+            s = f.read()
+
+        video_format = 'mp4[width<=640]+worstaudio'
+        if self.configs.has_option('download', 'video_format'):
+            video_format = self.configs.get('download', 'video_format')
+        s = s.replace("%VIDEO_FORMAT%", video_format)
+        s = s.replace("%OUTPUT_FORMAT%",
+                      self.configs.get('video', 'output_format'))
+        s = s.replace('%CODECS_OPTIONS%',
+                      self.configs.get('video', 'codecs_options'))
+        s = s.replace("%DEVICEID%",
+                      self.configs.get('bluetooth', 'deviceID'))
+        print("Configurations have migrated.")
+
+        bt_home = os.path.join(os.path.expanduser('~'), '.bluetube')
+        if os.path.exists(bt_home):
+            assert os.path.isdir(bt_home), \
+                '{} is not a directory'.format(bt_home)
+        else:
+            os.mkdir(bt_home)
+
+        new_db_base = os.path.basename(new_db_path)
+        for ex in ['.bak', '.dat', '.dir']:
+            os.rename(new_db_path + ex,
+                      os.path.join(bt_home, new_db_base + ex))
+        with open(os.path.join(bt_home, 'profiles.toml'), 'w') as f:
+            f.write(s)
+        print("Data has been moved to {}".format(bt_home))
+        print('All user data has migrated successfully.')
 
     def add_playlist(self, url, out_format):
         ''' add a new playlists to RSS feeds '''
@@ -580,8 +614,8 @@ def main():
     parser.add_argument('--version', action='version',
                         version='%(prog)s {}'.format(__version__))
 
-    parser.add_argument('--migrate_db', action='store_true',
-                        help='migrate DB to Python 3')
+    parser.add_argument('--migrate', action='store_true',
+                        help='migrate user data to Bluetube 3.0')
 
     bluetube = Bluetube()
     args = parser.parse_args()
@@ -597,8 +631,8 @@ def main():
                                  args.remove[1].strip())
     elif args.send:
         bluetube.send()
-    elif args.migrate_db:
-        bluetube.migrate_db()
+    elif args.migrate:
+        bluetube.migrate()
     else:
         bluetube.run(args.verbose, args.show_all)
     print('Done')

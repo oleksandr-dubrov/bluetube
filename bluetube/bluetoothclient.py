@@ -1,13 +1,11 @@
 import os
+import socket
 import sys
+import time
 
 import bluetooth  # @UnresolvedImport
-import socket
-import time
+from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client  # @UnresolvedImport
-from PyOBEX import headers
-from PyOBEX import requests
-from PyOBEX import responses
 
 from bcolors import Bcolors
 
