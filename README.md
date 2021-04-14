@@ -210,7 +210,7 @@ Underlining DB doesn't support unicode keys, so all keys must be strings.
         feeds: [
             {
                 "author": "author1":
-                "playlists: [
+                "playlists": [
                    {
                       "title": "the name of an entity",
                       "url": "url of the entity",

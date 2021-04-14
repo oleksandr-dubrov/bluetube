@@ -136,12 +136,19 @@ class Feeds(object):
 
         import dbhash
         import dumbdbm
+        import whichdb
+        import pickle
 
+        assert whichdb.whichdb(self.db_file) == 'dbhash'
         feeds = dbhash.open(self.db_file, flag='r').get('feeds', [])
 
-        new_db_filepath = self.db_file + '.db'
+        for f in pickle.loads(feeds):
+            for p in f['playlists']:
+                p['profiles'] = ['bluetube_2']
+
+        new_db_filepath = os.path.splitext(self.db_file)[0] + '.db'
         new_feeds = dumbdbm.open(new_db_filepath)
-        new_feeds['feeds'] = feeds
+        new_feeds['feeds'] = pickle.dumps(feeds)
         new_feeds.close()
 
         return new_db_filepath
