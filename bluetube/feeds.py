@@ -140,9 +140,10 @@ class Feeds(object):
         import pickle
 
         assert whichdb.whichdb(self.db_file) == 'dbhash'
-        feeds = dbhash.open(self.db_file, flag='r').get('feeds', [])
+        feeds_pickle = dbhash.open(self.db_file, flag='r').get('feeds', [])
 
-        for f in pickle.loads(feeds):
+        feeds = pickle.loads(feeds_pickle)
+        for f in feeds:
             for p in f['playlists']:
                 p['profiles'] = ['bluetube_2']
 
