@@ -1,5 +1,5 @@
 """This is the Bluetube module."""
-__version__ = '2.0'
+__version__ = '3.0'
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
     This file is part of Bluetube.

@@ -27,11 +27,6 @@ GNU packages:
 +   [youtube-dl](https://rg3.github.io/youtube-dl/) - a downloader.
 +   ffmpeg - for converting files into a desirable format.
 
-Python packages:
-+   _feedparser_
-+   _PyOBEX_
-+   _PyBluez_
-
 Before using this script the user should pair the bluetooth device with the PC.
 If the bluetooth device is not accessible, the script can download (and convert) files only.
 
@@ -39,28 +34,12 @@ If the bluetooth device is not accessible, the script can download (and convert)
 3 Installing.
 --------------
 
-### 3.1 Install to a dictionary
-In order to install *bluetube* to a specified directory you can run the next command:
-
-    ./install *a_directory_to_install_in*
-
-If *bluetube* is present in the specified directory then the files will be overwritten.
-
-### 3.2 Install to a package manager - PIP.
-You can run
-
-    python setup.py install
-
-to install the script to your environment.
-After the script is installed, you can run
-
-    python setup.py clean
-
-to clean the repository from *setuptools* data.
+### 3.1 Install to a package manager - PIP.
+TODO: describe how to install the wheel to ve and to the system
 
 
-4 Configurations.
------------------
+4 Configurations. TODO: rework
+-------------------------------
 The configuration is kept in the INI file ***bluetooth.cfg*** in the script's directory.
 The content of the file below:
 
@@ -138,10 +117,12 @@ If no option specified the script shows feeds to choose, downloads and sends
 via bluetooth.
 
 
-7 Development.
+7 Contribute.
 -------------
 
 This section contains information about the script internals.
+
+### 7.0 TODO: how to install for development (-e)
 
 ### 7.1 How to get the feed.
 
@@ -241,8 +222,12 @@ The script extends and uses PyOBEX (and PyBluez) to send files via bluetooth.
 A few experiments showed that the most appropriate socket timeout is 120 seconds.
 Unlike the base implementation, the extended version of the method reads the data from the file stream rather than reading all file in memory before sending.
 
+### 7.5 Tests
+TODO.
 
-### 7.5 Links.
+### 7.6 Links.
+[Python 3](https://www.python.org).
+
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
 [YouTube-dl](https://rg3.github.io/youtube-dl/).
@@ -251,9 +236,9 @@ Unlike the base implementation, the extended version of the method reads the dat
 
 [Markdown](https://daringfireball.net/projects/markdown/).
 
-[INI](https://en.wikipedia.org/wiki/INI_file).
+[libbluetooth-dev](https://packages.debian.org/sid/libbluetooth-dev).
 
-[PyOBEX](https://bitbucket.org/dboddie/pyobex/src/default/).
+[PyOBEX](https://pypi.org/project/PyOBEX/).
 
 [setuptools](https://setuptools.readthedocs.io/en/latest/).
 

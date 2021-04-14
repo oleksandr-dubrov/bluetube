@@ -129,13 +129,10 @@ class BluetoothClient(Client):
             try:
                 resp = self.put(fm,
                                 full_path,
-                                callback=lambda resp, fm: self._callback(resp,
-                                                                         fm))
-                if resp:
-                    pass  # print(resp)
-                else:
-                    print('\n{} sent.'.format(fm))
-                    sent.append(full_path)
+                                callback=lambda resp: self._callback(resp, fm))
+                assert not resp, "No response expected (a callback is used)."
+                print('\n{} sent.'.format(fm))
+                sent.append(full_path)
             except socket.error as e:
                 Bcolors.error(str(e))
                 Bcolors.error(f"{fm} didn't send")

@@ -73,7 +73,9 @@ def main():
                                help='a playlist to be removed')
     parser_remove.set_defaults(func=lambda bt, args:
                                bt.remove_playlist(args.author.strip(),
-                                                  args.playlist.strip()))
+                                                  args.playlist.strip())
+                               if args.author and args.playlist
+                               else parser.print_usage())
 
     parser_edit = subparsers.add_parser('edit',
                                         help='edit a playlist')
@@ -102,7 +104,8 @@ def main():
     parser_edit.set_defaults(func=lambda bt, args:
                              bt.edit_playlist(args.author.strip(),
                                               args.playlist.strip(),
-                                              OutputFormatType.from_char(args.output_type),
+                                              OutputFormatType
+                                              .from_char(args.output_type),
                                               args.profiles,
                                               args.reset_failed,
                                               args.days_back))
@@ -133,7 +136,6 @@ def main():
             bluetube.edit_profiles()
         else:
             bluetube.run()
-    print('Done')
 
 
 if __name__ == '__main__':
