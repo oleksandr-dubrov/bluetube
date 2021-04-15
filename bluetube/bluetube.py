@@ -278,7 +278,6 @@ class Bluetube(object):
         '''ask the user what to do with the entities'''
         ret = []
         for pl in pls:
-            self.event_listener.inform(pl.author)
             ret.append(self._process_playlist(pl))
         return ret
 
@@ -534,14 +533,15 @@ class Bluetube(object):
     def _process_playlist(self, pl):
         '''process the playlist'''
         entities = []
-        is_need_update = False
+        channel_has_update = False
         new_last_update = last_update = pl.last_update
         assert pl.feedparser_data is not None, 'fetch RSS first'
         for e in pl.feedparser_data.entries:
             e_update = time.mktime(e['published_parsed'])
             if last_update < e_update:
-                if not is_need_update:
-                    is_need_update = True
+                if not channel_has_update:
+                    self.event_listener.inform(pl.author)
+                    channel_has_update = True
                 if self.event_listener.ask(e):
                     entities.append(e)
                 if new_last_update < e_update:

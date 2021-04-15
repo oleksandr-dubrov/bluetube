@@ -127,15 +127,17 @@ class BluetoothClient(Client):
             full_path = os.path.join(self.bluetube_dir, fm)
             self.file_data_stream = open(full_path, 'rb')
             try:
-                resp = self.put(fm,
+                base_fm = os.path.basename(fm)
+                resp = self.put(base_fm,
                                 full_path,
-                                callback=lambda resp: self._callback(resp, fm))
+                                callback=lambda resp: self._callback(resp,
+                                                                     base_fm))
                 assert not resp, "No response expected (a callback is used)."
-                print('\n{} sent.'.format(fm))
+                print('\n{} sent.'.format(base_fm))
                 sent.append(full_path)
             except socket.error as e:
                 Bcolors.error(str(e))
-                Bcolors.error(f"{fm} didn't send")
+                Bcolors.error(f"{base_fm} didn't send")
                 print('Trying to reconnect...')
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
@@ -146,7 +148,8 @@ class BluetoothClient(Client):
                 else:
                     sent += self.send([fm, ])
             except KeyboardInterrupt:
-                msg = f'Sending of {fm} stopped because of KeyboardInterrupt'
+                msg = f'Sending of {base_fm} stopped ' +\
+                    'because of KeyboardInterrupt'
                 Bcolors.error(msg)
             finally:
                 self.in_progress = False
