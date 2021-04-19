@@ -90,9 +90,10 @@ class Bluetube(object):
                 print(a['author'])
                 for c in a['playlists']:
                     o = f"{' ' * 10}{c.title}"
-                    t = time.strftime('%Y-%m-%d %H:%M:%S',
-                                      time.localtime(c.last_update))
-                    o = f'{o} ({t})'
+                    if self.verbose:
+                        t = time.strftime('%Y-%m-%d %H:%M:%S',
+                                          time.localtime(c.last_update))
+                        o = f'{o} ({t})'
                     print(o)
         else:
             self.event_listener.inform('empty database')
