@@ -22,6 +22,7 @@ import io
 import os
 import re
 import shutil
+import signal
 import tempfile
 import time
 import urllib
@@ -52,7 +53,14 @@ class Bluetube(object):
     # keep files that failed to be converted here
     NOT_CONV_DIR = '[not yes converted files]'
 
+    def signal_handler(self, signum, _):
+        '''Ctrl+c handler to quit the tool'''
+        assert signum == signal.SIGINT, 'SIGINT expected in the handler'
+        self.event_listener.warn('Quit!')
+        os._exit(1)
+
     def __init__(self, verbose=False):
+        signal.signal(signal.SIGINT, self.signal_handler)
         self.verbose = verbose
         self.senders = {}
         self.executor = CommandExecutor(verbose)
@@ -267,7 +275,7 @@ class Bluetube(object):
         pls = feed.get_all_playlists()
         fetch_rss = self._get_rss_fetcher()
         for a in pls:
-            self.event_listener.inform(a['author'])
+            self.event_listener.inform(a['author'], capture='RSS')
             for pl in a['playlists']:
                 fetch_rss(pl)
                 pl.author = a['author']
@@ -514,7 +522,9 @@ class Bluetube(object):
         def fetch_rss(pl):
             '''get URLs from the RSS
             that the user will selected for every playlist'''
-            self.event_listener.inform('feed is fetching', pl.title)
+            self.event_listener.inform('feed is fetching',
+                                       pl.title,
+                                       capture='RSS')
             req = urllib.request.Request(pl.url, headers=headers)
             response = urllib.request.urlopen(req).read()
             f = feedparser.parse(io.BytesIO(response))
@@ -602,6 +612,7 @@ class Bluetube(object):
             spec_options = ('--extract-audio',
                             f'--audio-format={output_format}',
                             '--audio-quality=9',  # 9 means worse
+                            '--postprocessor-args "-ac 1"',  # convert to mono
                             )
         elif output_format == OutputFormatType.video:
             of = configs.get('output_format')
@@ -633,8 +644,7 @@ class Bluetube(object):
             except OSError:
                 self.event_listener.warn('download directory not empty',
                                          self.temp_dir)
-                self.event_listener.warn('\n  '.join(os.listdir(self.temp_dir))
-                                         )
+                self.event_listener.out('\n  '.join(os.listdir(self.temp_dir)))
 
     def _get_bt_dir(self):
         if not os.path.exists(Bluetube.CUR_DIR) or \

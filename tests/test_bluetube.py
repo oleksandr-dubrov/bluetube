@@ -316,7 +316,7 @@ class TestCli(unittest.TestCase):
         with patch('builtins.print'):
             self.sut.inform('empty database')
             self.sut.inform('feed is fetching', 'a message')
-            self.sut.inform('feed updated')
+            self.sut.success('feed updated')
             self.sut.inform('an arbitrary message')
         self.sut._executor.call.assert_called_once()
 

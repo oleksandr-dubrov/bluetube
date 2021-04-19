@@ -79,12 +79,13 @@ Check the config file. It must have something like this
         Bcolors.warn('[WARNING] {}'.format(self._get_msg(msg,
                                                          CLI.WARNS, *args)))
 
-    def inform(self, msg, *args):
-        '''inform the user by an arbitrary or predefined message'''
-        if msg == 'feed updated':
-            self.sound()
-            return
-        print('[info] {}'.format(self._get_msg(msg, CLI.INFORMS, *args)))
+    def inform(self, msg, *args, **kwargs):
+        '''inform the user by an arbitrary or predefined message,
+        set "capture" to specify the header of the message
+        instead of [info]'''
+        header = kwargs['capture'] if 'capture' in kwargs else 'info'
+        print('[{}] {}'.format(header,
+                               self._get_msg(msg, CLI.INFORMS, *args)))
 
     def error(self, msg, *args):
         '''show an error to the user'''
@@ -93,9 +94,16 @@ Check the config file. It must have something like this
 
     def success(self, msg, *args):
         '''inform about success'''
+        if msg == 'feed updated':
+            self.sound()
+            return
         Bcolors.intense('[INFO] {}'.format(self._get_msg(msg,
                                                          CLI.SUCCESSES,
                                                          *args)))
+
+    def out(self, msg):
+        '''simple output'''
+        print(msg)
 
     def _get_msg(self, msg, msg_collection, *args):
         if msg in msg_collection:
