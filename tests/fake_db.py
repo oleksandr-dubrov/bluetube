@@ -1,6 +1,6 @@
 # This is a test DB.
 # It has 2 authors with 1 + 2 = 3 playlists.
-# NOTE. It it is changed, *mocked_data.zip*
+# NOTE. If it is changed, *mocked_data.zip*
 #     and all asserts related to this should be updated.
 
 # mocked_data.zip has 10 new videos in case THESE last update values.

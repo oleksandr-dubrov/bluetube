@@ -37,7 +37,8 @@ class CLI(object):
         'device not found': 'Your bluetooth device is not accessible.\n'
                             'The script will download files to {} directory.',
         'download directory not empty': 'The download directory {} '
-                                        'is not empty. Cannot delete it.',
+                                        'is not empty. Run "bluetube -s" '
+                                        'to send the files or remove them.',
         'conversion is not needed': 'The files is in required format. '
                                     'No conversion needed.'
         }

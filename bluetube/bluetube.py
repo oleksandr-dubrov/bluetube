@@ -167,7 +167,7 @@ class Bluetube(object):
                 s_op = profiles.get_send_options(profile)
                 if s_op and 'bluetooth_device_id' in s_op:
                     sender = self._get_sender(s_op['bluetooth_device_id'])
-                    if sender.found:
+                    if sender and sender.found:
                         nbr_divices += 1
                         sent += self._send_all_in_dir(sender)
                     else:
@@ -601,7 +601,7 @@ class Bluetube(object):
                     # put the link to just downloaded file into the cache
                     cache[' '.join(all_options)] = new_link
 
-        os.rmdir(tmp)
+        shutil.rmtree(tmp)
         return success, failure
 
     def _build_converter_options(self, output_format, configs):
@@ -613,7 +613,7 @@ class Bluetube(object):
             spec_options = ('--extract-audio',
                             f'--audio-format={output_format}',
                             '--audio-quality=9',  # 9 means worse
-                            '--postprocessor-args "-ac 1"',  # convert to mono
+                            '--postprocessor-args', '-ac 1',  # convert to mono
                             )
         elif output_format == OutputFormatType.video:
             of = configs.get('output_format')
