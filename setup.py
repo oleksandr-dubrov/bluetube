@@ -72,7 +72,7 @@ setup(
     license="GNU GPL",
     packages=['bluetube'],
     package_data={
-        '': ['*.py', 'profiles.toml'],
+        '': ['*.py', '*.toml'],
     },
     entry_points={
         "console_scripts": [

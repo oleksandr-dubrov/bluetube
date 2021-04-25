@@ -1,0 +1,5 @@
+# Bluetube. Configurations.
+# TOML. https://pypi.org/project/toml/
+
+[editor]
+default = ""

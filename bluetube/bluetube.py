@@ -32,6 +32,7 @@ import feedparser
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import CLI
 from bluetube.commandexecutor import CommandExecutor
+from bluetube.configs import Configs
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
@@ -187,16 +188,16 @@ class Bluetube(object):
         '''open a profiles file and check after edit'''
         bt_dir = self.bt_dir
         Profiles.create_profiles_if_not_exist(bt_dir)
-        if self._edit_profiles():
-            profiles = Profiles(bt_dir)
-            for pr in profiles.get_profiles():
-                try:
-                    profiles.check_require_converter_configurations(pr)
-                    profiles.check_send_configurations(pr)
-                except ProfilesException as e:
-                    self.event_listener.error(e)
-                    msg = f'Profile "{pr}" are not configured properly'
-                    self.event_listener.warn(msg)
+        self._edit_profiles()
+        profiles = Profiles(bt_dir)
+        for pr in profiles.get_profiles():
+            try:
+                profiles.check_require_converter_configurations(pr)
+                profiles.check_send_configurations(pr)
+            except ProfilesException as e:
+                self.event_listener.error(e)
+                msg = f'Profile "{pr}" are not configured properly. Try again.'
+                self.event_listener.warn(msg)
 
     def edit_playlist(self, author, title, output_type=None,
                       profiles=None, reset_failed=None, days_back=None):
@@ -443,24 +444,26 @@ class Bluetube(object):
 
         return True
 
-    def _edit_profiles(self):
+    def _edit_profiles(self) -> None:
         '''try to open the profile file in a text editor'''
-        editors = ['nano', 'vim', 'emacs']
-        for ed in editors:
-            if self.executor.does_command_exist(ed):
-                self.executor.call((ed, Profiles.PROFILES_NAME),
-                                   self.bt_dir,
-                                   suppress_stdout=False,
-                                   suppress_stderr=False)
-                break
+        configs = Configs(self.bt_dir)
+        ed = configs.get_editor()
+        if ed:
+            self.executor.call((ed, Profiles.PROFILES_NAME),
+                               self.bt_dir,
+                               suppress_stdout=False,
+                               suppress_stderr=False)
         else:
-            msg = 'Edit this file in your favorite editor - {}\n and continue.'
-            msg = msg.format(os.path.join(self.bt_dir,
-                                          Profiles.PROFILES_NAME))
-            self.event_listener.warn(msg)
-            if not self.event_listener.do_continue():
-                return False
-        return True
+            self.event_listener.warn('no editor')
+
+            def set_editor():
+                ed = self.event_listener.arbitrary_input()
+                if self.executor.does_command_exist(ed):
+                    configs.set_editor(ed)
+                else:
+                    self.event_listener.error(f'"{ed}" not found. Try again.')
+                    set_editor()
+            set_editor()
 
     def _convert_video(self, entities, configs):
         '''convert all videos in the playlist,

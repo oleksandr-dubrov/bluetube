@@ -122,7 +122,14 @@ via bluetooth.
 
 This section contains information about the script internals.
 
-### 7.0 TODO: how to install for development (-e)
+### 7.0 Install
+To install the project for development make a clone:
+
+    git clone https://github.com/oleksandr-dubrov/bluetube.git
+
+Then install package in the editable mode:
+
+    pip install -e bluetube
 
 ### 7.1 How to get the feed.
 

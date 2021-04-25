@@ -44,7 +44,7 @@ def main():
                                        help='')
 
     parser_add = subparsers.add_parser('add',
-                                       help='add a URL to youtube playlist')
+                                       help='add a URL to bluetube')
     parser_add.add_argument('url', type=str,
                             help="an playlist's URL")
     parser_add.add_argument('-t', dest='type',

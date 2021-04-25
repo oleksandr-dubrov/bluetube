@@ -40,7 +40,10 @@ class CLI(object):
                                         'is not empty. Run "bluetube -s" '
                                         'to send the files or remove them.',
         'conversion is not needed': 'The files is in required format. '
-                                    'No conversion needed.'
+                                    'No conversion needed.',
+        'no editor': 'Text editor is not found. '
+                     'Specify your favorite text editor '
+                     '(e.g. nano, vim, emacs, edit):',
         }
 
     ERRORS = {
@@ -202,6 +205,7 @@ Check the config file. It must have something like this
             return self.selection_list(msg, lst, default)
 
     def multi_selection_list(self, msg, lst, default):
+        '''select items from the list'''
         self.inform(f'{msg}')
         for i, e in enumerate(lst):
             self.inform(f'{i} - {e}')
@@ -219,3 +223,7 @@ Check the config file. It must have something like this
             self.error(e)
             self.multi_selection_list(msg, lst, default)
         return ret
+
+    def arbitrary_input(self):
+        '''arbitrary input '''
+        return input('>')
