@@ -191,7 +191,12 @@ class Bluetube(object):
         bt_dir = self.bt_dir
         Profiles.create_profiles_if_not_exist(bt_dir)
         self._edit_profiles()
-        profiles = Profiles(bt_dir)
+        try:
+            profiles = Profiles(bt_dir)
+        except ProfilesException as e:
+            self.event_listener.error(e)
+            self.event_listener.error('edit profile filed')
+            return
         for pr in profiles.get_profiles():
             try:
                 profiles.check_require_converter_configurations(pr)
@@ -232,7 +237,9 @@ class Bluetube(object):
                 if days_back:
                     delta = datetime.timedelta(days=int(days_back))
                     pl.last_update -= delta.total_seconds()
-                    feed.sync()
+                feed.sync()
+                if self.verbose:
+                    self.event_listener.success('Done.')
         else:
             self.event_listener.error('playlist not found', title, author)
 

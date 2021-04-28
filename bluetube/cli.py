@@ -67,6 +67,8 @@ Check the config file. It must have something like this
     [__common__.video]
     output_format = "mp4"
 ''',
+        'edit profile filed': '''Profiles are not correct.
+Please try to edit them again''',
         }
 
     SUCCESSES = {
