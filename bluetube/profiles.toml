@@ -24,9 +24,9 @@
 
 # Default profile.
 # Use it as an example for new profiles as well.
-[profile_1]
+[default]
 
-    [profile_1.convert]
+    [default.convert]
     # Convert to this format.
     output_format = "mp4"
 
@@ -34,7 +34,7 @@
     # For more info see "ffmpeg --help"
     # codecs_options = "-vcodec h263 -acodec aac -s 352x288"
 
-    [profile_1.send]
+    [default.send]
     # Enter your pair bluetooth device ID here.
     # bluetooth_device_id = "00:00:00:00:00:00"
 

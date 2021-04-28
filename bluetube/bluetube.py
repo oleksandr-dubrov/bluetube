@@ -241,6 +241,12 @@ class Bluetube(object):
         else:
             self.event_listener.error('playlist not found', title, author)
 
+    def open_more_help(self):
+        '''open more help information'''
+        link = ['https://github.com/oleksandr-dubrov',
+                '/bluetube/blob/master/README.md']
+        self.event_listener.open_url(''.join(link))
+
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''
         sent = []

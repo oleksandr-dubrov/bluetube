@@ -26,7 +26,7 @@ from bluetube.model import OutputFormatType
 def main():
 
     def add(bluetube, args):
-        profiles = args.profiles if args.profiles else ['profile_1']
+        profiles = args.profiles if args.profiles else ['default']
         bluetube.add_playlist(args.url,
                               OutputFormatType.from_char(args.type),
                               profiles)
@@ -124,6 +124,9 @@ def main():
     me_group.add_argument('--edit_profiles', '-p',
                           action='store_true',
                           help='edit profiles in a text editor')
+    parser.add_argument('--online-help', dest='online_help',
+                        action='store_true',
+                        help='open help in the default browser')
     parser.add_argument('--verbose', '-v',
                         action='store_true',
                         help='print more information')
@@ -139,6 +142,8 @@ def main():
             bluetube.send()
         elif args.edit_profiles:
             bluetube.edit_profiles()
+        elif args.online_help:
+            bluetube.open_more_help()
         else:
             bluetube.run()
 

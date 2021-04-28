@@ -28,7 +28,7 @@ class CLI(object):
 
     INFORMS = {
         'empty database': 'No subscribed playlists.\n'
-                          'Run "bluetube add -h" for more info',
+                          'Run "bluetube add -h" for more info.',
         'feed is fetching': ' ' * INDENTATION + '{}',
         'converter not found': 'Please install the converter.',
         }
@@ -148,8 +148,7 @@ Please try to edit them again''',
             elif i in s:
                 print('Summary:\n{}'.format(feed_entry['summary']))
             elif i in open_browser:
-                print('Opening the link in the default browser...')
-                webbrowser.open(link, new=2)
+                self.open_url(link)
             elif i in open_player:
                 print(f'Opening the link by {CLI.MEDIA_PLAYER}...')
                 self._executor.call((CLI.MEDIA_PLAYER, link),
@@ -229,3 +228,8 @@ Please try to edit them again''',
     def arbitrary_input(self):
         '''arbitrary input '''
         return input('>')
+
+    def open_url(self, link):
+        '''open URL in default browser'''
+        print('Opening the link in the default browser...')
+        webbrowser.open(link, new=2)
