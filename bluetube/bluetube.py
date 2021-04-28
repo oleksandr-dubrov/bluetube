@@ -42,12 +42,7 @@ class Bluetube(object):
     ''' The main class of the script. '''
 
     CONFIG_FILE_NAME = 'bluetube.cfg'
-    CUR_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
-    CONFIG_FILES = [os.path.join(CUR_DIR, CONFIG_FILE_NAME),
-                    os.path.expanduser(os.path.join('~',
-                                                    '.bluetube',
-                                                    CONFIG_FILE_NAME))]
-    CONFIG_TEMPLATE = os.path.join(CUR_DIR, 'bt_config.template')
+    HOME_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
     DOWNLOADER = 'youtube-dl'
     CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
@@ -60,14 +55,14 @@ class Bluetube(object):
         self.event_listener.warn('Quit!')
         os._exit(1)
 
-    def __init__(self, verbose=False):
+    def __init__(self, home_dir=None, verbose=False):
         signal.signal(signal.SIGINT, self.signal_handler)
         self.verbose = verbose
         self.senders = {}
         self.executor = CommandExecutor(verbose)
         self.event_listener = CLI(self.executor)
         self.temp_dir = None
-        self.bt_dir = self._get_bt_dir()
+        self.bt_dir = self._get_bt_dir(home_dir)
 
     def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
@@ -111,6 +106,9 @@ class Bluetube(object):
 
     def run(self):
         ''' The main method. It does everything.'''
+
+        if self.verbose:
+            self._dbg(f'Bluetube home directory: {self.bt_dir}.')
 
         if not self._check_downloader():
             self.event_listener.error('downloader not found',
@@ -239,7 +237,7 @@ class Bluetube(object):
                     pl.last_update -= delta.total_seconds()
                 feed.sync()
                 if self.verbose:
-                    self.event_listener.success('Done.')
+                    self._dbg('Done.')
         else:
             self.event_listener.error('playlist not found', title, author)
 
@@ -659,11 +657,11 @@ class Bluetube(object):
                                          self.temp_dir)
                 self.event_listener.out('\n  '.join(os.listdir(self.temp_dir)))
 
-    def _get_bt_dir(self):
-        if not os.path.exists(Bluetube.CUR_DIR) or \
-                not os.path.isdir(Bluetube.CUR_DIR):
-            os.makedirs(Bluetube.CUR_DIR, Bluetube.ACCESS_MODE)
-        return Bluetube.CUR_DIR
+    def _get_bt_dir(self, home_dir):
+        bt_dir = home_dir if home_dir else Bluetube.HOME_DIR
+        if not os.path.exists(bt_dir) or not os.path.isdir(bt_dir):
+            os.makedirs(bt_dir, Bluetube.ACCESS_MODE)
+        return bt_dir
 
     def _dbg(self, msg):
         '''print debug info to console'''

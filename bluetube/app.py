@@ -112,6 +112,11 @@ def main():
 
     me_group = parser.add_mutually_exclusive_group()
 
+    me_group.add_argument('--home',
+                          default=Bluetube.HOME_DIR,
+                          help='specify Bluetube\'s home directory. '
+                          'Default: ~/.bluetube.')
+
     me_group.add_argument('--send', '-s',
                           help='send already downloaded files',
                           action='store_true')
@@ -126,7 +131,7 @@ def main():
                         version=f'%(prog)s {__version__}')
 
     args = parser.parse_args()
-    bluetube = Bluetube(args.verbose)
+    bluetube = Bluetube(home_dir=args.home, verbose=args.verbose)
     if hasattr(args, 'func'):
         args.func(bluetube, args)
     else:
