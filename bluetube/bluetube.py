@@ -90,7 +90,9 @@ class Bluetube(object):
             for a in all_playlists:
                 print(a['author'])
                 for c in a['playlists']:
-                    o = f"{' ' * 10}{c.title}"
+                    out_type = OutputFormatType.to_char(c.output_format)
+                    profiles = ', '.join(c.profiles)
+                    o = f"{' ' * 10}{c.title} |{out_type}, {profiles}|"
                     if self.verbose:
                         t = time.strftime('%Y-%m-%d %H:%M:%S',
                                           time.localtime(c.last_update))

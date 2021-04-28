@@ -43,6 +43,16 @@ class OutputFormatType(Enum):
         '''get all actual values'''
         return (OutputFormatType.audio, OutputFormatType.video, )
 
+    @staticmethod
+    def to_char(t: Enum):
+        '''get name from type'''
+        if t is OutputFormatType.video:
+            return 'video'
+        elif t is OutputFormatType.audio:
+            return 'audio'
+        else:
+            assert 0, 'unknown type'
+
 
 class Playlist(object):
     '''
