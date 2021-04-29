@@ -36,7 +36,13 @@ class Configs(object):
         self._configs['editor']['default'] = ed
         self._dump()
 
+    def get_media_player(self):
+        return self._configs.get('media_player').get('default')
+
+    def set_media_player(self, player: str):
+        self._configs['media_player']['default'] = player
+        self._dump()
+
     def _dump(self):
         with open(self._config_path, 'w') as f:
-            print(self._config_path)
             toml.dump(self._configs, f)

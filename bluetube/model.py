@@ -124,7 +124,6 @@ class Playlist(object):
 
     @property
     def entities(self):
-        # TODO: dont! self._entities.extend(self.failed_entities)
         return self._entities
 
     @entities.setter

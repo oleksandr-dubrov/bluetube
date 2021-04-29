@@ -116,6 +116,7 @@ class Bluetube(object):
             return
         if not self._check_vidoe_converter():
             return
+        self._check_media_player()
 
         feed = Feeds(self.bt_dir)
         pls = self._get_list(feed)
@@ -282,7 +283,6 @@ class Bluetube(object):
                 profiles = get_instance()
                 if self._check_profiles_consistency(profiles):
                     return profiles
-            # TODO: replace with sys.exit(1) ?
             raise ProfilesException('invalid profile')
 
     def _get_list(self, feed):
@@ -455,6 +455,24 @@ class Bluetube(object):
                 return False
 
         return True
+
+    def _check_media_player(self):
+        configs = Configs(self.bt_dir)
+        mp = configs.get_media_player()
+        if mp and mp != '-':
+            self.event_listener.set_media_player(mp)
+        else:
+            self.event_listener.warn('no media player')
+
+            def set_media_player():
+                mp = self.event_listener.arbitrary_input()
+                if mp == '-' or self.executor.does_command_exist(mp):
+                    configs.set_media_player(mp)
+                    self.event_listener.set_media_player(mp)
+                else:
+                    self.event_listener.error(f'"{mp}" not found. Try again.')
+                    set_media_player()
+            set_media_player()
 
     def _edit_profiles(self) -> None:
         '''try to open the profile file in a text editor'''

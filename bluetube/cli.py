@@ -23,7 +23,6 @@ class CLI(object):
     '''Command line interface of the tool'''
 
     INDENTATION = 10
-    MEDIA_PLAYER = 'vlc'
 
     INFORMS = {
         'empty database': 'No subscribed playlists.\n'
@@ -43,6 +42,9 @@ class CLI(object):
         'no editor': 'Specify your favorite text editor '
                      '(e.g. nano, vim, emacs, gedit) '
                      'and try again:',
+        'no media player': 'Specify a media player that can open a remote URI'
+                           ' (e.g. vlc) '
+                           'or put "-" if you do not want to use it',
         }
 
     ERRORS = {
@@ -77,7 +79,10 @@ Please try to edit them again''',
 
     def __init__(self, executor):
         self._executor = executor
-        self._is_player = None
+        self._player = None
+
+    def set_media_player(self, mp: str):
+        self._player = mp
 
     def warn(self, msg, *args):
         '''warn the user by an arbitrary or predefined message'''
@@ -133,10 +138,6 @@ Please try to edit them again''',
         open_browser = ['b', 'B', 'и', 'И']
         open_player = ['p', 'P', 'З', 'з']
 
-        if self._is_player is None:
-            self._is_player = \
-                self._executor.does_command_exist(CLI.MEDIA_PLAYER)
-
         link = feed_entry['link']
         while True:
             i = input('{}\n'.format(self._make_question_to_ask(feed_entry)))
@@ -149,12 +150,12 @@ Please try to edit them again''',
             elif i in open_browser:
                 self._executor.open_url(link)
             elif i in open_player:
-                print(f'Opening the link by {CLI.MEDIA_PLAYER}...')
-                self._executor.call_in_background((CLI.MEDIA_PLAYER, link))
+                print(f'Opening the link by {self._player}...')
+                self._executor.call_in_background((self._player, link))
             else:
                 msg = '{}{} to download, {} to reject, {} to open in a browser'
                 params = (Bcolors.FAIL, d[0], r[0], open_browser[0])
-                if self._is_player:
+                if self._player:
                     msg += ', {} to open in a media player'
                     params += (open_player[0], )
                 if feed_entry['summary']:
@@ -177,7 +178,7 @@ Please try to edit them again''',
                      '{b}r{e}eject | '
                      'open in a {b}b{e}rowser').format(b=Bcolors.HEADER,
                                                        e=Bcolors.ENDC)
-        if self._is_player:
+        if self._player:
             msg = ' | open in a media {b}p{e}layer'.format(b=Bcolors.HEADER,
                                                            e=Bcolors.ENDC)
             question += msg
@@ -225,4 +226,4 @@ Please try to edit them again''',
 
     def arbitrary_input(self):
         '''arbitrary input '''
-        return input('>')
+        return input('>').strip()
