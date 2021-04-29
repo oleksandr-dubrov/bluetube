@@ -28,6 +28,7 @@ import time
 import urllib
 
 import feedparser
+from mutagen import MutagenError, id3, mp3, mp4
 
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import CLI
@@ -624,6 +625,7 @@ class Bluetube(object):
                     fs = os.listdir(tmp)
                     assert len(fs) == 1, \
                         'one link should match one file in tmp'
+                    self._add_metadata(en, os.path.join(tmp, fs[0]))
                     new_link = os.path.join(self.temp_dir,
                                             os.path.basename(fs[0]))
                     # move the file out of the tmp directory
@@ -690,3 +692,22 @@ class Bluetube(object):
         '''print debug info to console'''
         if self.verbose:
             print(f'[verbose] {msg}')
+
+    def _add_metadata(self, entity, file_path):
+        '''add metadata to a downloaded file'''
+        ext = os.path.splitext(file_path)[1]
+        try:
+            if ext == '.mp3':
+                audio = mp3.MP3(file_path)
+                audio['TPE1'] = id3.TPE1(text=entity.author)
+                audio['TIT2'] = id3.TIT2(text=entity.title)
+                audio['COMM'] = id3.COMM(text=entity.summary[:256])
+                audio.save()
+            elif ext == '.mp4':
+                video = mp4.MP4(file_path)
+                video["\xa9ART"] = entity.author
+                video["\xa9nam"] = entity.title
+            else:
+                self._dbg(f'cannot add metadata to {ext}')
+        except MutagenError as e:
+            self.event_listener.error(e)

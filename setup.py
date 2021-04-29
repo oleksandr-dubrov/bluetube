@@ -81,7 +81,11 @@ setup(
     },
     keywords="Youtube, bluetooth, RSS",
     python_requires='>3.7',
-    install_requires=['feedparser', 'PyBluez', 'PyOBEX', 'toml'],
+    install_requires=['feedparser==5.2.1',
+                      'PyBluez==0.23',
+                      'PyOBEX', 
+                      'toml==0.10.1',
+                      'mutagen==1.45.1'],
     cmdclass={
         'clean': CleanCommand,
     },
