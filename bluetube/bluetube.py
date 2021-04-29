@@ -245,7 +245,7 @@ class Bluetube(object):
         '''open more help information'''
         link = ['https://github.com/oleksandr-dubrov',
                 '/bluetube/blob/master/README.md']
-        self.event_listener.open_url(''.join(link))
+        self.executor.open_url(''.join(link))
 
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''

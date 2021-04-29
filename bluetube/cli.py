@@ -15,7 +15,6 @@
     along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import webbrowser
 
 from bluetube.bcolors import Bcolors
 
@@ -41,9 +40,9 @@ class CLI(object):
                                         'to send the files or remove them.',
         'conversion is not needed': 'The files is in required format. '
                                     'No conversion needed.',
-        'no editor': 'Text editor is not found. '
-                     'Specify your favorite text editor '
-                     '(e.g. nano, vim, emacs, edit):',
+        'no editor': 'Specify your favorite text editor '
+                     '(e.g. nano, vim, emacs, gedit) '
+                     'and try again:',
         }
 
     ERRORS = {
@@ -148,7 +147,7 @@ Please try to edit them again''',
             elif i in s:
                 print('Summary:\n{}'.format(feed_entry['summary']))
             elif i in open_browser:
-                self.open_url(link)
+                self._executor.open_url(link)
             elif i in open_player:
                 print(f'Opening the link by {CLI.MEDIA_PLAYER}...')
                 self._executor.call((CLI.MEDIA_PLAYER, link),
@@ -228,8 +227,3 @@ Please try to edit them again''',
     def arbitrary_input(self):
         '''arbitrary input '''
         return input('>')
-
-    def open_url(self, link):
-        '''open URL in default browser'''
-        print('Opening the link in the default browser...')
-        webbrowser.open(link, new=2)

@@ -112,18 +112,17 @@ def main():
 
     me_group = parser.add_mutually_exclusive_group()
 
-    me_group.add_argument('--home',
-                          default=Bluetube.HOME_DIR,
-                          help='specify Bluetube\'s home directory. '
-                          'Default: ~/.bluetube.')
-
     me_group.add_argument('--send', '-s',
                           help='send already downloaded files',
                           action='store_true')
-
     me_group.add_argument('--edit_profiles', '-p',
                           action='store_true',
                           help='edit profiles in a text editor')
+
+    parser.add_argument('--home',
+                        default=Bluetube.HOME_DIR,
+                        help='specify Bluetube\'s home directory. '
+                        'Default: ~/.bluetube.')
     parser.add_argument('--online-help', dest='online_help',
                         action='store_true',
                         help='open help in the default browser')

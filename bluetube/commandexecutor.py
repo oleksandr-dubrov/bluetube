@@ -18,6 +18,7 @@
 import functools
 import os
 import subprocess
+import webbrowser
 
 
 def cache(func):
@@ -65,7 +66,8 @@ class CommandExecutor(object):
                                           cwd=cwd)
         except OSError as e:
             return_code = e.errno
-            print(e.strerror)
+            if self._verbose:
+                print(e.strerror)
         if self._verbose:
             print(f'Return code: {return_code}')
         return return_code
@@ -76,3 +78,8 @@ class CommandExecutor(object):
         return not self.call((name, '{}version'.format(dashes * '-')),
                              suppress_stdout=True,
                              suppress_stderr=True)
+
+    def open_url(self, link):
+        '''open URL in default browser'''
+        print('Opening the link in the default browser...')
+        webbrowser.open(link, new=2)

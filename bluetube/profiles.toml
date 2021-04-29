@@ -3,7 +3,7 @@
 
 
 # The download options.
-# Other profiles inherit these options.
+# Other profiles inherit these options. DON'T REMOVE THIS SECTION.
 [__download__]
 
     [__download__.audio]
@@ -23,7 +23,7 @@
 
 
 # Default profile.
-# Use it as an example for new profiles as well.
+# Edit it and use as an example for new profiles as well.
 [default]
 
     [default.convert]
