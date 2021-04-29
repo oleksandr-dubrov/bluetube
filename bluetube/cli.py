@@ -150,8 +150,7 @@ Please try to edit them again''',
                 self._executor.open_url(link)
             elif i in open_player:
                 print(f'Opening the link by {CLI.MEDIA_PLAYER}...')
-                self._executor.call((CLI.MEDIA_PLAYER, link),
-                                    suppress_stderr=True)
+                self._executor.call_in_background((CLI.MEDIA_PLAYER, link))
             else:
                 msg = '{}{} to download, {} to reject, {} to open in a browser'
                 params = (Bcolors.FAIL, d[0], r[0], open_browser[0])

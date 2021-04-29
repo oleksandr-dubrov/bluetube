@@ -83,3 +83,17 @@ class CommandExecutor(object):
         '''open URL in default browser'''
         print('Opening the link in the default browser...')
         webbrowser.open(link, new=2)
+
+    def call_in_background(self, args):
+        '''call args in background and forget'''
+        try:
+            p = subprocess.Popen(args,
+                                 stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+            if self._verbose:
+                command = ' '.join(args)
+                print('Background process has started.')
+                print(f'PID - {p.pid}, command - {command}')
+        except FileNotFoundError as e:
+            print(e)

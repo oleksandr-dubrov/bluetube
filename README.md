@@ -8,7 +8,7 @@ Bluetube allows you to do next:
 * open a video in browser or local media player;
 * download a video;
 * convert it to a suitable format or extract audio for talk shows.
-* send it via bluetooth (to a paired device) or to local directory.
+* send it via bluetooth (to a paired device) or to a local directory.
 
 
 ## 1 Preconditions

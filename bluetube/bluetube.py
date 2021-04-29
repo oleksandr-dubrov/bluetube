@@ -219,7 +219,7 @@ class Bluetube(object):
         if feed.has_playlist(author, title):
             pl = feed.get_playlist(author, title)
             assert pl, 'no playlist'
-            if not any((output_type, profiles, days_back)):
+            if not any((output_type, profiles, reset_failed, days_back)):
                 print_help()
             elif profiles \
                 and not all([p in Profiles(self.bt_dir).get_profiles()
@@ -333,7 +333,6 @@ class Bluetube(object):
             for profile, entities in pl.entities.items():
                 c_op = profiles.get_convert_options(profile)
                 if not c_op:
-                    self._dbg(f'no converter options for {profile}')
                     return
                 v_op = profiles.get_video_options(profile)
                 # convert unless the video has not been downloaded in
