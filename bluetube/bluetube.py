@@ -37,6 +37,7 @@ from bluetube.configs import Configs
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
+from urllib.error import HTTPError
 
 
 class Bluetube(object):
@@ -115,7 +116,7 @@ class Bluetube(object):
             self.event_listener.error('downloader not found',
                                       Bluetube.DOWNLOADER)
             return
-        if not self._check_vidoe_converter():
+        if not self._check_video_converter():
             return
         self._check_media_player()
 
@@ -417,7 +418,7 @@ class Bluetube(object):
                 self.senders[device_id] = sender
                 return sender
 
-    def _check_vidoe_converter(self):
+    def _check_video_converter(self):
         if not self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
             self.event_listener.error('converter not found',
                                       Bluetube.CONVERTER)
@@ -462,6 +463,8 @@ class Bluetube(object):
         mp = configs.get_media_player()
         if mp and mp != '-':
             self.event_listener.set_media_player(mp)
+        elif mp == '-':
+            return
         else:
             self.event_listener.warn('no media player')
 
@@ -498,7 +501,7 @@ class Bluetube(object):
 
     def _convert_video(self, entities, configs):
         '''convert all videos in the playlist,
-        return a list of succeeded an and a list failed links'''
+        return a list of succeeded an and a list of failed links'''
         options = ('-y',  # overwrite output files
                    '-hide_banner',)
         codecs_options = configs.get('codecs_options', '')
@@ -560,8 +563,12 @@ class Bluetube(object):
             self.event_listener.inform('feed is fetching',
                                        pl.title,
                                        capture='RSS')
-            req = urllib.request.Request(pl.url, headers=headers)
-            response = urllib.request.urlopen(req).read()
+            try:
+                req = urllib.request.Request(pl.url, headers=headers)
+                response = urllib.request.urlopen(req).read()
+            except HTTPError as e:
+                self.event_listener.error(e)
+                response = b''
             f = feedparser.parse(io.BytesIO(response))
             pl.feedparser_data = f
 

@@ -63,7 +63,8 @@ The command *edit* allows to:
 * change profiles assigned to a playlist;
 * reset failed videos (in case Bluetube failed to download a video, it will try to do that next time, this option makes Bluetube give up);
 * roll back last update time to download previous videos again.
-See `bluetube edit --help` for details.
+
+Run `bluetube edit --help` for details.
 
 ## 4 Links.
 [Python 3](https://www.python.org).

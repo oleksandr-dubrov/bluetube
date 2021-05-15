@@ -28,6 +28,7 @@
 
     [default.convert]
     # Convert to this format.
+    # If you don't need to convert videos, remove this whole section.
     output_format = "mp4"
 
     # Other ffmpeg option can be set here.

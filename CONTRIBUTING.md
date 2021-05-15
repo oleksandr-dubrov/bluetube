@@ -83,7 +83,7 @@ Don't forget to run *tox* before commit:
 
 [Feed parser](https://pythonhosted.org/feedparser/introduction.html).
 
-[YouTube-dl](https://rg3.github.io/youtube-dl/).
+[youtube-dl](https://rg3.github.io/youtube-dl/).
 
 [ffmpeg](https://ffmpeg.org/).
 
