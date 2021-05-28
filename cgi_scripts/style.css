@@ -1,0 +1,90 @@
+body {
+    background-color: lightblue;
+    background-image: url('images/bg.png');
+    background-repeat: no-repeat;
+    background-position: 100% 100%;
+    background-attachment: fixed;
+    background-blend-mode: saturation;
+    background-size: 30vw;
+}
+
+h1 {
+    text-align: center;
+    text-shadow: 2px 2px gold;
+}
+
+table, th, tr {
+    margin: auto;
+    border: 2px solid;
+    border-collapse: collapse;
+}
+
+td {
+    padding-left: 5px;
+}
+
+td.center {
+    text-align: center;
+}
+
+th {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+tr:nth-child(even) {
+    background-color: rgb(240, 255, 255, 0.3);
+}
+
+tr:hover {
+    background-color: #ddd;
+}
+
+.message {
+    color: green;
+}
+
+.btn:link, .btn:visited {
+    color: black;
+    border: 2px solid;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn.remove {
+    border-color: hotpink;
+    color: hotpink;
+}
+
+.disabled {
+  color: currentColor;
+  cursor: not-allowed;
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+.btn.refresh {
+    width: 10em;
+    margin: 2em auto;
+    border-color: green;
+    color: green;
+    display: block;
+}
+
+.btn.refresh:hover, .btn.refresh:active {
+    background-color: green;
+    color: white;
+}
+
+.btn.remove:hover, .btn.remove:active {
+    background-color: red;
+    color: white;
+}
+
+footer {
+    margin: 0 auto;
+    margin-top: 5em;
+    margin-bottom: 5em;
+    text-align: center;
+}
