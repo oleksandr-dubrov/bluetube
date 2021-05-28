@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="eng">
+<head>
+<meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.png" type="image/gif" sizes="16x16">
+<title>Bluetube</title>
+</head>
+<body>
+	<header>
+		<h1>Bluetube loads media</h1>
+	</header>
+	<p class="message">$msg</p>
+	<table>
+		<caption></caption>
+		<thead>
+			<tr>
+				<th scope="col">&#128462;</th>
+				<th scope="col">Name</th>
+				<th scope="col">Size</th>
+				<th scope="col">Action</th>
+			</tr>
+		</thead>
+		<tbody>
+		<!-- begin -->
+			<tr>
+				<td class="center">$icon</td>
+				<td><a href="$link">$name</a></td>
+				<td class="center">$size</td>
+				<td><a href="$remove_link" class="btn remove">Remove</a></td>
+			</tr>
+		<!-- end -->
+		</tbody>
+		<tfoot>
+			<tr>
+				<td class="center">&#x2211;</td>
+				<td><em>$nbr_audios audios | $nbr_videos videos</em></td>
+				<td class="center"><em>$total_size</em></td>
+				<td></td>
+			</tr>
+		</tfoot>
+	</table>
+	<a href="/" class="btn refresh">Refresh</a>
+	<footer>
+		<em>
+			|| <a href="https://github.com/oleksandr-dubrov/bluetube" target="_blank">Bluetube 2.0</a>
+		</em>
+		<p>2021</p>
+	</footer>
+</body>
+</html>
