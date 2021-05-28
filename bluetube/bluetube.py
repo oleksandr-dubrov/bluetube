@@ -69,6 +69,8 @@ class Bluetube(object):
     def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
         feed_url = self._get_feed_url(url)
+        if not feed_url:
+            return
         f = feedparser.parse(feed_url)
         title = f.feed.title
         author = f.feed.author

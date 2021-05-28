@@ -7,7 +7,7 @@ Bluetube allows you to do next:
 * see updates on subscribed playlists and channels;
 * open a video in browser or local media player;
 * download a video;
-* convert it to a suitable format or extract audio for talk shows.
+* convert it to a suitable format or extract audio for talk shows;
 * send it via bluetooth (to a paired device) or to a local directory.
 
 
@@ -15,10 +15,10 @@ Bluetube allows you to do next:
 In order to use the script, you must have the next installed.
 
 GNU packages:
-+   Python 3
-+   libbluetooth-dev - a bluetooth Python package.
++   [Python 3](https://www.python.org)
++   [libbluetooth-dev](https://packages.debian.org/sid/libbluetooth-dev) - a bluetooth Python package.
 +   [youtube-dl](https://rg3.github.io/youtube-dl/) - a downloader.
-+   ffmpeg - for converting files into a desirable format.
++   [ffmpeg](https://ffmpeg.org/) - for converting files into a desirable format.
 
 Before using this script the user should pair the bluetooth device with the PC.
 If the bluetooth device is not accessible, the script can download (and convert) files only.
@@ -65,10 +65,3 @@ The command *edit* allows to:
 * roll back last update time to download previous videos again.
 
 Run `bluetube edit --help` for details.
-
-## 4 Links.
-[Python 3](https://www.python.org).
-
-[libbluetooth-dev](https://packages.debian.org/sid/libbluetooth-dev).
-
-[ffmpeg](https://ffmpeg.org/).
