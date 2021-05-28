@@ -26,6 +26,7 @@ import signal
 import tempfile
 import time
 import urllib
+from urllib.error import HTTPError
 
 import feedparser
 from mutagen import MutagenError, id3, mp3, mp4
@@ -37,7 +38,6 @@ from bluetube.configs import Configs
 from bluetube.feeds import Feeds
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
-from urllib.error import HTTPError
 
 
 class Bluetube(object):
@@ -545,7 +545,7 @@ class Bluetube(object):
             msg = 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'
             return msg.format(m.group(1))
         else:
-            p = re.compile(r'^https://www\.youtube\.com/channel/(.+)$')
+            p = re.compile(r'^https://www\.youtube\.com/channel/(.+)/.*$')
             m = p.match(url)
             if m:
                 msg = 'https://www.youtube.com/feeds/videos.xml?channel_id={}'
