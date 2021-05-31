@@ -2,12 +2,19 @@
 <html lang="eng">
 <head>
 <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<link rel="stylesheet" href="style.css" type="text/css">
 <link rel="icon" href="favicon.png" type="image/gif" sizes="16x16">
 <title>Bluetube</title>
 </head>
 <body>
+	<!-- add a dummy <script> tag right after <body>,
+	Firefox will show the page after all the CSS from <head> is loaded.
+	It avoid "Layout was forced before the page was fully loaded.
+	If stylesheets are not yet loaded this may cause a flash of unsettled content.
+	-->
+	<script>0</script>
+
 	<header>
 		<h1>Bluetube loads media</h1>
 	</header>

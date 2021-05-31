@@ -11,6 +11,7 @@ import cgitb
 import copy
 import os
 import re
+import urllib.parse
 
 cgitb.enable()
 
@@ -20,8 +21,7 @@ BASE = 'data'
 TEMPLATE = 'index.html'
 ICONS = {'audio': '&#x266B;',  # ♫
          'video': '&#x1F4F9;',  # a video camera
-         'dir': '&#x1F4C1;'  # a directory
-    }
+         'dir': '&#x1F4C1;'}  # a directory
 
 # Tags:
 _icon = '$icon'
@@ -33,7 +33,6 @@ _remove_link = '$remove_link'
 _nbr_audios = '$nbr_audios'
 _nbr_videos = '$nbr_videos'
 _total_size = '$total_size'
-
 
 
 def get_data():
@@ -57,7 +56,7 @@ def get_data():
             d[_icon] = ICONS['dir']
             d[_name] = x
             d[_size] = '-'
-            d[_link] = '?path=' + x
+            d[_link] = '?path=' + urllib.parse.quote_plus(x)
             d[_remove_link] = '$remove_link" class="disabled'
         else:
             if os.path.splitext(x)[1] == '.mp3':
@@ -66,12 +65,14 @@ def get_data():
             else:
                 d[_icon] = ICONS['video']
                 summary[_nbr_videos] += 1
+
+            enc_x = urllib.parse.quote(x)
             d[_name] = get_name(x)
             size = round(os.path.getsize(full_path) / 1000000, 1)
             summary[_total_size] += size
             d[_size] = str(size)
-            d[_link] = os.path.join(BASE, x)
-            d[_remove_link] = f'?path={BASE[5:]}&remove={x}'
+            d[_link] = os.path.join(BASE, enc_x)
+            d[_remove_link] = f'?path={BASE[5:]}&remove={enc_x}'
         summary[_total_size] = round(summary[_total_size])
         data.append(d)
     return {'data': data, 'summary': summary}
@@ -112,7 +113,7 @@ def remove_file(fl):
         os.remove(full_path)
         msg = f'{fl} removed!'
     else:
-        msg = f'{fl} not found'
+        msg = ''
     return msg
 
 
@@ -125,6 +126,7 @@ def get_name(name):
 
 # =======================================
 
+
 print('Content-Type: text/html')
 print()
 
@@ -132,10 +134,10 @@ msg = ''
 
 form = cgi.FieldStorage()
 if 'path' in form:
-    BASE = os.path.join(BASE, form['path'].value)
+    BASE = os.path.join(BASE, urllib.parse.unquote_plus(form['path'].value))
 
 if 'remove' in form:
-    msg = remove_file(form['remove'].value)
+    msg = remove_file(urllib.parse.unquote_plus(form['remove'].value))
 
 data = get_data()
 pre, temp, post = get_template()
