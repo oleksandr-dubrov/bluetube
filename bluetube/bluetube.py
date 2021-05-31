@@ -538,8 +538,9 @@ class Bluetube(object):
         return self.executor.does_command_exist(Bluetube.DOWNLOADER)
 
     def _get_feed_url(self, url):
-        p1 = re.compile(r'^https://www\.youtube\.com/watch\?v=.+&list=(.+)$')
-        p2 = re.compile(r'^https://www\.youtube\.com/playlist\?list=(.+)$')
+        p1 = re.compile(r'^(?:.*?)youtube\.com/' +
+                        r'watch\?v=.+&list=(.+?)(?:&.*)?$')
+        p2 = re.compile(r'^(?:.*?)youtube\.com/playlist\?list=(.+?)(?:&.*)?$')
         m = p1.match(url)
         if not m:
             m = p2.match(url)
@@ -547,7 +548,7 @@ class Bluetube(object):
             msg = 'https://www.youtube.com/feeds/videos.xml?playlist_id={}'
             return msg.format(m.group(1))
         else:
-            p = re.compile(r'^https://www\.youtube\.com/channel/(.+)/.*$')
+            p = re.compile(r'^(?:.*?)youtube\.com/channel/(.+?)(/.*)?$')
             m = p.match(url)
             if m:
                 msg = 'https://www.youtube.com/feeds/videos.xml?channel_id={}'

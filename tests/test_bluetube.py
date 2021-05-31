@@ -266,6 +266,22 @@ class TestBluetube(unittest.TestCase):
                 self.sut.add_playlist(url, out_format, profiles)
                 self.assertTrue(self.check_author_title(d['feeds'], a, t))
 
+    def test__get_feed_url(self):
+        '''test possible URLs of playlists'''
+        exp_id = 'UCSHZKyawb77ixDdsGog4iWA'
+        urls = [
+            'youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA',
+            'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA',
+            'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA/video',
+            'youtube.com/playlist?list=UCSHZKyawb77ixDdsGog4iWA&playnext=1' +
+            '&index=1',
+            'https://www.youtube.com/watch?v=qZmkoV6U_qw&list' +
+            '=UCSHZKyawb77ixDdsGog4iWA&index=4',
+            ]
+        for u in urls:
+            feed = self.sut._get_feed_url(u)
+            self.assertTrue(exp_id in feed, f"unexpected feed for {u}")
+
     def test_remove_playlist(self):
         self.mock_cli()
         d = {'feeds': []}
