@@ -113,7 +113,8 @@ def main():
     me_group = parser.add_mutually_exclusive_group()
 
     me_group.add_argument('--send', '-s',
-                          help='send already downloaded files',
+                          help='send already downloaded files' +\
+                          ' to all bluetooth devices',
                           action='store_true')
     me_group.add_argument('--edit_profiles', '-p',
                           action='store_true',
