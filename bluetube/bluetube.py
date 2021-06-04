@@ -35,7 +35,7 @@ from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import CLI
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.configs import Configs
-from bluetube.feeds import Feeds
+from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
 
@@ -251,6 +251,13 @@ class Bluetube(object):
         link = ['https://github.com/oleksandr-dubrov',
                 '/bluetube/blob/master/README.md']
         self.executor.open_url(''.join(link))
+
+    def export_db(self):
+        '''export DB into the bluetube.sql file for MySQL'''
+        feed = Feeds(self.bt_dir)
+        exporter = SqlExporter(feed.get_all_playlists())
+        with open('bluetube.sql', 'w') as f:
+            exporter.export(f)
 
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''

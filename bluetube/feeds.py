@@ -3,8 +3,9 @@ import functools
 import os
 import shelve
 
+from bluetube import __version__
 from bluetube.bcolors import Bcolors
-from bluetube.model import Playlist
+from bluetube.model import OutputFormatType, Playlist
 
 '''
     This file is part of Bluetube.
@@ -164,3 +165,105 @@ class Feeds(object):
         except ValueError as e:
             Bcolors.error('Probably your changes were lost. Try again')
             raise e
+
+
+class SqlExporter(object):
+    '''Export the DB to SQL'''
+
+    DB_NAME = 'bluetube'
+    ENGINE = 'ENGINE=INNODB'
+    ID_INT = 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY'
+
+    def __init__(self, feeds):
+        self._feeds = feeds
+
+    def export(self, file):
+        '''export DB'''
+        file.write(self._add_header())
+        file.write(self._use_db())
+        file.write(self._create_roles())
+        file.write(self._create_users())
+        file.write(self._create_authors())
+        file.write(self._create_playlists())
+        file.write(self._insert_authors_and_playlists())
+
+    def _add_header(self):
+        return f'/*\nBluetube {__version__} DB for MySQL.\n*/\n\n'
+
+    def _use_db(self):
+        return f'USE {SqlExporter.DB_NAME};\n'
+
+    def _create_roles(self):
+        r = ['']
+        r.append('CREATE TABLE IF NOT EXISTS roles(')
+        r.append('    id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,')
+        r.append('    role CHAR(10) UNIQUE')
+        r.append(f') {SqlExporter.ENGINE};')
+        r.append('')
+        r.append('INSERT INTO roles(id, role)')
+        r.append("VALUES (1, 'admin'), (2, 'user');")
+        r.append('')
+        return '\n'.join(r)
+
+    def _create_users(self):
+        r = ['']
+        r.append('CREATE TABLE IF NOT EXISTS users (')
+        r.append(f'    {SqlExporter.ID_INT},')
+        r.append('    name VARCHAR(100) NOT NULL,')
+        r.append('    password VARCHAR(60) NOT NULL,')
+        r.append('    email VARCHAR(100),')
+        r.append('    role TINYINT UNSIGNED NOT NULL,')
+        r.append('    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,')
+        r.append('    FOREIGN KEY(role) REFERENCES roles(id)')
+        r.append(f') {SqlExporter.ENGINE};')
+        r.append('')
+        r.append('INSERT INTO users(id, name, password, email, role)')
+        r.append("VALUES (1, 'admin', 'admin', 'email@example.com', 1);")
+        r.append('')
+        return '\n'.join(r)
+
+    def _create_authors(self):
+        r = ['']
+        r.append('CREATE TABLE IF NOT EXISTS authors(')
+        r.append(f'    {SqlExporter.ID_INT},')
+        r.append('    name VARCHAR(255) UNIQUE,')
+        r.append('    user INT UNSIGNED NOT NULL,')
+        r.append('    FOREIGN KEY(user) REFERENCES users(id)' +
+                 ' ON UPDATE CASCADE ON DELETE CASCADE')
+        r.append(f') {SqlExporter.ENGINE};')
+        r.append('')
+        return '\n'.join(r)
+
+    def _create_playlists(self):
+        r = ['']
+        r.append('CREATE TABLE IF NOT EXISTS playlists(')
+        r.append(f'    {SqlExporter.ID_INT},')
+        r.append('    title VARCHAR(255) NOT NULL,')
+        r.append('    URL VARCHAR(2048) NOT NULL,')
+        r.append('    out_format CHAR(3) NOT NULL,')
+        r.append('    last_update TIMESTAMP,')
+        r.append('    author INT UNSIGNED NOT NULL,')
+        r.append('    UNIQUE(title, author),')
+        r.append('    FOREIGN KEY(author) REFERENCES authors(id)' +
+                 'ON UPDATE CASCADE ON DELETE CASCADE')
+        r.append(f') {SqlExporter.ENGINE};')
+        r.append('')
+        return '\n'.join(r)
+
+    def _insert_authors_and_playlists(self):
+        r = []
+        for x in self._feeds:
+            r.append('')
+            author = x['author'].replace("'", "''")
+            r.append("INSERT INTO authors(name, user)")
+            r.append(f"VALUES ('{author}', 1);")
+            r.append('SELECT LAST_INSERT_ID() INTO @author_id;')
+            for y in x['playlists']:
+                r.append('INSERT INTO playlists' +
+                         '(title, URL, out_format, author)')
+                a = OutputFormatType.audio
+                nf = 'mp3' if y.output_format is a else 'mp4'
+                title = y.title.replace("'", "''")
+                r.append(f"VALUES ('{title}', '{y.url}', '{nf}', @author_id);")
+        r.append('')
+        return '\n'.join(r)
