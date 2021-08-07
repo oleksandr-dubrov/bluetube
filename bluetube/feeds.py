@@ -197,7 +197,7 @@ class SqlExporter(object):
         r = ['']
         r.append('CREATE TABLE IF NOT EXISTS roles(')
         r.append('    id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,')
-        r.append('    role CHAR(10) UNIQUE')
+        r.append('    role CHAR(10) NOT NULL UNIQUE')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
         r.append('INSERT INTO roles(id, role)')
@@ -212,12 +212,12 @@ class SqlExporter(object):
         r.append('    name VARCHAR(100) NOT NULL,')
         r.append('    password VARCHAR(60) NOT NULL,')
         r.append('    email VARCHAR(100),')
-        r.append('    role TINYINT UNSIGNED NOT NULL,')
+        r.append('    role_id TINYINT UNSIGNED NOT NULL,')
         r.append('    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,')
-        r.append('    FOREIGN KEY(role) REFERENCES roles(id)')
+        r.append('    FOREIGN KEY(role_id) REFERENCES roles(id)')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
-        r.append('INSERT INTO users(id, name, password, email, role)')
+        r.append('INSERT INTO users(id, name, password, email, role_id)')
         r.append("VALUES (1, 'admin', 'admin', 'email@example.com', 1);")
         r.append('')
         return '\n'.join(r)
@@ -227,8 +227,8 @@ class SqlExporter(object):
         r.append('CREATE TABLE IF NOT EXISTS authors(')
         r.append(f'    {SqlExporter.ID_INT},')
         r.append('    name VARCHAR(255) UNIQUE,')
-        r.append('    user INT UNSIGNED NOT NULL,')
-        r.append('    FOREIGN KEY(user) REFERENCES users(id)' +
+        r.append('    user_id INT UNSIGNED NOT NULL,')
+        r.append('    FOREIGN KEY(user_id) REFERENCES users(id)' +
                  ' ON UPDATE CASCADE ON DELETE CASCADE')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
@@ -242,9 +242,9 @@ class SqlExporter(object):
         r.append('    URL VARCHAR(2048) NOT NULL,')
         r.append('    out_format CHAR(3) NOT NULL,')
         r.append('    last_update TIMESTAMP,')
-        r.append('    author INT UNSIGNED NOT NULL,')
-        r.append('    UNIQUE(title, author),')
-        r.append('    FOREIGN KEY(author) REFERENCES authors(id)' +
+        r.append('    author_id INT UNSIGNED NOT NULL,')
+        r.append('    UNIQUE(title, author_id),')
+        r.append('    FOREIGN KEY(author_id) REFERENCES authors(id)' +
                  'ON UPDATE CASCADE ON DELETE CASCADE')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
@@ -255,12 +255,12 @@ class SqlExporter(object):
         for x in self._feeds:
             r.append('')
             author = x['author'].replace("'", "''")
-            r.append("INSERT INTO authors(name, user)")
+            r.append("INSERT INTO authors(name, user_id)")
             r.append(f"VALUES ('{author}', 1);")
             r.append('SELECT LAST_INSERT_ID() INTO @author_id;')
             for y in x['playlists']:
                 r.append('INSERT INTO playlists' +
-                         '(title, URL, out_format, author)')
+                         '(title, URL, out_format, author_id)')
                 a = OutputFormatType.audio
                 nf = 'mp3' if y.output_format is a else 'mp4'
                 title = y.title.replace("'", "''")
