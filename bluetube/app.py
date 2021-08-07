@@ -120,6 +120,9 @@ def main():
                           action='store_true',
                           help='edit profiles in a text editor')
 
+    parser.add_argument('--yes', '-y',
+                        action='store_true',
+                        help='answer positive to all questions')
     parser.add_argument('--home',
                         default=Bluetube.HOME_DIR,
                         help='specify Bluetube\'s home directory. '
@@ -134,7 +137,9 @@ def main():
                         version=f'%(prog)s {__version__}')
 
     args = parser.parse_args()
-    bluetube = Bluetube(home_dir=args.home, verbose=args.verbose)
+    bluetube = Bluetube(home_dir=args.home,
+                        verbose=args.verbose,
+                        yes=args.yes)
     if hasattr(args, 'func'):
         args.func(bluetube, args)
     else:

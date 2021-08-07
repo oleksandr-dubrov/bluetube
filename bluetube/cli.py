@@ -77,9 +77,10 @@ Please try to edit them again''',
         'feeds updated': "Feeds have been updated successfully."
         }
 
-    def __init__(self, executor):
+    def __init__(self, executor, yes=False):
         self._executor = executor
         self._player = None
+        self._yes = yes
 
     def set_media_player(self, mp: str):
         self._player = mp
@@ -130,6 +131,8 @@ Please try to edit them again''',
 
     def ask(self, feed_entry):
         '''ask if perform something'''
+        if self._yes:
+            return True
         # d for download
         d = ['d', 'D', 'В', 'в', 'Y', 'y', 'Н', 'н', 'yes', 'YES']
         # r for reject

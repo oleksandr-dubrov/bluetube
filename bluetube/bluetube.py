@@ -57,12 +57,12 @@ class Bluetube(object):
         self.event_listener.warn('Quit!')
         os._exit(1)
 
-    def __init__(self, home_dir=None, verbose=False):
+    def __init__(self, home_dir=None, verbose=False, yes=False):
         signal.signal(signal.SIGINT, self.signal_handler)
         self.verbose = verbose
         self.senders = {}
         self.executor = CommandExecutor(verbose)
-        self.event_listener = CLI(self.executor)
+        self.event_listener = CLI(self.executor, yes)
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
 
