@@ -113,7 +113,7 @@ def remove_file(fl):
         os.remove(full_path)
         msg = f'{fl} removed!'
     else:
-        msg = ''
+        msg = f'{fl} not found!'
     return msg
 
 
@@ -127,17 +127,22 @@ def get_name(name):
 # =======================================
 
 
-print('Content-Type: text/html')
-print()
-
 msg = ''
 
 form = cgi.FieldStorage()
+path = None
+
 if 'path' in form:
-    BASE = os.path.join(BASE, urllib.parse.unquote_plus(form['path'].value))
+    path = form['path'].value
+    BASE = os.path.join(BASE, urllib.parse.unquote_plus(path))
 
 if 'remove' in form:
-    msg = remove_file(urllib.parse.unquote_plus(form['remove'].value))
+    msg = remove_file(form['remove'].value)
+    print('Status: 302 Found')
+    print('Location: {}'.format('/' if path is None else '/?path=' + path))
+
+print('Content-Type: text/html')
+print()
 
 data = get_data()
 pre, temp, post = get_template()
