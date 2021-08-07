@@ -137,7 +137,7 @@ if 'path' in form:
     BASE = os.path.join(BASE, urllib.parse.unquote_plus(path))
 
 if 'remove' in form:
-    msg = remove_file(urllib.parse.unquote_plus(form['remove'].value))
+    msg = remove_file(form['remove'].value)
     print('Status: 302 Found')
     print('Location: {}'.format('/' if path is None else '/?path=' + path))
 
