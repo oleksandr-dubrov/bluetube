@@ -3,8 +3,6 @@ import shutil
 
 from setuptools import Command, setup
 
-from bluetube import __version__
-
 
 def onerror(func, path, exc_info):
     """
@@ -62,7 +60,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="bluetube-cli",
-    version=__version__,
+    version='2.0',
     author="Olexandr Dubrov",
     author_email="olexandr.dubrov@gmail.com",
     description="to get video from Youtube by RSS and send via bluetooth",
@@ -81,7 +79,7 @@ setup(
     },
     keywords="Youtube, bluetooth, RSS",
     python_requires='>3.7',
-    install_requires=['feedparser==5.2.1',
+    install_requires=['feedparser==6.0.8',
                       'PyBluez==0.23',
                       'PyOBEX', 
                       'toml==0.10.1',
