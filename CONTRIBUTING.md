@@ -8,7 +8,7 @@
 It's recommended to install the sources into a [virtual environment](https://docs.python.org/3/tutorial/venv.html):
 
     python3 -m virtualenv ve
-    . ve/bin/activate
+    ./ve/bin/activate
 
 To install *bluetube* in the development mode, run:
 
