@@ -146,3 +146,6 @@ class Playlist(object):
     @failed_entities.deleter
     def failed_entities(self):
         self._failed_entities.clear()
+
+    def __str__(self):
+        return f'{type(self).__name__}: {self.author} - {self._title}'

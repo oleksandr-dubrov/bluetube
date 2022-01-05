@@ -151,6 +151,9 @@ class Bluetube(object):
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
+            if self.verbose:
+                self._dbg(f"process {pl}")
+
             self._download_list(pl, profiles)
 
             self._convert_list(pl, profiles)
