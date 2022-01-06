@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from zipfile import ZipFile
 
 from bluetube import Bluetube
-from bluetube.bluetube import CLI
+from bluetube.cli import CLI
 from bluetube.commandexecutor import cache
 from bluetube.model import OutputFormatType
 from tests.fake_db import FAKE_DB, NEW_LINKS

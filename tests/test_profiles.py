@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from bluetube.bluetube import Profiles, ProfilesException
+from bluetube.profiles import Profiles, ProfilesException
 
 
 class TestProfile(unittest.TestCase):

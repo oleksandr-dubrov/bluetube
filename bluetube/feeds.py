@@ -3,9 +3,9 @@ import functools
 import os
 import shelve
 
-from bluetube import __version__
 from bluetube.bcolors import Bcolors
 from bluetube.model import OutputFormatType, Playlist
+from bluetube.version import __version__
 
 '''
     This file is part of Bluetube.

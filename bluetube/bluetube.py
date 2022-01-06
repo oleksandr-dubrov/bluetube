@@ -49,7 +49,7 @@ class Bluetube(object):
     CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
     # keep files that failed to be converted here
-    NOT_CONV_DIR = '[not yes converted files]'
+    NOT_CONV_DIR = '[not yet converted files]'
 
     def signal_handler(self, signum, _):
         '''Ctrl+c handler to quit the tool'''
@@ -120,7 +120,7 @@ class Bluetube(object):
             return
         if not self._check_video_converter():
             return
-        self._check_media_player()
+        # self._check_media_player()
 
         feed = Feeds(self.bt_dir)
         pls = self._get_list(feed)
@@ -439,7 +439,7 @@ class Bluetube(object):
         return True
 
     def _check_profiles(self, pl, profiles):
-        '''check if profiles if the playlist do exist'''
+        '''check if profiles of the playlist do exist'''
         def check_profiles_internal(profile):
             if not profiles.check_profile(profile):
                 self.event_listener.error('profile not found',

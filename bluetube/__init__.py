@@ -1,5 +1,8 @@
-"""This is the Bluetube module."""
-__version__ = '2.0'
+'''This is the Bluetube module.'''
+from bluetube.bluetube import Bluetube
+from bluetube.version import __version__
+
+__all__ = ['Bluetube', '__version__']
 __author__ = 'Olexandr Dubrov <olexandr.dubrov@gmail.com>'
 __license__ = '''
     This file is part of Bluetube.
@@ -17,6 +20,3 @@ __license__ = '''
     You should have received a copy of the GNU General Public License
     along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
 '''
-__all__ = ['Bluetube']
-
-from bluetube.bluetube import Bluetube
