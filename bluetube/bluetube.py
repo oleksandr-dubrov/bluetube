@@ -410,7 +410,7 @@ class Bluetube(object):
         for ln in links:
             self._dbg(f'copying {ln} to {local_path}')
             try:
-                shutil.copy2(ln, local_path)
+                shutil.copy2(os.path.join(self.temp_dir, ln), local_path)
                 copied.append(ln)
             except shutil.SameFileError as e:
                 self.event_listener.error(e)
@@ -640,9 +640,11 @@ class Bluetube(object):
                     failure.append(en)
                     # clear partially downloaded files if any
                     for f in just_downloaded:
-                        os.unlink(os.path.join(f))
+                        os.unlink(os.path.join(self.temp_dir, f))
                 else:
-                    self._add_metadata(en, just_downloaded[0])
+                    self._add_metadata(en,
+                                       os.path.join(self.temp_dir,
+                                                    just_downloaded[0]))
                     en['link'] = just_downloaded[0]
                     success.append(en)
 
