@@ -101,10 +101,12 @@ class TestBluetube(unittest.TestCase):
 
         if args[0][0] == 'youtube-dl':
             fake_name = args[0][-1].split('=')[1]
-            open(os.path.join(kwargs['cwd'], fake_name), 'w').close()
+            open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
+                              fake_name), 'w').close()
             self.nbr_downloaded += 1
         elif args[0][0] == 'ffmpeg':
-            open(args[0][-1], 'w').close()
+            open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
+                              args[0][-1]), 'w').close()
             self.nbr_converted += 1
         return 0
 

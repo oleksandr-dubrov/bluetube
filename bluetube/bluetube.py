@@ -388,7 +388,7 @@ class Bluetube(object):
                 lnk = en['link']
                 if all([lnk in pr for pr in processed]):
                     try:
-                        os.remove(lnk)
+                        os.remove(os.path.join(self.temp_dir, lnk))
                     except FileNotFoundError:
                         pass  # ignore this exception
                 else:
@@ -617,10 +617,6 @@ class Bluetube(object):
 
     def _download(self, entities, output_format, configs, cache):
         options = self._build_converter_options(output_format, configs)
-        # create a temporal directory to download a file by its link
-        # to be sure that the file belongs to the link
-        tmp = os.path.join(self.temp_dir, 'tmp')
-        os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
         success, failure = [], []
 
         for en in entities:
@@ -634,35 +630,32 @@ class Bluetube(object):
                 en['link'] = new_link
                 success.append(en)
             else:
-                status = self.executor.call(all_options, cwd=tmp)
+                status = self.executor.call(all_options, cwd=self.temp_dir)
+                just_downloaded = [jd for jd in os.listdir(self.temp_dir)
+                                   if en['yt_videoid'] in jd]
+                assert len(just_downloaded) <= 1,\
+                    f"more than one file with {en['yt_videoid']}" +\
+                    "has just been downloaded"
                 if status:
                     failure.append(en)
-                    # clear the tmp directory that may have parts of
-                    # not completely downloaded file.
-                    for f in os.listdir(tmp):
-                        os.unlink(os.path.join(tmp, f))
+                    # clear partially downloaded files if any
+                    for f in just_downloaded:
+                        os.unlink(os.path.join(f))
                 else:
-                    fs = os.listdir(tmp)
-                    assert len(fs) == 1, \
-                        'one link should match one file in tmp'
-                    self._add_metadata(en, os.path.join(tmp, fs[0]))
-                    new_link = os.path.join(self.temp_dir,
-                                            os.path.basename(fs[0]))
-                    # move the file out of the tmp directory
-                    os.rename(os.path.join(tmp, fs[0]), new_link)
-                    en['link'] = new_link
+                    self._add_metadata(en, just_downloaded[0])
+                    en['link'] = just_downloaded[0]
                     success.append(en)
 
                     # put the link to just downloaded file into the cache
-                    cache[' '.join(all_options)] = new_link
+                    cache[' '.join(all_options)] = just_downloaded[0]
 
-        shutil.rmtree(tmp)
         return success, failure
 
     def _build_converter_options(self, output_format, configs):
-        options = ('--ignore-config',
-                   '--ignore-errors',
-                   '--mark-watched',)
+        options = ('--ignore-config',  # Do  not  read  configuration  files.
+                   '--ignore-errors',  # Continue on download errors
+                   '--mark-watched',   # Mark videos watched (YouTube only)
+                   )
         if output_format == OutputFormatType.audio:
             output_format = configs['output_format']
             spec_options = ('--extract-audio',
