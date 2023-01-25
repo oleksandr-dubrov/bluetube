@@ -126,6 +126,7 @@ Please try to edit them again''',
         link = feed_entry['link']
         while True:
             i = input('{}\n'.format(self._make_question_to_ask(feed_entry)))
+            i = i.strip()
             if i in d:
                 return True
             elif i in r:
@@ -177,7 +178,7 @@ Please try to edit them again''',
         self.inform(f'{msg}')
         for i, e in enumerate(lst):
             self.inform(f'{i} - {e}')
-        o = input(f'[{default}] -> ')
+        o = input(f'[{default}] -> ').strip()
         try:
             if len(o) == 0:
                 return default
@@ -194,7 +195,7 @@ Please try to edit them again''',
         self.inform(f'{msg}')
         for i, e in enumerate(lst):
             self.inform(f'{i} - {e}')
-        o = input(f'Choose items, separate by space [{default}]')
+        o = input(f'Choose items, separate by space [{default}]').strip()
         items = o.split()
         ret = []
         try:
