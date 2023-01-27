@@ -258,15 +258,20 @@ class TestBluetube(unittest.TestCase):
         profiles = ['profile_1', ]
 
         a = t = 'ТаТоТаке'
+        em = "\U0001F612"
         for a, t in (('author1', 'title1'), (a, t)):
             parsed = type('mocked_feed',
                           (object,),
                           {'feed': type('mocked_pl',
                                         (object,),
-                                        {'author': a, 'title': t})})
+                                        # check that emojies are cut off
+                                        {'author': a+em,
+                                         'title': t+em})})
             with patch('feedparser.parse', return_value=parsed):
                 self.sut.add_playlist(url, out_format, profiles)
-                self.assertTrue(self.check_author_title(d['feeds'], a, t))
+                self.assertTrue(self.check_author_title(d['feeds'],
+                                                        a+"□",
+                                                        t+"□"))
 
     def test__get_feed_url(self):
         '''test possible URLs of playlists'''

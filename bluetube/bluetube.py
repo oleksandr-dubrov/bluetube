@@ -38,6 +38,7 @@ from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
+from bluetube.utils import deemojify
 
 
 class Bluetube(object):
@@ -72,8 +73,8 @@ class Bluetube(object):
         if not feed_url:
             return
         f = feedparser.parse(feed_url)
-        title = f.feed.title
-        author = f.feed.author
+        title = deemojify(f.feed.title)
+        author = deemojify(f.feed.author)
         feeds = Feeds(self.bt_dir)
         if feeds.has_playlist(author, title):
             self.event_listener.error('playlist exists', title, author)
@@ -111,8 +112,7 @@ class Bluetube(object):
     def run(self):
         ''' The main method. It does everything.'''
 
-        if self.verbose:
-            self._dbg(f'Bluetube home directory: {self.bt_dir}.')
+        self._dbg(f'Bluetube home directory: {self.bt_dir}.')
 
         if not self._check_downloader():
             self.event_listener.error('downloader not found',
@@ -151,8 +151,7 @@ class Bluetube(object):
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
-            if self.verbose:
-                self._dbg(f"process {pl}")
+            self._dbg(f"process {pl}")
 
             self._download_list(pl, profiles)
 
@@ -244,8 +243,7 @@ class Bluetube(object):
                     delta = datetime.timedelta(days=int(days_back))
                     pl.last_update -= delta.total_seconds()
                 feed.sync()
-                if self.verbose:
-                    self._dbg('Done.')
+                self._dbg('Done.')
         else:
             self.event_listener.error('playlist not found', title, author)
 
@@ -642,6 +640,10 @@ class Bluetube(object):
                     for f in just_downloaded:
                         os.unlink(os.path.join(self.temp_dir, f))
                 else:
+                    x = deemojify(just_downloaded[0])
+                    os.rename(os.path.join(self.temp_dir, just_downloaded[0]),
+                              os.path.join(self.temp_dir, x))
+                    just_downloaded[0] = x
                     self._add_metadata(en,
                                        os.path.join(self.temp_dir,
                                                     just_downloaded[0]))
