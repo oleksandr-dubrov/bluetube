@@ -38,6 +38,7 @@ from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
+from bluetube.utils import deemojify
 
 
 class Bluetube(object):
@@ -72,8 +73,8 @@ class Bluetube(object):
         if not feed_url:
             return
         f = feedparser.parse(feed_url)
-        title = f.feed.title
-        author = f.feed.author
+        title = deemojify(f.feed.title)
+        author = deemojify(f.feed.author)
         feeds = Feeds(self.bt_dir)
         if feeds.has_playlist(author, title):
             self.event_listener.error('playlist exists', title, author)
@@ -111,8 +112,7 @@ class Bluetube(object):
     def run(self):
         ''' The main method. It does everything.'''
 
-        if self.verbose:
-            self._dbg(f'Bluetube home directory: {self.bt_dir}.')
+        self._dbg(f'Bluetube home directory: {self.bt_dir}.')
 
         if not self._check_downloader():
             self.event_listener.error('downloader not found',
@@ -151,8 +151,7 @@ class Bluetube(object):
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
-            if self.verbose:
-                self._dbg(f"process {pl}")
+            self._dbg(f"process {pl}")
 
             self._download_list(pl, profiles)
 
@@ -244,8 +243,7 @@ class Bluetube(object):
                     delta = datetime.timedelta(days=int(days_back))
                     pl.last_update -= delta.total_seconds()
                 feed.sync()
-                if self.verbose:
-                    self._dbg('Done.')
+                self._dbg('Done.')
         else:
             self.event_listener.error('playlist not found', title, author)
 
@@ -388,7 +386,7 @@ class Bluetube(object):
                 lnk = en['link']
                 if all([lnk in pr for pr in processed]):
                     try:
-                        os.remove(lnk)
+                        os.remove(os.path.join(self.temp_dir, lnk))
                     except FileNotFoundError:
                         pass  # ignore this exception
                 else:
@@ -410,7 +408,7 @@ class Bluetube(object):
         for ln in links:
             self._dbg(f'copying {ln} to {local_path}')
             try:
-                shutil.copy2(ln, local_path)
+                shutil.copy2(os.path.join(self.temp_dir, ln), local_path)
                 copied.append(ln)
             except shutil.SameFileError as e:
                 self.event_listener.error(e)
@@ -617,10 +615,6 @@ class Bluetube(object):
 
     def _download(self, entities, output_format, configs, cache):
         options = self._build_converter_options(output_format, configs)
-        # create a temporal directory to download a file by its link
-        # to be sure that the file belongs to the link
-        tmp = os.path.join(self.temp_dir, 'tmp')
-        os.makedirs(tmp, Bluetube.ACCESS_MODE, exist_ok=True)
         success, failure = [], []
 
         for en in entities:
@@ -634,35 +628,38 @@ class Bluetube(object):
                 en['link'] = new_link
                 success.append(en)
             else:
-                status = self.executor.call(all_options, cwd=tmp)
+                status = self.executor.call(all_options, cwd=self.temp_dir)
+                just_downloaded = [jd for jd in os.listdir(self.temp_dir)
+                                   if en['yt_videoid'] in jd]
+                assert len(just_downloaded) <= 1,\
+                    f"more than one file with {en['yt_videoid']}" +\
+                    "has just been downloaded"
                 if status:
                     failure.append(en)
-                    # clear the tmp directory that may have parts of
-                    # not completely downloaded file.
-                    for f in os.listdir(tmp):
-                        os.unlink(os.path.join(tmp, f))
+                    # clear partially downloaded files if any
+                    for f in just_downloaded:
+                        os.unlink(os.path.join(self.temp_dir, f))
                 else:
-                    fs = os.listdir(tmp)
-                    assert len(fs) == 1, \
-                        'one link should match one file in tmp'
-                    self._add_metadata(en, os.path.join(tmp, fs[0]))
-                    new_link = os.path.join(self.temp_dir,
-                                            os.path.basename(fs[0]))
-                    # move the file out of the tmp directory
-                    os.rename(os.path.join(tmp, fs[0]), new_link)
-                    en['link'] = new_link
+                    x = deemojify(just_downloaded[0])
+                    os.rename(os.path.join(self.temp_dir, just_downloaded[0]),
+                              os.path.join(self.temp_dir, x))
+                    just_downloaded[0] = x
+                    self._add_metadata(en,
+                                       os.path.join(self.temp_dir,
+                                                    just_downloaded[0]))
+                    en['link'] = just_downloaded[0]
                     success.append(en)
 
                     # put the link to just downloaded file into the cache
-                    cache[' '.join(all_options)] = new_link
+                    cache[' '.join(all_options)] = just_downloaded[0]
 
-        shutil.rmtree(tmp)
         return success, failure
 
     def _build_converter_options(self, output_format, configs):
-        options = ('--ignore-config',
-                   '--ignore-errors',
-                   '--mark-watched',)
+        options = ('--ignore-config',  # Do  not  read  configuration  files.
+                   '--ignore-errors',  # Continue on download errors
+                   '--mark-watched',   # Mark videos watched (YouTube only)
+                   )
         if output_format == OutputFormatType.audio:
             output_format = configs['output_format']
             spec_options = ('--extract-audio',
