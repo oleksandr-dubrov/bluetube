@@ -19,6 +19,7 @@
 import copy
 import datetime
 import io
+import logging
 import os
 import re
 import shutil
@@ -58,10 +59,11 @@ class Bluetube(object):
         os._exit(1)
 
     def __init__(self, home_dir=None, verbose=False, yes=False):
+        self._configLogger(verbose)
+        self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
-        self.verbose = verbose
         self.senders = {}
-        self.executor = CommandExecutor(verbose)
+        self.executor = CommandExecutor()
         self.event_listener = CLI(self.executor, yes)
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
@@ -92,10 +94,9 @@ class Bluetube(object):
                     out_type = OutputFormatType.to_char(c.output_format)
                     profiles = ', '.join(c.profiles)
                     o = f"{' ' * 10}{c.title} |{out_type}, {profiles}|"
-                    if self.verbose:
-                        t = time.strftime('%Y-%m-%d %H:%M:%S',
-                                          time.localtime(c.last_update))
-                        o = f'{o} ({t})'
+                    t = time.strftime('%Y-%m-%d %H:%M:%S',
+                                      time.localtime(c.last_update))
+                    o = f'{o} ({t})'
                     print(o)
         else:
             self.event_listener.inform('empty database')
@@ -111,7 +112,7 @@ class Bluetube(object):
     def run(self):
         ''' The main method. It does everything.'''
 
-        self._dbg(f'Bluetube home directory: {self.bt_dir}.')
+        self._debug(f'Bluetube home directory: {self.bt_dir}.')
 
         if not self._check_video_converter():
             return
@@ -146,7 +147,7 @@ class Bluetube(object):
                     pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
                     del pl.failed_entities[pr]
 
-            self._dbg(f"process {pl}")
+            self._debug(f"process {pl}")
 
             self._download_list(pl, profiles)
 
@@ -238,7 +239,7 @@ class Bluetube(object):
                     delta = datetime.timedelta(days=int(days_back))
                     pl.last_update -= delta.total_seconds()
                 feed.sync()
-                self._dbg('Done.')
+                self._debug('Done.')
         else:
             self.event_listener.error('playlist not found', title, author)
 
@@ -315,8 +316,7 @@ class Bluetube(object):
         # keep path to successfully downloaded files for all profiles here
         downloader = YoutubeDlDownloader(self.executor,
                                          self.event_listener,
-                                         self.temp_dir,
-                                         self.verbose)
+                                         self.temp_dir)
 
         for profile, entities in pl.entities.items():
             if pl.output_format is OutputFormatType.audio:
@@ -388,7 +388,7 @@ class Bluetube(object):
                     except FileNotFoundError:
                         pass  # ignore this exception
                 else:
-                    self._dbg(f'{lnk} has not been sent')
+                    self._debug(f'{lnk} has not been sent')
 
     def _send_bt(self, device_id, links):
         '''sent all files defined by the links
@@ -404,7 +404,7 @@ class Bluetube(object):
         '''copy files defined by links to the local path'''
         copied = []
         for ln in links:
-            self._dbg(f'copying {ln} to {local_path}')
+            self._debug(f'copying {ln} to {local_path}')
             try:
                 shutil.copy2(os.path.join(self.temp_dir, ln), local_path)
                 copied.append(ln)
@@ -619,7 +619,7 @@ class Bluetube(object):
             # to avoid downloading the same file twice
             new_link = cache.get(' '.join(all_options))
             if new_link:
-                self._dbg(f'this link has been downloaded - {new_link}')
+                self._debug(f'this link has been downloaded - {new_link}')
                 en['link'] = new_link
                 success.append(en)
             else:
@@ -700,7 +700,7 @@ class Bluetube(object):
             os.makedirs(bt_dir, Bluetube.ACCESS_MODE)
         return bt_dir
 
-    def _dbg(self, msg):
-        '''print debug info to console'''
-        if self.verbose:
-            print(f'[verbose] {msg}')
+    def _configLogger(self, verbose: bool) -> None:
+        level = logging.DEBUG if verbose else logging.NOTSET
+        f = '[verbose] %(name)s - %(message)s'
+        logging.basicConfig(format=f, level=level)

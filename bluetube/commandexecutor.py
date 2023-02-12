@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 import subprocess
 import webbrowser
@@ -23,9 +24,9 @@ def cache(func):
 class CommandExecutor(object):
     '''This class run the commands in the shell'''
 
-    def __init__(self, verbose):
-        self._verbose = verbose
+    def __init__(self):
         cache.cache = {}
+        self._debug = logging.getLogger(__name__).debug
 
     @cache
     def call(self, args, cwd=None,
@@ -36,8 +37,7 @@ class CommandExecutor(object):
         return_code = 0
         stdout, stderr = None, None
         try:
-            if self._verbose:
-                print('RUN: {}'.format(' '.join([a for a in args])))
+            self._debug('RUN: {}'.format(' '.join([a for a in args])))
             if suppress_stdout:
                 stdout = open(os.devnull, 'wb')
             if suppress_stderr:
@@ -49,10 +49,8 @@ class CommandExecutor(object):
                                           cwd=cwd)
         except OSError as e:
             return_code = e.errno
-            if self._verbose:
-                print(e.strerror)
-        if self._verbose:
-            print(f'Return code: {return_code}')
+            self._debug(e.strerror)
+        self._debug(f'Return code: {return_code}')
         return return_code
 
     def does_command_exist(self, name, dashes=2):
@@ -74,9 +72,7 @@ class CommandExecutor(object):
                                  stdin=subprocess.DEVNULL,
                                  stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
-            if self._verbose:
-                command = ' '.join(args)
-                print('Background process has started.')
-                print(f'PID - {p.pid}, command - {command}')
+            self._debug('Background process has started.')
+            self._debug(f'PID - {p.pid}, command - {" ".join(args)}')
         except FileNotFoundError as e:
             print(e)

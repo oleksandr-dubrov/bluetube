@@ -1,6 +1,7 @@
 '''
 The youtube-dl downloader.
 '''
+import logging
 import os
 
 from mutagen import MutagenError, id3, mp3, mp4
@@ -16,12 +17,12 @@ class YoutubeDlDownloader(object):
 
     NAME = 'youtube-dl'
 
-    def __init__(self, executor, event_listener, temp_dir, verbose) -> None:
+    def __init__(self, executor, event_listener, temp_dir) -> None:
         self._cache = {}
         self._executor = executor
         self._event_listener = event_listener
         self._temp_dir = temp_dir
-        self._verbose = verbose
+        self._debug = logging.getLogger(__name__).debug
 
     def download(self, entities, output_format, configs) -> None:
         options = self._build_converter_options(output_format, configs)
@@ -40,7 +41,7 @@ class YoutubeDlDownloader(object):
             # to avoid downloading the same file twice
             new_link = self._cache.get(' '.join(all_options))
             if new_link:
-                self._dbg(f'this link has been downloaded - {new_link}')
+                self._debug(f'this link has been downloaded - {new_link}')
                 en['link'] = new_link
                 success.append(en)
             else:
@@ -112,11 +113,6 @@ class YoutubeDlDownloader(object):
                 video["\xa9ART"] = entity.author
                 video["\xa9nam"] = entity.title
             else:
-                self._dbg(f'cannot add metadata to {ext}')
+                self._debug(f'cannot add metadata to {ext}')
         except MutagenError as e:
             self._event_listener.error(e)
-
-    def _dbg(self, msg):
-        '''print debug info to console'''
-        if self._verbose:
-            print(f'[verbose] {msg}')
