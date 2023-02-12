@@ -29,7 +29,6 @@ import urllib
 from urllib.error import HTTPError
 
 import feedparser
-from mutagen import MutagenError, id3, mp3, mp4
 
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import CLI
@@ -39,6 +38,7 @@ from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.utils import deemojify
+from bluetube.ytdldownloader import YoutubeDlDownloader
 
 
 class Bluetube(object):
@@ -46,7 +46,6 @@ class Bluetube(object):
 
     CONFIG_FILE_NAME = 'bluetube.cfg'
     HOME_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
-    DOWNLOADER = 'youtube-dl'
     CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
     # keep files that failed to be converted here
@@ -114,10 +113,6 @@ class Bluetube(object):
 
         self._dbg(f'Bluetube home directory: {self.bt_dir}.')
 
-        if not self._check_downloader():
-            self.event_listener.error('downloader not found',
-                                      Bluetube.DOWNLOADER)
-            return
         if not self._check_video_converter():
             return
         # self._check_media_player()
@@ -318,7 +313,11 @@ class Bluetube(object):
 
     def _download_list(self, pl, profiles):
         # keep path to successfully downloaded files for all profiles here
-        cache = {}
+        downloader = YoutubeDlDownloader(self.executor,
+                                         self.event_listener,
+                                         self.temp_dir,
+                                         self.verbose)
+
         for profile, entities in pl.entities.items():
             if pl.output_format is OutputFormatType.audio:
                 dl_op = profiles.get_audio_options(profile)
@@ -327,10 +326,9 @@ class Bluetube(object):
             else:
                 assert 0, 'unexpected output format type'
 
-            s, f = self._download(entities,
-                                  pl.output_format,
-                                  dl_op,
-                                  cache)
+            s, f = downloader.download(entities,
+                                       pl.output_format,
+                                       dl_op)
             pl.entities[profile] = s
             if f:
                 ens = [e.title for e in f]
@@ -542,9 +540,6 @@ class Bluetube(object):
                                            f'the script is done.')
         return success, failure
 
-    def _check_downloader(self):
-        return self.executor.does_command_exist(Bluetube.DOWNLOADER)
-
     def _get_feed_url(self, url):
         p1 = re.compile(r'^(?:.*?)youtube\.com/' +
                         r'watch\?v=.+&list=(.+?)(?:&.*)?$')
@@ -709,22 +704,3 @@ class Bluetube(object):
         '''print debug info to console'''
         if self.verbose:
             print(f'[verbose] {msg}')
-
-    def _add_metadata(self, entity, file_path):
-        '''add metadata to a downloaded file'''
-        ext = os.path.splitext(file_path)[1]
-        try:
-            if ext == '.mp3':
-                audio = mp3.MP3(file_path)
-                audio['TPE1'] = id3.TPE1(text=entity.author)
-                audio['TIT2'] = id3.TIT2(text=entity.title)
-                audio['COMM'] = id3.COMM(text=entity.summary[:256])
-                audio.save()
-            elif ext == '.mp4':
-                video = mp4.MP4(file_path)
-                video["\xa9ART"] = entity.author
-                video["\xa9nam"] = entity.title
-            else:
-                self._dbg(f'cannot add metadata to {ext}')
-        except MutagenError as e:
-            self.event_listener.error(e)
