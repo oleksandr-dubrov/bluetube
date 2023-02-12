@@ -1,14 +1,23 @@
-.pydevproject
-.settings/*
+# Python
 *.pyc
 *~
-.eclipse_user_dict.txt
-.project
-playground/*
+
+# build
 *.egg-info/*
 build/*
 dist/*
-taskboard.txt
 bluetube_cli.egg-info
-
 .tox
+
+#Eclipse files
+.pydevproject
+.settings/*
+.eclipse_user_dict.txt
+.project
+
+# VS code
+.vscode/*
+
+# others
+taskboard.txt
+
