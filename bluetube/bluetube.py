@@ -33,13 +33,12 @@ import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import CLI
-from bluetube.commandexecutor import CommandExecutor
+from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.utils import deemojify
-from bluetube.ytdldownloader import YoutubeDlDownloader
 
 
 class Bluetube(object):
@@ -63,7 +62,8 @@ class Bluetube(object):
         self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
         self.senders = {}
-        self.executor = CommandExecutor()
+        self._factory = ComponentFactory()
+        self.executor = self._factory.get_command_executor()
         self.event_listener = CLI(self.executor, yes)
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
@@ -314,9 +314,8 @@ class Bluetube(object):
 
     def _download_list(self, pl, profiles):
         # keep path to successfully downloaded files for all profiles here
-        downloader = YoutubeDlDownloader(self.executor,
-                                         self.event_listener,
-                                         self.temp_dir)
+        downloader = self._factory.get_downloader(self.event_listener,
+                                                  self.temp_dir)
 
         for profile, entities in pl.entities.items():
             if pl.output_format is OutputFormatType.audio:
@@ -701,6 +700,6 @@ class Bluetube(object):
         return bt_dir
 
     def _configLogger(self, verbose: bool) -> None:
-        level = logging.DEBUG if verbose else logging.NOTSET
+        level = logging.DEBUG if verbose else logging.WARNING
         f = '[verbose] %(name)s - %(message)s'
         logging.basicConfig(format=f, level=level)

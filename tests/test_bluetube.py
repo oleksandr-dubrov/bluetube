@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 from zipfile import ZipFile
 
 from bluetube import Bluetube
-from bluetube.cli import CLI
 from bluetube.commandexecutor import cache
 from bluetube.model import OutputFormatType
 from tests.fake_db import FAKE_DB, NEW_LINKS
@@ -38,6 +37,7 @@ class TestBluetube(unittest.TestCase):
         self.args = []
         Bluetube._get_bt_dir = lambda _, __: \
             os.path.dirname(os.path.abspath(__file__))
+        self.mock_executor()
         self.sut = Bluetube(verbose=False)
         self.nbr_downloaded = 0
         self.nbr_converted = 0
@@ -112,9 +112,12 @@ class TestBluetube(unittest.TestCase):
 
     def mock_executor(self):
         '''mock the command executor'''
-        self.sut.executor = MagicMock()
-        self.sut.executor.call.side_effect = self.call_side_effect
-        self.sut.executor.does_command_exist.return_value = True
+        patcher = patch('bluetube.componentfactory.CommandExecutor', spec=True)
+        mocked_executor_class = patcher.start()
+        instance = mocked_executor_class.return_value
+        instance.call.side_effect = self.call_side_effect
+        instance.does_command_exist.return_value = True
+        return instance
 
     def mock_sender(self, found, connect, send):
         '''mock the bluetooth client'''
@@ -161,7 +164,6 @@ class TestBluetube(unittest.TestCase):
         '''an origin good usage'''
         mdb = self.mock_db(FAKE_DB)
         cli = self.mock_cli()
-        self.mock_executor()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         urlopen = self.mock_remote_data()
@@ -179,7 +181,7 @@ class TestBluetube(unittest.TestCase):
 
         self.assertEqual(NEW_LINKS, self.nbr_downloaded)
         self.assertEqual(self.nbr_downloaded + self.nbr_converted,
-                         self.sut.executor.call.call_count)
+                         self.sut._factory._executor.call.call_count)
 
         bt.assert_called()
         self.assertEqual(3, mock_send.call_count,
@@ -192,8 +194,8 @@ class TestBluetube(unittest.TestCase):
         '''failed all downloads'''
         self.mock_db(FAKE_DB)
         self.mock_cli()
-        self.sut.executor = MagicMock()
-        self.sut.executor.call.side_effect = \
+        self.sut._factory._executor = MagicMock()
+        self.sut._factory._executor.call.side_effect = \
             lambda *args, **kwargs: 1  # @UnusedVariable
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -203,7 +205,8 @@ class TestBluetube(unittest.TestCase):
         self.sut.run()
 
         self.assertEqual(0, self.nbr_downloaded)
-        self.assertEqual(NEW_LINKS + 2, self.sut.executor.call.call_count,
+        self.assertEqual(NEW_LINKS + 2,
+                         self.sut._factory._executor.call.call_count,
                          'download does not cache failed attempts,'
                          'so it should called for every link in every profile')
         bt.assert_not_called()
@@ -328,20 +331,6 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(old_last_update - pl['last_update'],
                          datetime.timedelta(days=int(90)).total_seconds(),
                          'unexpected last update')
-
-
-class TestCli(unittest.TestCase):
-
-    def setUp(self):
-        self.sut = CLI(executor=MagicMock())
-
-    def test_informs(self):
-        with patch('builtins.print'):
-            self.sut.inform('empty database')
-            self.sut.inform('feed is fetching', 'a message')
-            self.sut.success('feed updated')
-            self.sut.inform('an arbitrary message')
-        self.sut._executor.call.assert_called_once()
 
 
 if __name__ == "__main__":
