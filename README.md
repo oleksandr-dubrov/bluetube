@@ -17,7 +17,7 @@ In order to use the script, you must have the next installed.
 GNU packages:
 +   [Python 3](https://www.python.org)
 +   [libbluetooth-dev](https://packages.debian.org/sid/libbluetooth-dev) - a bluetooth Python package.
-+   [youtube-dl](https://rg3.github.io/youtube-dl/) - a downloader.
++   [yt-dlp](https://github.com/yt-dlp) - a downloader.
 +   [ffmpeg](https://ffmpeg.org/) - for converting files into a desirable format.
 
 Before using this script the user should pair the bluetooth device with the PC.

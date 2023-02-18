@@ -15,7 +15,7 @@ class YoutubeDlDownloader(object):
     The class downloads media by youtube-dl installed in the system.
     '''
 
-    NAME = 'youtube-dl'
+    NAME = "yt-dlp"  # ' a youtube-dl fork'
 
     def __init__(self, executor, event_listener, temp_dir) -> None:
         self._cache = {}

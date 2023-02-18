@@ -99,7 +99,7 @@ class TestBluetube(unittest.TestCase):
             self.fail(f'called twice: {str_args}')
         self.args.append(str_args)
 
-        if args[0][0] == 'youtube-dl':
+        if args[0][0] in ['youtube-dl', 'yt-dlp']:
             fake_name = args[0][-1].split('=')[1]
             open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
                               fake_name), 'w').close()
