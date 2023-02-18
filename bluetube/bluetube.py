@@ -46,10 +46,7 @@ class Bluetube(object):
 
     CONFIG_FILE_NAME = 'bluetube.cfg'
     HOME_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
-    CONVERTER = 'ffmpeg'
     ACCESS_MODE = 0o744
-    # keep files that failed to be converted here
-    NOT_CONV_DIR = '[not yet converted files]'
 
     def signal_handler(self, signum, _):
         '''Ctrl+c handler to quit the tool'''
@@ -114,8 +111,6 @@ class Bluetube(object):
 
         self._debug(f'Bluetube home directory: {self.bt_dir}.')
 
-        if not self._check_video_converter():
-            return
         # self._check_media_player()
 
         feed = Feeds(self.bt_dir)
@@ -338,6 +333,8 @@ class Bluetube(object):
 
     def _convert_list(self, pl, profiles):
         # convert video, audio has been converted by the downloader
+        converter = self._factory.get_converter(self.event_listener,
+                                                self.temp_dir)
         if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
                 c_op = profiles.get_convert_options(profile)
@@ -347,7 +344,7 @@ class Bluetube(object):
                 # convert unless the video has not been downloaded in
                 # proper format
                 if not c_op['output_format'] == v_op['output_format']:
-                    s, f = self.convert(entities, c_op)
+                    s, f = converter.convert(entities, c_op)
                     pl.entities[profile] = s
                     if f and self.event_listener.do_continue():
                         return
@@ -425,14 +422,6 @@ class Bluetube(object):
                 self.senders[device_id] = sender
                 return sender
 
-    def _check_video_converter(self):
-        if not self.executor.does_command_exist(Bluetube.CONVERTER, dashes=1):
-            self.event_listener.error('converter not found',
-                                      Bluetube.CONVERTER)
-            self.event_listener.inform('converter not found')
-            return self.event_listener.do_continue()
-        return True
-
     def _check_profiles(self, pl, profiles):
         '''check if profiles of the playlist do exist'''
         def check_profiles_internal(profile):
@@ -505,39 +494,6 @@ class Bluetube(object):
                     self.event_listener.error(f'"{ed}" not found. Try again.')
                     set_editor()
             set_editor()
-
-    def convert(self, entities, configs):
-        '''convert all videos in the playlist,
-        return a list of succeeded an and a list of failed links'''
-        options = ('-y',  # overwrite output files
-                   '-hide_banner',)
-        codecs_options = configs.get('codecs_options', '')
-        codecs_options = tuple(codecs_options.split())
-        output_format = configs['output_format']
-        success, failure = [], []
-        for en in entities:
-            orig = en['link']
-            new = os.path.splitext(orig)[0] + '.' + output_format
-            if orig == new:
-                self.event_listener.warn('conversion is not needed')
-                success.append(en)
-                continue
-            args = (Bluetube.CONVERTER,) + ('-i', orig) + options + \
-                codecs_options + (new,)
-            if not 1 == self.executor.call(args, cwd=self.temp_dir):
-                os.remove(os.path.join(self.temp_dir, orig))
-                en['link'] = new
-                success.append(en)
-            else:
-                failure.append(en)
-                d = os.path.join(self.temp_dir, Bluetube.NOT_CONV_DIR)
-                os.makedirs(d, Bluetube.ACCESS_MODE, exist_ok=True)
-                os.rename(orig, os.path.join(d, os.path.basename(orig)))
-                self.event_listener.error(os.path.basename(orig))
-                self.event_listener.inform(f'Command: \n{" ".join(args)}')
-                self.event_listener.inform(f'Check {d} after '
-                                           f'the script is done.')
-        return success, failure
 
     def _get_feed_url(self, url):
         p1 = re.compile(r'^(?:.*?)youtube\.com/' +
