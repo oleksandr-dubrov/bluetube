@@ -347,7 +347,7 @@ class Bluetube(object):
                 # convert unless the video has not been downloaded in
                 # proper format
                 if not c_op['output_format'] == v_op['output_format']:
-                    s, f = self._convert_video(entities, c_op)
+                    s, f = self.convert(entities, c_op)
                     pl.entities[profile] = s
                     if f and self.event_listener.do_continue():
                         return
@@ -506,7 +506,7 @@ class Bluetube(object):
                     set_editor()
             set_editor()
 
-    def _convert_video(self, entities, configs):
+    def convert(self, entities, configs):
         '''convert all videos in the playlist,
         return a list of succeeded an and a list of failed links'''
         options = ('-y',  # overwrite output files
@@ -606,69 +606,6 @@ class Bluetube(object):
         pl.last_update = new_last_update
         pl.entities = entities
         return pl
-
-    def _download(self, entities, output_format, configs, cache):
-        options = self._build_converter_options(output_format, configs)
-        success, failure = [], []
-
-        for en in entities:
-            all_options = options + (en['link'],)
-
-            # check the value in the given cache
-            # to avoid downloading the same file twice
-            new_link = cache.get(' '.join(all_options))
-            if new_link:
-                self._debug(f'this link has been downloaded - {new_link}')
-                en['link'] = new_link
-                success.append(en)
-            else:
-                status = self.executor.call(all_options, cwd=self.temp_dir)
-                just_downloaded = [jd for jd in os.listdir(self.temp_dir)
-                                   if en['yt_videoid'] in jd]
-                assert len(just_downloaded) <= 1,\
-                    f"more than one file with {en['yt_videoid']}" +\
-                    "has just been downloaded"
-                if status:
-                    failure.append(en)
-                    # clear partially downloaded files if any
-                    for f in just_downloaded:
-                        os.unlink(os.path.join(self.temp_dir, f))
-                else:
-                    x = deemojify(just_downloaded[0])
-                    os.rename(os.path.join(self.temp_dir, just_downloaded[0]),
-                              os.path.join(self.temp_dir, x))
-                    just_downloaded[0] = x
-                    self._add_metadata(en,
-                                       os.path.join(self.temp_dir,
-                                                    just_downloaded[0]))
-                    en['link'] = just_downloaded[0]
-                    success.append(en)
-
-                    # put the link to just downloaded file into the cache
-                    cache[' '.join(all_options)] = just_downloaded[0]
-
-        return success, failure
-
-    def _build_converter_options(self, output_format, configs):
-        options = ('--ignore-config',  # Do  not  read  configuration  files.
-                   '--ignore-errors',  # Continue on download errors
-                   '--mark-watched',   # Mark videos watched (YouTube only)
-                   )
-        if output_format == OutputFormatType.audio:
-            output_format = configs['output_format']
-            spec_options = ('--extract-audio',
-                            f'--audio-format={output_format}',
-                            '--audio-quality=9',  # 9 means worse
-                            '--postprocessor-args', '-ac 1',  # convert to mono
-                            )
-        elif output_format == OutputFormatType.video:
-            of = configs.get('output_format')
-            spec_options = ('--format', of,) if of else ()
-        else:
-            assert 0, 'unexpected output format'
-
-        all_options = (Bluetube.DOWNLOADER,) + options + spec_options
-        return all_options
 
     def _fetch_temp_dir(self):
         '''fetch a temporal directory;
