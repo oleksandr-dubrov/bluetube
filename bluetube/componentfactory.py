@@ -3,7 +3,7 @@ The factory.
 '''
 
 
-from bluetube.cli import CLI
+from bluetube.cli.cli import CLI
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.converter import FfmpegConvertver
 from bluetube.ytdldownloader import YoutubeDlDownloader

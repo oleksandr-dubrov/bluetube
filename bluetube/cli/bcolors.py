@@ -1,4 +1,6 @@
 class Bcolors:
+    '''CLI color codes and wrappers.'''
+
     BOLD = '\033[1m'
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'

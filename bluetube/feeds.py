@@ -3,7 +3,6 @@ import functools
 import os
 import shelve
 
-from bluetube.bcolors import Bcolors
 from bluetube.model import OutputFormatType, Playlist
 from bluetube.version import __version__
 
@@ -163,7 +162,7 @@ class Feeds(object):
         try:
             db.close()
         except ValueError as e:
-            Bcolors.error('Probably your changes were lost. Try again')
+            print('Probably your changes were lost. Try again')
             raise e
 
 

@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import Mock
 
-from bluetube.cli import CLI
+from bluetube.cli.cli import CLI
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.componentfactory import ComponentFactory
 from bluetube.ytdldownloader import YoutubeDlDownloader

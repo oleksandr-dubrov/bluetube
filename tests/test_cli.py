@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from bluetube.cli import CLI, Error, Info, Success, Warn
+from bluetube.cli.cli import CLI, Error, Info, Success, Warn
 
 
 class TestCli(unittest.TestCase):

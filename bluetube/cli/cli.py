@@ -1,4 +1,6 @@
-from bluetube.bcolors import Bcolors
+
+
+from bluetube.cli.bcolors import Bcolors
 
 INDENTATION = 10
 

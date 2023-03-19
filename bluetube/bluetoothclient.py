@@ -7,7 +7,7 @@ import bluetooth
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client
 
-from bluetube.bcolors import Bcolors
+from bluetube.cli.bcolors import Bcolors
 
 '''
     This file is part of Bluetube.
