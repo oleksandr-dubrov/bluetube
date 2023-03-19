@@ -18,7 +18,7 @@ class TestComponentFactory(unittest.TestCase):
         self.assertIsInstance(ex, CommandExecutor)
 
     def test_get_downloader(self):
-        dl = self.sut.get_downloader(Mock())
+        dl = self.sut.get_downloader(Mock(), Mock())
         self.assertIsNotNone(self.sut._executor)
         self.assertIsInstance(dl, YoutubeDlDownloader)
 

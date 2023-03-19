@@ -15,7 +15,8 @@ class Inputer(CLI):
     def set_media_player(self, mp: str):
         self._player = mp
 
-    def do_continue(self):
+    @staticmethod
+    def do_continue():
         input('Press Enter to continue, Ctrl+c to interrupt.')
         return True
 

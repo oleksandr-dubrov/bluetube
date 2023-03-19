@@ -27,44 +27,50 @@ import signal
 import tempfile
 import time
 import urllib
+from typing import NoReturn
 from urllib.error import HTTPError
 
 import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.cli.events import Error, Event, Info, Success, Warn
+from bluetube.cli.events import Error, Info, Success, Warn
+from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
+from bluetube.eventpublisher import EventPublisher
 from bluetube.feeds import Feeds, SqlExporter
 from bluetube.model import OutputFormatType
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.utils import deemojify
 
 
-class Bluetube(object):
+class Bluetube(EventPublisher):
     ''' The main class of the script. '''
 
     CONFIG_FILE_NAME = 'bluetube.cfg'
     HOME_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
     ACCESS_MODE = 0o744
 
-    def signal_handler(self, signum, _):
+    def signal_handler(self, signum, _) -> NoReturn:
         '''Ctrl+c handler to quit the tool'''
         assert signum == signal.SIGINT, 'SIGINT expected in the handler'
         self.notify(Warn('Quit!'))
         os._exit(1)
 
     def __init__(self, home_dir=None, verbose=False, yes=False):
+        super().__init__()
+
         self._configLogger(verbose)
         self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
         self.senders = {}
-        self._factory = ComponentFactory()
-        self.executor = self._factory.get_command_executor()
-        self.inputer = self._factory.get_inputer(yes)
-        self.outputer = self._factory.get_outputer()
+        self.factory = ComponentFactory()
+        self.executor = self.factory.get_command_executor()
+        self.inputer = self.factory.get_inputer(yes)
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
+
+        self.subscribe(self.factory.get_outputer())
 
     def add_playlist(self, url, out_format, profiles):
         ''' add a new playlists to RSS feeds '''
@@ -283,7 +289,7 @@ class Bluetube(object):
         if self._check_profiles_consistency(profiles):
             return profiles
         else:
-            if self.inputer.do_continue():
+            if Inputer.do_continue():
                 self._edit_profiles()
                 # try to load profiles one more time
                 profiles = get_instance()
@@ -312,7 +318,7 @@ class Bluetube(object):
 
     def _download_list(self, pl, profiles):
         # keep path to successfully downloaded files for all profiles here
-        downloader = self._factory.get_downloader(self.temp_dir)
+        downloader = self.factory.get_downloader(self, self.temp_dir)
 
         for profile, entities in pl.entities.items():
             if pl.output_format is OutputFormatType.audio:
@@ -335,7 +341,7 @@ class Bluetube(object):
 
     def _convert_list(self, pl, profiles):
         # convert video, audio has been converted by the downloader
-        converter = self._factory.get_converter(self.temp_dir)
+        converter = self.factory.get_converter(self, self.temp_dir)
         if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
                 c_op = profiles.get_convert_options(profile)
@@ -347,7 +353,7 @@ class Bluetube(object):
                 if not c_op['output_format'] == v_op['output_format']:
                     s, f = converter.convert(entities, c_op)
                     pl.entities[profile] = s
-                    if f and self.inputer.do_continue():
+                    if f and Inputer.do_continue():
                         return
 
     def _send_list(self, pl, profiles):
@@ -598,7 +604,3 @@ class Bluetube(object):
         level = logging.DEBUG if verbose else logging.WARNING
         f = '[verbose] %(name)s - %(message)s'
         logging.basicConfig(format=f, level=level)
-
-    def notify(self, event: Event):
-        '''todo'''
-        self.outputer.update(event)

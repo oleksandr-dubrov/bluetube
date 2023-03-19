@@ -73,7 +73,7 @@ class TestBluetube(unittest.TestCase):
 
         out_patcher = patch('bluetube.componentfactory.Outputer')
         out = out_patcher.start()
-        self.sut.outputer = out
+        self.sut._subscribers.append(out)
 
         return inp, out
 
@@ -186,7 +186,7 @@ class TestBluetube(unittest.TestCase):
 
         self.assertEqual(NEW_LINKS, self.nbr_downloaded)
         self.assertEqual(self.nbr_downloaded + self.nbr_converted,
-                         self.sut._factory._executor.call.call_count)
+                         self.sut.factory._executor.call.call_count)
 
         bt.assert_called()
         self.assertEqual(3, mock_send.call_count,
@@ -199,8 +199,8 @@ class TestBluetube(unittest.TestCase):
         '''failed all downloads'''
         self.mock_db(FAKE_DB)
         self.mock_cli()
-        self.sut._factory._executor = MagicMock()
-        self.sut._factory._executor.call.side_effect = \
+        self.sut.factory._executor = MagicMock()
+        self.sut.factory._executor.call.side_effect = \
             lambda *args, **kwargs: 1  # @UnusedVariable
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -211,7 +211,7 @@ class TestBluetube(unittest.TestCase):
 
         self.assertEqual(0, self.nbr_downloaded)
         self.assertEqual(NEW_LINKS + 2,
-                         self.sut._factory._executor.call.call_count,
+                         self.sut.factory._executor.call.call_count,
                          'download does not cache failed attempts,'
                          'so it should called for every link in every profile')
         bt.assert_not_called()

@@ -2,7 +2,14 @@ from bluetube.cli.cli import CLI
 from bluetube.cli.events import Event, Success
 
 
-class Outputer(CLI):
+class EventListener(object):
+    '''An event listener interface.'''
+
+    def update(self, event: Event) -> None:
+        raise NotImplementedError()
+
+
+class Outputer(CLI, EventListener):
     '''Print information to CLI'''
 
     def __init__(self):

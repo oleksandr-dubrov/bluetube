@@ -7,6 +7,8 @@ import os
 from mutagen import MutagenError, id3, mp3, mp4
 
 from bluetube.cli.events import Error
+from bluetube.commandexecutor import CommandExecutor
+from bluetube.eventpublisher import EventPublisher
 from bluetube.model import OutputFormatType
 from bluetube.utils import deemojify
 
@@ -18,10 +20,11 @@ class YoutubeDlDownloader(object):
 
     NAME = "yt-dlp"  # ' a youtube-dl fork'
 
-    def __init__(self, executor, event_listener, temp_dir) -> None:
+    def __init__(self, executor: CommandExecutor,
+                 publisher: EventPublisher, temp_dir: str) -> None:
         self._cache = {}
         self._executor = executor
-        self._event_listener = event_listener
+        self._publisher = publisher
         self._temp_dir = temp_dir
         self._debug = logging.getLogger(__name__).debug
 
@@ -30,8 +33,8 @@ class YoutubeDlDownloader(object):
         success, failure = [], []
 
         if not self._check_downloader():
-            self._event_listener.update(Error('downloader not found',
-                                        YoutubeDlDownloader.NAME))
+            self._publisher.notify(Error('downloader not found',
+                                   YoutubeDlDownloader.NAME))
             failure = [en for en in entities]
             return success, failure
 
@@ -116,4 +119,4 @@ class YoutubeDlDownloader(object):
             else:
                 self._debug(f'cannot add metadata to {ext}')
         except MutagenError as e:
-            self._event_listener.update(Error(e))
+            self._publisher.notify(Error(e))
