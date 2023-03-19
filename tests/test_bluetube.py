@@ -66,7 +66,7 @@ class TestBluetube(unittest.TestCase):
 
     def mock_cli(self):
         ''' mock an event listener'''
-        patcher = patch('bluetube.bluetube.CLI')
+        patcher = patch('bluetube.componentfactory.CLI')
         cli = patcher.start()
         cli.ask.return_value = True
         self.sut.event_listener = cli
@@ -214,8 +214,8 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(0, self.nbr_sent)
         self.assertEqual(0, mock_copy.call_count)
 
-    @patch('bluetube.bluetube.CLI')
-    def test_run_nothig_selected(self, cli):
+    @patch('bluetube.componentfactory.CLI')
+    def test_run_nothing_selected(self, cli):
         '''no selected videos to process'''
         cli.ask.return_value = False
         self.sut.event_listener = cli

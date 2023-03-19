@@ -32,7 +32,7 @@ from urllib.error import HTTPError
 import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.cli import CLI, Error, Event, Info, Success, Warn
+from bluetube.cli import Error, Event, Info, Success, Warn
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
@@ -61,7 +61,7 @@ class Bluetube(object):
         self.senders = {}
         self._factory = ComponentFactory()
         self.executor = self._factory.get_command_executor()
-        self.event_listener = CLI(self.executor, yes)
+        self.event_listener = self._factory.get_cli(yes)
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
 
