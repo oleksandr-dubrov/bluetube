@@ -7,7 +7,7 @@ import bluetooth
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client
 
-from bluetube.cli.cli import Error, Warn
+from bluetube.cli.events import Error, Warn
 
 '''
     This file is part of Bluetube.

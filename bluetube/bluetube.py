@@ -32,7 +32,7 @@ from urllib.error import HTTPError
 import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.cli.cli import Error, Event, Info, Success, Warn
+from bluetube.cli.events import Error, Event, Info, Success, Warn
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
@@ -61,7 +61,8 @@ class Bluetube(object):
         self.senders = {}
         self._factory = ComponentFactory()
         self.executor = self._factory.get_command_executor()
-        self.event_listener = self._factory.get_cli(yes)
+        self.inputer = self._factory.get_inputer(yes)
+        self.outputer = self._factory.get_outputer()
         self.temp_dir = None
         self.bt_dir = self._get_bt_dir(home_dir)
 
@@ -282,7 +283,7 @@ class Bluetube(object):
         if self._check_profiles_consistency(profiles):
             return profiles
         else:
-            if self.event_listener.do_continue():
+            if self.inputer.do_continue():
                 self._edit_profiles()
                 # try to load profiles one more time
                 profiles = get_instance()
@@ -311,8 +312,7 @@ class Bluetube(object):
 
     def _download_list(self, pl, profiles):
         # keep path to successfully downloaded files for all profiles here
-        downloader = self._factory.get_downloader(self.event_listener,
-                                                  self.temp_dir)
+        downloader = self._factory.get_downloader(self.temp_dir)
 
         for profile, entities in pl.entities.items():
             if pl.output_format is OutputFormatType.audio:
@@ -335,8 +335,7 @@ class Bluetube(object):
 
     def _convert_list(self, pl, profiles):
         # convert video, audio has been converted by the downloader
-        converter = self._factory.get_converter(self.event_listener,
-                                                self.temp_dir)
+        converter = self._factory.get_converter(self.temp_dir)
         if pl.output_format is OutputFormatType.video:
             for profile, entities in pl.entities.items():
                 c_op = profiles.get_convert_options(profile)
@@ -348,7 +347,7 @@ class Bluetube(object):
                 if not c_op['output_format'] == v_op['output_format']:
                     s, f = converter.convert(entities, c_op)
                     pl.entities[profile] = s
-                    if f and self.event_listener.do_continue():
+                    if f and self.inputer.do_continue():
                         return
 
     def _send_list(self, pl, profiles):
@@ -462,17 +461,17 @@ class Bluetube(object):
         configs = Configs(self.bt_dir)
         mp = configs.get_media_player()
         if mp and mp != '-':
-            self.event_listener.set_media_player(mp)
+            self.inputer.set_media_player(mp)
         elif mp == '-':
             return
         else:
             self.notify(Warn('no media player'))
 
             def set_media_player():
-                mp = self.event_listener.arbitrary_input()
+                mp = self.inputer.arbitrary_input()
                 if mp == '-' or self.executor.does_command_exist(mp):
                     configs.set_media_player(mp)
-                    self.event_listener.set_media_player(mp)
+                    self.inputer.set_media_player(mp)
                 else:
                     self.notify(Error(f'"{mp}" not found. Try again.'))
                     set_media_player()
@@ -491,7 +490,7 @@ class Bluetube(object):
             self.notify(Warn('no editor'))
 
             def set_editor():
-                ed = self.event_listener.arbitrary_input()
+                ed = self.inputer.arbitrary_input()
                 if self.executor.does_command_exist(ed):
                     configs.set_editor(ed)
                 else:
@@ -557,7 +556,7 @@ class Bluetube(object):
                 if not channel_has_update:
                     self.notify(Info(pl.author))
                     channel_has_update = True
-                if self.event_listener.ask(e):
+                if self.inputer.ask(e):
                     entities.append(e)
                 if new_last_update < e_update:
                     new_last_update = e_update
@@ -602,4 +601,4 @@ class Bluetube(object):
 
     def notify(self, event: Event):
         '''todo'''
-        self.event_listener.update(event)
+        self.outputer.update(event)

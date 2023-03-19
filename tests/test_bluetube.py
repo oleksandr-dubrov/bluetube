@@ -66,11 +66,16 @@ class TestBluetube(unittest.TestCase):
 
     def mock_cli(self):
         ''' mock an event listener'''
-        patcher = patch('bluetube.componentfactory.CLI')
-        cli = patcher.start()
-        cli.ask.return_value = True
-        self.sut.event_listener = cli
-        return cli
+        in_patcher = patch('bluetube.componentfactory.Inputer')
+        inp = in_patcher.start()
+        inp.ask.return_value = True
+        self.sut.inputer = inp
+
+        out_patcher = patch('bluetube.componentfactory.Outputer')
+        out = out_patcher.start()
+        self.sut.outputer = out
+
+        return inp, out
 
     def mock_listdir(self, ret=None):
         '''mock os.listdir'''
@@ -163,7 +168,7 @@ class TestBluetube(unittest.TestCase):
     def test_run(self):
         '''an origin good usage'''
         mdb = self.mock_db(FAKE_DB)
-        cli = self.mock_cli()
+        inp, _ = self.mock_cli()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         urlopen = self.mock_remote_data()
@@ -177,7 +182,7 @@ class TestBluetube(unittest.TestCase):
         nbr_urls = FAKE_DB.count('"url"')
         self.assertEqual(urlopen.return_value.read.call_count, nbr_urls)
 
-        self.assertEqual(cli.ask.call_count, NEW_LINKS)
+        self.assertEqual(inp.ask.call_count, NEW_LINKS)
 
         self.assertEqual(NEW_LINKS, self.nbr_downloaded)
         self.assertEqual(self.nbr_downloaded + self.nbr_converted,
@@ -214,11 +219,12 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(0, self.nbr_sent)
         self.assertEqual(0, mock_copy.call_count)
 
-    @patch('bluetube.componentfactory.CLI')
+    @patch('bluetube.componentfactory.Inputer')
     def test_run_nothing_selected(self, cli):
         '''no selected videos to process'''
         cli.ask.return_value = False
-        self.sut.event_listener = cli
+        self.sut.inputer = cli
+        self.sut.outputer = MagicMock()
 
         mdb = self.mock_db(FAKE_DB)
         self.mock_executor()
@@ -241,16 +247,14 @@ class TestBluetube(unittest.TestCase):
         '''inform about the empty DB and do nothing'''
         mdb = self.mock_db({})
         self.mock_executor()
-        cli = self.mock_cli()
-        cli.info = MagicMock()
-        cli.feeds_updated = MagicMock()
+        _, out = self.mock_cli()
 
         self.sut.run()
 
         mdb.assert_called_once()
-        cli.update.assert_called_once()
-        self.assertEquals('empty database', cli.update.call_args[0][0].msg)
-        cli.feeds_updated.assert_not_called()
+        out.update.assert_called_once()
+        self.assertEquals('empty database', out.update.call_args[0][0].msg)
+        out.feeds_updated.assert_not_called()
 
     def test_add_playlist(self):
         self.mock_cli()
@@ -304,23 +308,23 @@ class TestBluetube(unittest.TestCase):
 
     def test_send(self):
         self.mock_db(FAKE_DB)
-        cli = self.mock_cli()
+        _, out = self.mock_cli()
         self.mock_listdir([])
 
         self.sut.send()
-        cli.update.assert_called_once()
-        self.assertEquals('Nothing to send.', cli.update.call_args[0][0].msg)
+        out.update.assert_called_once()
+        self.assertEquals('Nothing to send.', out.update.call_args[0][0].msg)
 
     def test_edit_playlist(self):
-        mcli = self.mock_cli()
+        _, out = self.mock_cli()
         d = {'feeds': []}
         self.mock_db(FAKE_DB, d)
         a = '24 Канал'
         t = 'Чесна політика'
 
         self.sut.edit_playlist(a, t)
-        mcli.update.assert_called_once()
-        mcli.reset_mock()
+        out.update.assert_called_once()
+        out.reset_mock()
 
         orig_db = json.loads(FAKE_DB)
         old_last_update = orig_db[1]['playlists'][1]['last_update']
@@ -328,7 +332,7 @@ class TestBluetube(unittest.TestCase):
                                profiles=('mobile', 'local'),
                                reset_failed=True,
                                days_back=90)
-        mcli.warn.assert_not_called()
+        out.warn.assert_not_called()
         pl = d['feeds'][1]['playlists'][1]
         self.assertEqual(old_last_update - pl['last_update'],
                          datetime.timedelta(days=int(90)).total_seconds(),

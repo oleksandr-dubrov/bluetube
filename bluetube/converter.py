@@ -5,7 +5,7 @@ A video converter.
 
 import os
 
-from bluetube.cli.cli import Error, Info, Warn
+from bluetube.cli.events import Error, Info, Warn
 
 
 class FfmpegConvertver(object):

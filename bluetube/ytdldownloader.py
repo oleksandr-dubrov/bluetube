@@ -6,7 +6,7 @@ import os
 
 from mutagen import MutagenError, id3, mp3, mp4
 
-from bluetube.cli.cli import Error
+from bluetube.cli.events import Error
 from bluetube.model import OutputFormatType
 from bluetube.utils import deemojify
 
