@@ -7,7 +7,7 @@ import bluetooth
 from PyOBEX import headers, requests, responses
 from PyOBEX.client import Client
 
-from bluetube.cli.bcolors import Bcolors
+from bluetube.cli.cli import Error, Warn
 
 '''
     This file is part of Bluetube.
@@ -32,8 +32,9 @@ class BluetoothClient(Client):
 
     SOCKETTIMEOUT = 120.0
 
-    def __init__(self, device_id, bluetube_dir):
+    def __init__(self, event_listener, device_id, bluetube_dir):
         self.found = self._find_device(device_id)
+        self._event_listener = event_listener
         if self.found:
             print(f'Checking connection to "{self.name}" on "{self.host}"')
             # Client is old style class, so don't use super
@@ -41,12 +42,13 @@ class BluetoothClient(Client):
             self.bluetube_dir = bluetube_dir
             self.in_progress = False
         else:
-            Bcolors.error(f'Device {device_id} is not found.')
+            self._event_listener.update(
+                Error(f'Device {device_id} is not found.'))
 
     def _find_device(self, device_id):
         service_matches = bluetooth.find_service(address=device_id)
         if len(service_matches) == 0:
-            Bcolors.error("Couldn't find the service.")
+            self._event_listener.update(Error("Couldn't find the service."))
             return False
 
         for s in service_matches:
@@ -136,8 +138,8 @@ class BluetoothClient(Client):
                 print('\n{} sent.'.format(base_fm))
                 sent.append(full_path)
             except socket.error as e:
-                Bcolors.error(str(e))
-                Bcolors.error(f"{base_fm} didn't send")
+                self._event_listener.update(Error(str(e)))
+                self._event_listener.update(Error(f"{base_fm} didn't send"))
                 print('Trying to reconnect...')
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
@@ -150,7 +152,7 @@ class BluetoothClient(Client):
             except KeyboardInterrupt:
                 msg = f'Sending of {base_fm} stopped ' +\
                     'because of KeyboardInterrupt'
-                Bcolors.error(msg)
+                self._event_listener.update(Error(msg))
             finally:
                 self.in_progress = False
                 self.file_data_stream.close()
@@ -163,8 +165,8 @@ class BluetoothClient(Client):
             self.socket.settimeout(BluetoothClient.SOCKETTIMEOUT)
             status = True
         except socket.error as e:
-            Bcolors.error(str(e))
-            Bcolors.warn('Some files will not be sent.')
+            self._event_listener.update(Error(str(e)))
+            self._event_listener.update(Warn('Some files will not be sent.'))
         return status
 
     def disconnect(self):
@@ -172,6 +174,6 @@ class BluetoothClient(Client):
             Client.disconnect(self)
             #  print(resp)
         except (socket.error, socket.timeout) as e:
-            Bcolors.error(str(e))
-            Bcolors.warn('Wait a minute.')
+            self._event_listener.update(Error(str(e)))
+            self._event_listener.update(Warn('Wait a minute.'))
             time.sleep(60.0)
