@@ -1,3 +1,5 @@
+from typing import List
+
 from bluetube.cli import EventListener
 from bluetube.cli.events import Event
 
@@ -6,7 +8,7 @@ class EventPublisher(object):
     '''An event publisher.'''
 
     def __init__(self) -> None:
-        self._subscribers = []
+        self._subscribers: List[EventListener] = []
 
     def subscribe(self, listener: EventListener) -> None:
         '''Subscripe a listener.'''

@@ -3,6 +3,7 @@ The youtube-dl downloader.
 '''
 import logging
 import os
+from typing import Dict, List, Tuple
 
 from mutagen import MutagenError, id3, mp3, mp4
 
@@ -21,16 +22,18 @@ class YoutubeDlDownloader(object):
     NAME = "yt-dlp"  # ' a youtube-dl fork'
 
     def __init__(self, executor: CommandExecutor,
-                 publisher: EventPublisher, temp_dir: str) -> None:
-        self._cache = {}
+                 publisher: EventPublisher,
+                 temp_dir: str) -> None:
+        self._cache: Dict = {}
         self._executor = executor
         self._publisher = publisher
         self._temp_dir = temp_dir
         self._debug = logging.getLogger(__name__).debug
 
-    def download(self, entities, output_format, configs) -> None:
+    def download(self, entities, output_format, configs) -> Tuple[List, List]:
         options = self._build_converter_options(output_format, configs)
-        success, failure = [], []
+        success: List = []
+        failure: List = []
 
         if not self._check_downloader():
             self._publisher.notify(Error('downloader not found',

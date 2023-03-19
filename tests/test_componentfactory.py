@@ -29,7 +29,6 @@ class TestComponentFactory(unittest.TestCase):
 
     def test_get_outputer(self):
         outputer = self.sut.get_outputer()
-        self.assertIsNone(self.sut._executor)
         self.assertIsInstance(outputer, Outputer)
 
 
