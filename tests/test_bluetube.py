@@ -242,13 +242,14 @@ class TestBluetube(unittest.TestCase):
         mdb = self.mock_db({})
         self.mock_executor()
         cli = self.mock_cli()
-        cli.inform = MagicMock()
+        cli.info = MagicMock()
         cli.feeds_updated = MagicMock()
 
         self.sut.run()
 
         mdb.assert_called_once()
-        cli.inform.assert_any_call('empty database')
+        cli.update.assert_called_once()
+        self.assertEquals('empty database', cli.update.call_args[0][0].msg)
         cli.feeds_updated.assert_not_called()
 
     def test_add_playlist(self):
@@ -307,7 +308,8 @@ class TestBluetube(unittest.TestCase):
         self.mock_listdir([])
 
         self.sut.send()
-        cli.warn.assert_any_call('Nothing to send.')
+        cli.update.assert_called_once()
+        self.assertEquals('Nothing to send.', cli.update.call_args[0][0].msg)
 
     def test_edit_playlist(self):
         mcli = self.mock_cli()
@@ -317,7 +319,7 @@ class TestBluetube(unittest.TestCase):
         t = 'Чесна політика'
 
         self.sut.edit_playlist(a, t)
-        mcli.warn.assert_called_once()
+        mcli.update.assert_called_once()
         mcli.reset_mock()
 
         orig_db = json.loads(FAKE_DB)

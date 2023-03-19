@@ -32,7 +32,7 @@ from urllib.error import HTTPError
 import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.cli import CLI
+from bluetube.cli import CLI, Error, Event, Info, Success, Warn
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.feeds import Feeds, SqlExporter
@@ -51,7 +51,7 @@ class Bluetube(object):
     def signal_handler(self, signum, _):
         '''Ctrl+c handler to quit the tool'''
         assert signum == signal.SIGINT, 'SIGINT expected in the handler'
-        self.event_listener.warn('Quit!')
+        self.notify(Warn('Quit!'))
         os._exit(1)
 
     def __init__(self, home_dir=None, verbose=False, yes=False):
@@ -75,10 +75,11 @@ class Bluetube(object):
         author = deemojify(f.feed.author)
         feeds = Feeds(self.bt_dir)
         if feeds.has_playlist(author, title):
-            self.event_listener.error('playlist exists', title, author)
+            event = Error('playlist exists', title, author)
         else:
             feeds.add_playlist(author, title, feed_url, out_format, profiles)
-            self.event_listener.success('added', title, author)
+            event = Success('added', title, author)
+        self.notify(event)
 
     def list_playlists(self):
         ''' list all playlists in RSS feeds '''
@@ -96,7 +97,7 @@ class Bluetube(object):
                     o = f'{o} ({t})'
                     print(o)
         else:
-            self.event_listener.inform('empty database')
+            self.notify(Info('empty database'))
 
     def remove_playlist(self, author, title):
         ''' remove the playlist of the given author'''
@@ -104,7 +105,7 @@ class Bluetube(object):
         if feeds.has_playlist(author, title):
             feeds.remove_playlist(author, title)
         else:
-            self.event_listener.error('playlist not found', title, author)
+            self.notify('playlist not found', title, author)
 
     def run(self):
         ''' The main method. It does everything.'''
@@ -117,9 +118,9 @@ class Bluetube(object):
         pls = self._get_list(feed)
 
         if len(pls):
-            self.event_listener.success('feeds updated')
+            self.notify(Success('feeds updated'))
         else:
-            self.event_listener.inform('empty database')
+            self.notify(Info('empty database'))
             return
 
         profiles = self._get_profiles(self.bt_dir)
@@ -171,7 +172,7 @@ class Bluetube(object):
                         sent += self._send_all_in_dir(sender)
                     else:
                         msg = 'Your bluetooth device is not accessible.'
-                        self.event_listener.error(msg)
+                        self.notify(Error(msg))
 
             # remove the files that have been sent to all devices
             counts = {x: sent.count(x) for x in sent}
@@ -179,7 +180,7 @@ class Bluetube(object):
                 if n == nbr_divices:
                     os.remove(f)
         else:
-            self.event_listener.warn('Nothing to send.')
+            self.notify(Warn('Nothing to send.'))
         self._return_temp_dir()
 
     def edit_profiles(self):
@@ -190,17 +191,17 @@ class Bluetube(object):
         try:
             profiles = Profiles(bt_dir)
         except ProfilesException as e:
-            self.event_listener.error(e)
-            self.event_listener.error('edit profile filed')
+            self.notify(Error(e))
+            self.notify(Error('edit profile filed'))
             return
         for pr in profiles.get_profiles():
             try:
                 profiles.check_require_converter_configurations(pr)
                 profiles.check_send_configurations(pr)
             except ProfilesException as e:
-                self.event_listener.error(e)
+                self.notify(Error(e))
                 msg = f'Profile "{pr}" are not configured properly. Try again.'
-                self.event_listener.warn(msg)
+                self.notify(Warn(msg))
 
     def edit_playlist(self, author, title, output_type=None,
                       profiles=None, reset_failed=None, days_back=None):
@@ -211,7 +212,7 @@ class Bluetube(object):
                   f'-t (a or v) -pr ({prs})\n' \
                   '-r (to reset previously failed videos)' \
                   ' -d N (to set last updated date to N days before)'
-            self.event_listener.warn(msg)
+            self.notify(Warn(msg))
 
         feed = Feeds(self.bt_dir)
         if feed.has_playlist(author, title):
@@ -236,7 +237,8 @@ class Bluetube(object):
                 feed.sync()
                 self._debug('Done.')
         else:
-            self.event_listener.error('playlist not found', title, author)
+            event = Error('playlist not found', title, author)
+            self.notify(event)
 
     def open_more_help(self):
         '''open more help information'''
@@ -272,8 +274,8 @@ class Bluetube(object):
             try:
                 return Profiles(bt_dir)
             except ProfilesException as e:
-                self.event_listener.error(e)
-                self.event_listener.warn('Try to reinstall the application.')
+                self.notify(Error(e))
+                self.notify(Warn('Try to reinstall the application.'))
                 raise
 
         profiles = get_instance()
@@ -293,7 +295,7 @@ class Bluetube(object):
         pls = feed.get_all_playlists()
         fetch_rss = self._get_rss_fetcher()
         for a in pls:
-            self.event_listener.inform(a['author'], capture='RSS')
+            self.notify(Info(a['author'], capture='RSS'))
             for pl in a['playlists']:
                 fetch_rss(pl)
                 pl.author = a['author']
@@ -327,8 +329,8 @@ class Bluetube(object):
             if f:
                 ens = [e.title for e in f]
                 ens = ', '.join(ens)
-                self.event_listener.error('failed to download',
-                                          ens, profile)
+                event = Error('failed to download', ens, profile)
+                self.notify(event)
             pl.add_failed_entities({profile: f})
 
     def _convert_list(self, pl, profiles):
@@ -371,7 +373,7 @@ class Bluetube(object):
                                 Bluetube.ACCESS_MODE,
                                 exist_ok=True)
                 except PermissionError as e:
-                    self.event_listener.error(e)
+                    self.notify(Error(e))
                     continue
                 copied = self._copy_to_local_path(local_path, links)
                 processed.append(copied)
@@ -405,7 +407,7 @@ class Bluetube(object):
                 shutil.copy2(os.path.join(self.temp_dir, ln), local_path)
                 copied.append(ln)
             except shutil.SameFileError as e:
-                self.event_listener.error(e)
+                self.notify(Error(e))
         return copied
 
     def _get_sender(self, device_id):
@@ -416,7 +418,7 @@ class Bluetube(object):
         else:
             sender = BluetoothClient(device_id, self.temp_dir)
             if not sender.found:
-                self.event_listener.error('device not found')
+                self.notify(Error('device not found'))
                 return None
             else:
                 self.senders[device_id] = sender
@@ -426,14 +428,16 @@ class Bluetube(object):
         '''check if profiles of the playlist do exist'''
         def check_profiles_internal(profile):
             if not profiles.check_profile(profile):
-                self.event_listener.error('profile not found',
-                                          profile,
-                                          pl.title,
-                                          pl.author)
+                event = Error('profile not found',
+                              profile,
+                              pl.title,
+                              pl.author)
+                self.notify(event)
                 all_pr = ', '.join(profiles.get_profiles())
-                self.event_listener.warn(f'Possible profiles - {all_pr}.')
-                self.event_listener.inform('This playlist is skipped.\n'
-                                           'Edit the playlist and try again')
+                self.notify(Warn(f'Possible profiles - {all_pr}.'))
+                event = Info('This playlist is skipped.\n'
+                             'Edit the playlist and try again')
+                self.notify(event)
                 return False
             return True
 
@@ -447,9 +451,9 @@ class Bluetube(object):
                 profiles.check_require_converter_configurations(pr)
                 profiles.check_send_configurations(pr)
             except ProfilesException as e:
-                self.event_listener.error(e)
+                self.notify(Error(e))
                 msg = f'Profile "{pr}" are not configured properly'
-                self.event_listener.warn(msg)
+                self.notify(Warn(msg))
                 return False
 
         return True
@@ -462,7 +466,7 @@ class Bluetube(object):
         elif mp == '-':
             return
         else:
-            self.event_listener.warn('no media player')
+            self.notify(Warn('no media player'))
 
             def set_media_player():
                 mp = self.event_listener.arbitrary_input()
@@ -470,7 +474,7 @@ class Bluetube(object):
                     configs.set_media_player(mp)
                     self.event_listener.set_media_player(mp)
                 else:
-                    self.event_listener.error(f'"{mp}" not found. Try again.')
+                    self.notify(Error(f'"{mp}" not found. Try again.'))
                     set_media_player()
             set_media_player()
 
@@ -484,14 +488,14 @@ class Bluetube(object):
                                suppress_stdout=False,
                                suppress_stderr=False)
         else:
-            self.event_listener.warn('no editor')
+            self.notify(Warn('no editor'))
 
             def set_editor():
                 ed = self.event_listener.arbitrary_input()
                 if self.executor.does_command_exist(ed):
                     configs.set_editor(ed)
                 else:
-                    self.event_listener.error(f'"{ed}" not found. Try again.')
+                    self.notify(Error(f'"{ed}" not found. Try again.'))
                     set_editor()
             set_editor()
 
@@ -511,7 +515,7 @@ class Bluetube(object):
             if m:
                 msg = 'https://www.youtube.com/feeds/videos.xml?channel_id={}'
                 return msg.format(m.group(1))
-            self.event_listener.error('misformatted URL')
+            self.notify(Error('misformatted URL'))
             return None
 
     def _get_rss_fetcher(self):
@@ -521,14 +525,12 @@ class Bluetube(object):
         def fetch_rss(pl):
             '''get URLs from the RSS
             that the user will selected for every playlist'''
-            self.event_listener.inform('feed is fetching',
-                                       pl.title,
-                                       capture='RSS')
+            self.notify(Info('feed is fetching', pl.title, capture='RSS'))
             try:
                 req = urllib.request.Request(pl.url, headers=headers)
                 response = urllib.request.urlopen(req).read()
             except HTTPError as e:
-                self.event_listener.error(e)
+                self.notify(Error(e))
                 response = b''
             f = feedparser.parse(io.BytesIO(response))
             pl.feedparser_data = f
@@ -553,7 +555,7 @@ class Bluetube(object):
             e_update = time.mktime(e['published_parsed'])
             if last_update < e_update:
                 if not channel_has_update:
-                    self.event_listener.inform(pl.author)
+                    self.notify(Info(pl.author))
                     channel_has_update = True
                 if self.event_listener.ask(e):
                     entities.append(e)
@@ -573,7 +575,7 @@ class Bluetube(object):
             fs = os.listdir(temp_dir)
             if len(fs):
                 msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
-                self.event_listener.warn(msg)
+                self.notify(Warn(msg))
         self.temp_dir = temp_dir
 
     def _return_temp_dir(self):
@@ -582,9 +584,10 @@ class Bluetube(object):
             try:
                 os.rmdir(self.temp_dir)
             except OSError:
-                self.event_listener.warn('download directory not empty',
-                                         self.temp_dir)
-                self.event_listener.out('\n  '.join(os.listdir(self.temp_dir)))
+                event = Warn('download directory not empty', self.temp_dir)
+                self.notify(event)
+                event = Warn('\n  '.join(os.listdir(self.temp_dir)))
+                self.notify(event)
 
     def _get_bt_dir(self, home_dir):
         bt_dir = home_dir if home_dir else Bluetube.HOME_DIR
@@ -596,3 +599,7 @@ class Bluetube(object):
         level = logging.DEBUG if verbose else logging.WARNING
         f = '[verbose] %(name)s - %(message)s'
         logging.basicConfig(format=f, level=level)
+
+    def notify(self, event: Event):
+        '''todo'''
+        self.event_listener.update(event)

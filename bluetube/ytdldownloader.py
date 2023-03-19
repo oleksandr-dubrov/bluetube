@@ -6,6 +6,7 @@ import os
 
 from mutagen import MutagenError, id3, mp3, mp4
 
+from bluetube.cli import Error
 from bluetube.model import OutputFormatType
 from bluetube.utils import deemojify
 
@@ -29,8 +30,8 @@ class YoutubeDlDownloader(object):
         success, failure = [], []
 
         if not self._check_downloader():
-            self._event_listener.error('downloader not found',
-                                       YoutubeDlDownloader.NAME)
+            self._event_listener.update(Error('downloader not found',
+                                        YoutubeDlDownloader.NAME))
             failure = [en for en in entities]
             return success, failure
 
@@ -115,4 +116,4 @@ class YoutubeDlDownloader(object):
             else:
                 self._debug(f'cannot add metadata to {ext}')
         except MutagenError as e:
-            self._event_listener.error(e)
+            self._event_listener.update(Error(e))

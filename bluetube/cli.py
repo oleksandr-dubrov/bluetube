@@ -1,35 +1,30 @@
 from bluetube.bcolors import Bcolors
 
+INDENTATION = 10
 
-class CLI(object):
-    '''Command line interface of the tool'''
 
-    INDENTATION = 10
+class Event(object):
+    '''The base event class.'''
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        self.msg = msg
+        self.args = args
+        self.kwargs = kwargs
 
-    INFORMS = {
-        'empty database': 'No subscribed playlists.\n'
-                          'Run "bluetube add -h" for more info.',
-        'feed is fetching': ' ' * INDENTATION + '{}',
-        'converter not found': 'Please install the converter.',
+
+class Success(Event):
+    '''A successfull event.'''
+    MSGS = {
+        'added': '{} by {} added successfully.',
+        'feeds updated': "Feeds have been updated successfully."
         }
 
-    WARNS = {
-        'device not found': 'Your bluetooth device is not accessible.\n'
-                            'The script will download files to {} directory.',
-        'download directory not empty': 'The download directory {} '
-                                        'is not empty. Run "bluetube -s" '
-                                        'to send the files or remove them.',
-        'conversion is not needed': 'The files is in required format. '
-                                    'No conversion needed.',
-        'no editor': 'Specify your favorite text editor '
-                     '(e.g. nano, vim, emacs, gedit) '
-                     'and try again:',
-        'no media player': 'Specify a media player that can open a remote URI'
-                           ' (e.g. vlc) '
-                           'or put "-" if you do not want to use it',
-        }
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        super().__init__(msg, *args, **kwargs)
 
-    ERRORS = {
+
+class Error(Event):
+    '''An error event.'''
+    MSGS = {
         'profile not found': 'The profile "{}" for "{}"({}) not found',
         'playlist not found': '"{}" by "{}" not found',
         'downloader not found': 'The tool for downloading "{}"'
@@ -54,56 +49,101 @@ Check the config file. It must have something like this
 Please try to edit them again''',
         }
 
-    SUCCESSES = {
-        'added': '{} by {} added successfully.',
-        'feeds updated': "Feeds have been updated successfully."
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        super().__init__(msg, *args, **kwargs)
+
+
+class Info(Event):
+    '''An informational event.'''
+    MSGS = {
+        'empty database': 'No subscribed playlists.\n'
+                          'Run "bluetube add -h" for more info.',
+        'feed is fetching': ' ' * INDENTATION + '{}',
+        'converter not found': 'Please install the converter.',
         }
+
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        super().__init__(msg, *args, **kwargs)
+
+
+class Warn(Event):
+    '''A warning event.'''
+    MSGS = {
+        'device not found': 'Your bluetooth device is not accessible.\n'
+                            'The script will download files to {} directory.',
+        'download directory not empty': 'The download directory {} '
+                                        'is not empty. Run "bluetube -s" '
+                                        'to send the files or remove them.',
+        'conversion is not needed': 'The files is in required format. '
+                                    'No conversion needed.',
+        'no editor': 'Specify your favorite text editor '
+                     '(e.g. nano, vim, emacs, gedit) '
+                     'and try again:',
+        'no media player': 'Specify a media player that can open a remote URI'
+                           ' (e.g. vlc) '
+                           'or put "-" if you do not want to use it',
+        }
+
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        super().__init__(msg, *args, **kwargs)
+
+
+class CLI(object):
+    '''Command line interface of the tool'''
 
     def __init__(self, executor, yes=False):
         self._executor = executor
         self._player = None
         self._yes = yes
+        self._handlers = {Info.__name__: self._info,
+                          Success.__name__: self._success,
+                          Error.__name__: self._error,
+                          Warn.__name__: self._warn}
+
+    def update(self, event: Event):
+        '''todo'''
+        self._handlers[type(event).__name__](event)
 
     def set_media_player(self, mp: str):
         self._player = mp
 
-    def warn(self, msg, *args):
+    def _warn(self, event):
         '''warn the user by an arbitrary or predefined message'''
-        Bcolors.warn('[WARNING] {}'.format(self._get_msg(msg,
-                                                         CLI.WARNS, *args)))
+        Bcolors.warn('[WARNING] {}'.format(self._get_msg(event.msg,
+                                                         Warn.MSGS,
+                                                         *event.args)))
 
-    def inform(self, msg, *args, **kwargs):
+    def _info(self, event: Info):
         '''inform the user by an arbitrary or predefined message,
         set "capture" to specify the header of the message
         instead of [info]'''
-        header = kwargs['capture'] if 'capture' in kwargs else 'info'
+        header = event.kwargs['capture']\
+            if 'capture' in event.kwargs else 'info'
         print('[{}] {}'.format(header,
-                               self._get_msg(msg, CLI.INFORMS, *args)))
+                               self._get_msg(event.msg,
+                                             Info.MSGS,
+                                             *event.args)))
 
-    def error(self, msg, *args):
+    def _error(self, event: Error):
         '''show an error to the user'''
-        Bcolors.error('[ERROR] {}'.format(self._get_msg(msg,
-                                                        CLI.ERRORS, *args)))
+        Bcolors.error('[ERROR] {}'.format(
+            self._get_msg(event.msg, Error.MSGS, *event.args)))
 
-    def success(self, msg, *args):
+    def _success(self, event: Success):
         '''inform about success'''
-        if msg == 'feed updated':
-            self.sound()
+        if event.msg == 'feed updated':
+            self._sound()
             return
-        Bcolors.intense('[INFO] {}'.format(self._get_msg(msg,
-                                                         CLI.SUCCESSES,
-                                                         *args)))
+        Bcolors.intense('[INFO] {}'.format(self._get_msg(event.msg,
+                                                         Success.MSGS,
+                                                         *event.args)))
 
-    def out(self, msg):
-        '''simple output'''
-        print(msg)
-
-    def _get_msg(self, msg, msg_collection, *args):
-        if msg in msg_collection:
-            msg = msg_collection[msg].format(*args)
+    def _get_msg(self, msg, msgs, *args):
+        if msg in msgs:
+            msg = msgs[msg].format(*args)
         return msg
 
-    def sound(self):
+    def _sound(self):
         ''' inform the user by voice'''
         self._executor.call(('spd-say', '--wait', 'beep, beep.'))
 
@@ -152,7 +192,7 @@ Please try to edit them again''',
 
     def _make_question_to_ask(self, feed_entry):
         pub = feed_entry['published_parsed']
-        params = {'ind': 2 * CLI.INDENTATION * ' ',
+        params = {'ind': 2 * INDENTATION * ' ',
                   'tit': feed_entry['title'],
                   'h': pub.tm_hour,
                   'min': pub.tm_min,
@@ -187,7 +227,7 @@ Please try to edit them again''',
             else:
                 return lst[int(o)]
         except ValueError as e:
-            self.error(e)
+            self._error(e)
             return self.selection_list(msg, lst, default)
 
     def multi_selection_list(self, msg, lst, default):
@@ -206,7 +246,7 @@ Please try to edit them again''',
                 else:
                     ret.append(lst[o])
         except ValueError as e:
-            self.error(e)
+            self._error(e)
             self.multi_selection_list(msg, lst, default)
         return ret
 

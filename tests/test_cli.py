@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from bluetube.cli import CLI
+from bluetube.cli import CLI, Error, Info, Success, Warn
 
 
 class TestCli(unittest.TestCase):
@@ -10,12 +10,12 @@ class TestCli(unittest.TestCase):
     def setUp(self):
         self.sut = CLI(executor=MagicMock())
 
-    def test_informs(self):
+    def test_update(self):
         with patch('builtins.print'):
-            self.sut.inform('empty database')
-            self.sut.inform('feed is fetching', 'a message')
-            self.sut.success('feed updated')
-            self.sut.inform('an arbitrary message')
+            self.sut.update(Info('empty database'))
+            self.sut.update(Error('misformatted URL'))
+            self.sut.update(Success('feed updated'))
+            self.sut.update(Warn('conversion is not needed'))
         self.sut._executor.call.assert_called_once()
 
 
