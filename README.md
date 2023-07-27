@@ -1,7 +1,7 @@
 # BLUETUBE
 
 
-Bluetube is a Python script that downloads videos from Youtube by URLs get from RSS, converts them and sends to a bluetooth device.
+Bluetube is a CLI application that downloads videos from Youtube by URLs get from RSS, converts them and sends to a bluetooth device.
 
 Bluetube allows you to do next:
 * see updates on subscribed playlists and channels;

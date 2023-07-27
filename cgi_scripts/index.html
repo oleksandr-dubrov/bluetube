@@ -15,17 +15,18 @@
 	-->
 	<script>0</script>
 
-	<header>
-		<h1>Bluetube loads media</h1>
-	</header>
 	<p class="message">$msg</p>
 	<table>
-		<caption></caption>
+		<caption>
+			<header>
+				<h1>Bluetube loads media</h1>
+			</header>
+		</caption>
 		<thead>
 			<tr>
 				<th scope="col">&#128462;</th>
-				<th scope="col">Name</th>
-				<th scope="col">Size</th>
+				<th scope="col"><a href="/?path=$path&sort=name">Name</a></th>
+				<th scope="col"><a href="/?path=$path&sort=size">Size</a></th>
 				<th scope="col">Action</th>
 			</tr>
 		</thead>
@@ -48,7 +49,10 @@
 			</tr>
 		</tfoot>
 	</table>
-	<a href="/" class="btn refresh">Refresh</a>
+	<p class="center">
+		<a href="/?path=$path" class="btn refresh center">Refresh</a>
+		<a href="/" class="btn refresh center">Home</a>
+	</p>
 	<footer>
 		<em>
 			|| <a href="https://github.com/oleksandr-dubrov/bluetube" target="_blank">Bluetube 2.0</a>
