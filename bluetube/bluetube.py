@@ -16,9 +16,9 @@
 '''
 
 
+import asyncio
 import copy
 import datetime
-import io
 import logging
 import os
 import re
@@ -26,20 +26,20 @@ import shutil
 import signal
 import tempfile
 import time
-import urllib
 from typing import NoReturn
 from urllib.error import HTTPError
 
+import aiohttp
 import feedparser
 
 from bluetube.bluetoothclient import BluetoothClient
-from bluetube.cli.events import Error, Info, Success, Warn
+from bluetube.cli.events import Error, Event, Info, Success, Warn
 from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.eventpublisher import EventPublisher
 from bluetube.feeds import Feeds, SqlExporter
-from bluetube.model import OutputFormatType
+from bluetube.model import OutputFormatType, Playlist
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.utils import deemojify
 
@@ -60,7 +60,7 @@ class Bluetube(EventPublisher):
     def __init__(self, home_dir=None, verbose=False, yes=False):
         super().__init__()
 
-        self._configLogger(verbose)
+        self._config_logger(verbose)
         self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
         self.senders = {}
@@ -297,17 +297,47 @@ class Bluetube(EventPublisher):
                     return profiles
             raise ProfilesException('invalid profile')
 
-    def _get_list(self, feed):
-        '''fetch and parse RSS data for all lists'''
+    def _get_list(self, feed: Feeds) -> list[Playlist]:
+        '''Fetch and parse RSS data for all lists.'''
         pls = feed.get_all_playlists()
-        fetch_rss = self._get_rss_fetcher()
-        for a in pls:
-            self.notify(Info(a['author'], capture='RSS'))
-            for pl in a['playlists']:
-                fetch_rss(pl)
-                pl.author = a['author']
+
+        async def task(session, author):
+            '''task that fetches RSS for the author'''
+            events: list[Event] = [Info(author['author'], capture='RSS')]
+            for pl in author['playlists']:
+                events.append(Info('feed is fetching',
+                                   pl.title, capture='RSS'))
+                response = await self._fetch_rss(session, pl)
+                pl.feedparser_data = feedparser.parse(response)
+                pl.author = author['author']
+            return events
+
+        async def process_tasks():
+            '''process all async tasks'''
+            timeout = aiohttp.ClientTimeout(total=60)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                return await asyncio.gather(*[task(session, a) for a in pls],
+                                            return_exceptions=False)
+
+        events = asyncio.run(process_tasks())
+        for event in events:  # handles all event collected in the event loop
+            for e in event:
+                self.notify(e)
+
         pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
+
+    async def _fetch_rss(self, session, pl):
+        '''get URLs from the RSS
+        that the user will selected for every playlist'''
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        try:
+            async with session.get(pl.url, headers=headers) as response:
+                response = await response.text()
+        except HTTPError as e:
+            self.notify(Error(e))  # notify the error immidiatelly
+            response = ''
+        return response
 
     def _proccess_playlists(self, pls):
         '''ask the user what to do with the entities'''
@@ -523,25 +553,6 @@ class Bluetube(EventPublisher):
             self.notify(Error('misformatted URL'))
             return None
 
-    def _get_rss_fetcher(self):
-        '''make and return a function to get RSS'''
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-
-        def fetch_rss(pl):
-            '''get URLs from the RSS
-            that the user will selected for every playlist'''
-            self.notify(Info('feed is fetching', pl.title, capture='RSS'))
-            try:
-                req = urllib.request.Request(pl.url, headers=headers)
-                response = urllib.request.urlopen(req).read()
-            except HTTPError as e:
-                self.notify(Error(e))
-                response = b''
-            f = feedparser.parse(io.BytesIO(response))
-            pl.feedparser_data = f
-
-        return fetch_rss
-
     def _prepare_list(self, pls):
         ret = {}
         for pl in pls:
@@ -600,7 +611,7 @@ class Bluetube(EventPublisher):
             os.makedirs(bt_dir, Bluetube.ACCESS_MODE)
         return bt_dir
 
-    def _configLogger(self, verbose: bool) -> None:
+    def _config_logger(self, verbose: bool) -> None:
         level = logging.DEBUG if verbose else logging.WARNING
         f = '[verbose] %(name)s - %(message)s'
         logging.basicConfig(format=f, level=level)

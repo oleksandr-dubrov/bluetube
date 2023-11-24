@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from zipfile import ZipFile
 
 from bluetube import Bluetube
@@ -142,13 +142,12 @@ class TestBluetube(unittest.TestCase):
         return args[0]
 
     def mock_remote_data(self):
-        '''mock remote data returned by urlopen'''
-        patcher = patch('urllib.request.urlopen')
-        uo = patcher.start()
+        '''mock remote data returned'''
+        mocked_fetch = AsyncMock()
         md = read_mocked_data()
-        uo.return_value = MagicMock()
-        uo.return_value.read.side_effect = [ln.encode() for ln in md]
-        return uo
+        mocked_fetch.side_effect = [ln.encode() for ln in md]
+        self.sut._fetch_rss = mocked_fetch
+        return mocked_fetch
 
     def mock_shutil_copy(self):
         ''' mock shutil.copy2'''
@@ -171,7 +170,7 @@ class TestBluetube(unittest.TestCase):
         inp, _ = self.mock_cli()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
-        urlopen = self.mock_remote_data()
+        fetch = self.mock_remote_data()
         mock_copy = self.mock_shutil_copy()
 
         self.sut.run()
@@ -179,8 +178,7 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(2, mdb.call_count,
                          'should be called for read and write')
 
-        nbr_urls = FAKE_DB.count('"url"')
-        self.assertEqual(urlopen.return_value.read.call_count, nbr_urls)
+        self.assertEqual(fetch.await_count, FAKE_DB.count('"url"'))
 
         self.assertEqual(inp.ask.call_count, NEW_LINKS)
 
@@ -230,15 +228,14 @@ class TestBluetube(unittest.TestCase):
         self.mock_executor()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
-        urlopen = self.mock_remote_data()
+        fetch = self.mock_remote_data()
 
         self.sut.run()
 
         self.assertEqual(2, mdb.call_count,
                          'should be called for read and write')
 
-        self.assertEqual(urlopen.return_value.read.call_count,
-                         FAKE_DB.count('"url"'))
+        self.assertEqual(fetch.await_count, FAKE_DB.count('"url"'))
         self.assertEqual(cli.ask.call_count, NEW_LINKS)
         bt.assert_not_called()
         self.assertEqual(mock_send.call_count, 0)

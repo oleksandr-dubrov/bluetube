@@ -9,10 +9,10 @@ Created on May 15, 2021
 import cgi
 import cgitb
 import copy
-from enum import Enum
 import os
 import re
 import urllib.parse
+from enum import Enum
 
 cgitb.enable()
 
