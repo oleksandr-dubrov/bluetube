@@ -12,12 +12,7 @@ bluetube_cli.egg-info
 #Eclipse files
 .pydevproject
 .settings/*
-.eclipse_user_dict.txt
 .project
 
 # VS code
 .vscode/*
-
-# others
-taskboard.txt
-

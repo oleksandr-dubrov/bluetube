@@ -1,0 +1,56 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 61.0"]
+
+[project]
+name = "bluetube"
+dynamic = ["version"]
+description="to get video from Youtube by RSS and send via bluetooth"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE"}
+keywords=["Youtube", "bluetooth", "RSS"]
+classifiers=[
+     "Programming Language :: Python :: 3.11",
+     "Development Status :: 4 - Beta",
+     "Environment :: Console",
+     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+     "Operating System :: POSIX :: Linux"
+]
+authors = [
+  {name = "Olexandr Dubrov", email = "olexandr.dubrov@gmail.com"}
+]
+maintainers = [
+  {name = "Olexandr Dubrov", email = "olexandr.dubrov@gmail.com"}
+]
+requires-python = ">= 3.11"
+dependencies = [
+  "feedparser==6.0.8",
+  "PyBluez@git+https://github.com/pybluez/pybluez#egg=master",  # need the version without 2_to_3 
+  "PyOBEX==0.31",
+  "toml==0.10.1",
+  "mutagen==1.45.1",
+  "aiohttp==3.9.0",
+]
+
+# this section allows to install this package as editable with
+# dev dependencies e.g.
+# `pipenv install -e "../this_package/[dev]"`
+[project.optional-dependencies]
+dev = [
+  "flake8",
+  "tox",
+  "isort",
+  "mypy",
+]
+
+[project.scripts]
+bluetube = "bluetube.app:main"
+
+[project.urls]
+Repository = "https://github.com/oleksandr-dubrov/bluetube"
+
+[tool.setuptools]
+packages = ["bluetube"]  # specify directly since there is a package for cgi in the project
+
+[tool.setuptools.dynamic]
+version = {attr = "bluetube.version.__version__"}
