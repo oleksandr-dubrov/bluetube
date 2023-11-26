@@ -55,7 +55,7 @@ class YoutubeDlDownloader(object):
                 status = self._executor.call(all_options, cwd=self._temp_dir)
                 just_downloaded = [jd for jd in os.listdir(self._temp_dir)
                                    if en['yt_videoid'] in jd]
-                assert len(just_downloaded) <= 1,\
+                assert len(just_downloaded) <= 1, \
                     f"more than one file with {en['yt_videoid']}" +\
                     "has just been downloaded"
                 if status:

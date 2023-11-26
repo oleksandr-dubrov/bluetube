@@ -319,6 +319,7 @@ class Bluetube(EventPublisher):
                 return await asyncio.gather(*[task(session, a) for a in pls],
                                             return_exceptions=False)
 
+        self.notify(Info('Updating feeds...'))
         events = asyncio.run(process_tasks())
         for event in events:  # handles all event collected in the event loop
             for e in event:

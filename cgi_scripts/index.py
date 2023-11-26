@@ -49,8 +49,6 @@ class SortBy(Enum):
 
 def sort_all(full_paths, sort_by):
     reverse = False
-    cb_file_sort = None
-    cb_dir_sort = None
 
     if sort_by == SortBy.NAME.value:
         def cb_file_sort(x): return os.path.basename(x)

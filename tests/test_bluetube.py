@@ -117,7 +117,7 @@ class TestBluetube(unittest.TestCase):
 
     def mock_executor(self):
         '''mock the command executor'''
-        patcher = patch('bluetube.componentfactory.CommandExecutor', spec=True)
+        patcher = patch('bluetube.componentfactory.CommandExecutor')
         mocked_executor_class = patcher.start()
         instance = mocked_executor_class.return_value
         instance.call.side_effect = self.call_side_effect
@@ -249,7 +249,7 @@ class TestBluetube(unittest.TestCase):
         self.sut.run()
 
         mdb.assert_called_once()
-        out.update.assert_called_once()
+        self.assertEqual(2, out.update.call_count)  # 1st is 'Updating feeds.'
         self.assertEquals('empty database', out.update.call_args[0][0].msg)
         out.feeds_updated.assert_not_called()
 
