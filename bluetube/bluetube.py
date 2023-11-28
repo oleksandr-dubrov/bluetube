@@ -134,7 +134,7 @@ class Bluetube(EventPublisher):
 
         self._fetch_temp_dir()
 
-        pls = self._proccess_playlists(pls)
+        pls = self._process_playlists(pls)
 
         for pl in pls:
             if not self._check_profiles(pl, profiles):
@@ -254,7 +254,7 @@ class Bluetube(EventPublisher):
         self.executor.open_url(''.join(link))
 
     def export_db(self):
-        '''export DB into the bluetube.sql file for MySQL'''
+        '''export DB into the bluetube.sql file for SQLite3'''
         feed = Feeds(self.bt_dir)
         exporter = SqlExporter(feed.get_all_playlists())
         with open('bluetube.sql', 'w') as f:
@@ -340,7 +340,7 @@ class Bluetube(EventPublisher):
             response = ''
         return response
 
-    def _proccess_playlists(self, pls):
+    def _process_playlists(self, pls):
         '''ask the user what to do with the entities'''
         ret = []
         for pl in pls:

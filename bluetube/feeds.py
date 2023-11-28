@@ -170,8 +170,8 @@ class SqlExporter(object):
     '''Export the DB to SQL'''
 
     DB_NAME = 'bluetube'
-    ENGINE = 'ENGINE=INNODB'
-    ID_INT = 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY'
+    ENGINE = ''
+    ID_INT = 'id INTEGER PRIMARY KEY,'
 
     def __init__(self, feeds):
         self._feeds = feeds
@@ -179,7 +179,6 @@ class SqlExporter(object):
     def export(self, file):
         '''export DB'''
         file.write(self._add_header())
-        file.write(self._use_db())
         file.write(self._create_roles())
         file.write(self._create_users())
         file.write(self._create_authors())
@@ -187,26 +186,23 @@ class SqlExporter(object):
         file.write(self._insert_authors_and_playlists())
 
     def _add_header(self):
-        return f'/*\nBluetube {__version__} DB for MySQL.\n*/\n\n'
-
-    def _use_db(self):
-        return f'USE {SqlExporter.DB_NAME};\n'
+        return f'/*\nBluetube {__version__} DB for SQLite3.\n*/\n\n'
 
     def _create_roles(self):
         r = ['']
-        r.append('CREATE TABLE IF NOT EXISTS roles(')
+        r.append('CREATE TABLE IF NOT EXISTS role(')
         r.append('    id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,')
         r.append('    role CHAR(10) NOT NULL UNIQUE')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
-        r.append('INSERT INTO roles(id, role)')
+        r.append('INSERT INTO role(id, role)')
         r.append("VALUES (1, 'admin'), (2, 'user');")
         r.append('')
         return '\n'.join(r)
 
     def _create_users(self):
         r = ['']
-        r.append('CREATE TABLE IF NOT EXISTS users (')
+        r.append('CREATE TABLE IF NOT EXISTS user (')
         r.append(f'    {SqlExporter.ID_INT},')
         r.append('    name VARCHAR(100) NOT NULL,')
         r.append('    password VARCHAR(60) NOT NULL,')
@@ -216,14 +212,14 @@ class SqlExporter(object):
         r.append('    FOREIGN KEY(role_id) REFERENCES roles(id)')
         r.append(f') {SqlExporter.ENGINE};')
         r.append('')
-        r.append('INSERT INTO users(id, name, password, email, role_id)')
+        r.append('INSERT INTO user(id, name, password, email, role_id)')
         r.append("VALUES (1, 'admin', 'admin', 'email@example.com', 1);")
         r.append('')
         return '\n'.join(r)
 
     def _create_authors(self):
         r = ['']
-        r.append('CREATE TABLE IF NOT EXISTS authors(')
+        r.append('CREATE TABLE IF NOT EXISTS author(')
         r.append(f'    {SqlExporter.ID_INT},')
         r.append('    name VARCHAR(255) UNIQUE,')
         r.append('    user_id INT UNSIGNED NOT NULL,')
@@ -235,7 +231,7 @@ class SqlExporter(object):
 
     def _create_playlists(self):
         r = ['']
-        r.append('CREATE TABLE IF NOT EXISTS playlists(')
+        r.append('CREATE TABLE IF NOT EXISTS playlist(')
         r.append(f'    {SqlExporter.ID_INT},')
         r.append('    title VARCHAR(255) NOT NULL,')
         r.append('    URL VARCHAR(2048) NOT NULL,')
@@ -254,15 +250,16 @@ class SqlExporter(object):
         for x in self._feeds:
             r.append('')
             author = x['author'].replace("'", "''")
-            r.append("INSERT INTO authors(name, user_id)")
+            r.append("INSERT INTO author(name, user_id)")
             r.append(f"VALUES ('{author}', 1);")
-            r.append('SELECT LAST_INSERT_ID() INTO @author_id;')
             for y in x['playlists']:
-                r.append('INSERT INTO playlists' +
+                r.append('\n')
+                r.append('INSERT INTO playlist' +
                          '(title, URL, out_format, author_id)')
                 a = OutputFormatType.audio
                 nf = 'mp3' if y.output_format is a else 'mp4'
                 title = y.title.replace("'", "''")
-                r.append(f"VALUES ('{title}', '{y.url}', '{nf}', @author_id);")
+                sub = f"(SELECT id FROM author WHERE name = '{author}')"
+                r.append(f"VALUES ('{title}', '{y.url}', '{nf}', {sub} );")
         r.append('')
         return '\n'.join(r)
