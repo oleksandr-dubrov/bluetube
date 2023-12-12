@@ -27,6 +27,7 @@ class Success(Event):
 class Error(Event):
     '''An error event.'''
     MSGS = {
+        'no internet': 'Check your Internet connection.',
         'profile not found': 'The profile "{}" for "{}"({}) not found',
         'playlist not found': '"{}" by "{}" not found',
         'downloader not found': 'The tool for downloading "{}"'

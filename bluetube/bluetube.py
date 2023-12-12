@@ -27,7 +27,6 @@ import signal
 import tempfile
 import time
 from typing import NoReturn
-from urllib.error import HTTPError
 
 import aiohttp
 import feedparser
@@ -320,10 +319,16 @@ class Bluetube(EventPublisher):
                                             return_exceptions=False)
 
         self.notify(Info('Updating feeds...'))
-        events = asyncio.run(process_tasks())
-        for event in events:  # handles all event collected in the event loop
-            for e in event:
-                self.notify(e)
+        try:
+            events = asyncio.run(process_tasks())
+            # handles all event collected in the event loop
+            for event in events:
+                for e in event:
+                    self.notify(e)
+        except aiohttp.ClientConnectorError as e:
+            self.notify(Warn(e))  # notify the error immediately
+            self.notify(Error('no internet'))
+            os.exit()
 
         pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
@@ -332,12 +337,10 @@ class Bluetube(EventPublisher):
         '''get URLs from the RSS
         that the user will selected for every playlist'''
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        try:
-            async with session.get(pl.url, headers=headers) as response:
-                response = await response.text()
-        except HTTPError as e:
-            self.notify(Error(e))  # notify the error immidiatelly
-            response = ''
+        response = ''
+        async with session.get(pl.url, headers=headers) as response:
+            response = await response.text()
+
         return response
 
     def _process_playlists(self, pls):
