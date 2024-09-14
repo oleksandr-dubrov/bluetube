@@ -14,7 +14,7 @@ class Event(object):
 
 
 class Success(Event):
-    '''A successfull event.'''
+    '''A successful event.'''
     MSGS = {
         'added': '{} by {} added successfully.',
         'feeds updated': "Feeds have been updated successfully."

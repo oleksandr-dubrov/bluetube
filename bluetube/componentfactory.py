@@ -4,7 +4,7 @@ The factory.
 
 from bluetube.cli import Inputer, Outputer
 from bluetube.commandexecutor import CommandExecutor
-from bluetube.converter import FfmpegConvertver
+from bluetube.converter import FfmpegConverter
 from bluetube.eventpublisher import EventPublisher
 from bluetube.ytdldownloader import YoutubeDlDownloader
 
@@ -27,7 +27,7 @@ class ComponentFactory(object):
 
     def get_converter(self, publisher: EventPublisher, temp_dir: str):
         ex = self.get_command_executor()
-        return FfmpegConvertver(ex, publisher, temp_dir)
+        return FfmpegConverter(ex, publisher, temp_dir)
 
     def get_inputer(self, yes: bool) -> Inputer:
         if not hasattr(self, '_inputer'):

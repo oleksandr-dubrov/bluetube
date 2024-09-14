@@ -11,7 +11,7 @@ from bluetube.commandexecutor import CommandExecutor
 from bluetube.eventpublisher import EventPublisher
 
 
-class FfmpegConvertver(object):
+class FfmpegConverter(object):
     '''
     This class converts media by ffmpeg installed in the system.
     '''
@@ -33,7 +33,7 @@ class FfmpegConvertver(object):
         success, failure = [], []
         if not self._check_video_converter():
             self._publisher.notify(Error('converter not found',
-                                   FfmpegConvertver.NAME))
+                                   FfmpegConverter.NAME))
             failure = [en for en in entities]
             return success, failure
 
@@ -49,7 +49,7 @@ class FfmpegConvertver(object):
                 self._publisher.notify(Warn('conversion is not needed'))
                 success.append(en)
                 continue
-            args = (FfmpegConvertver.NAME,) + ('-i', orig) + options + \
+            args = (FfmpegConverter.NAME,) + ('-i', orig) + options + \
                 codecs_options + (new,)
             if not 1 == self._executor.call(args, cwd=self._temp_dir):
                 os.remove(os.path.join(self._temp_dir, orig))
@@ -57,8 +57,8 @@ class FfmpegConvertver(object):
                 success.append(en)
             else:
                 failure.append(en)
-                d = os.path.join(self._temp_dir, FfmpegConvertver.NOT_CONV_DIR)
-                os.makedirs(d, FfmpegConvertver.ACCESS_MODE, exist_ok=True)
+                d = os.path.join(self._temp_dir, FfmpegConverter.NOT_CONV_DIR)
+                os.makedirs(d, FfmpegConverter.ACCESS_MODE, exist_ok=True)
                 os.rename(orig, os.path.join(d, os.path.basename(orig)))
                 self._publisher.notify(Error(os.path.basename(orig)))
                 self._publisher.notify(
@@ -68,9 +68,9 @@ class FfmpegConvertver(object):
         return success, failure
 
     def _check_video_converter(self):
-        if not self._executor.does_command_exist(FfmpegConvertver.NAME,
+        if not self._executor.does_command_exist(FfmpegConverter.NAME,
                                                  dashes=1):
             self._publisher.notify(Error('converter not found',
-                                         FfmpegConvertver.NAME))
+                                         FfmpegConverter.NAME))
             return Inputer.do_continue()
         return True

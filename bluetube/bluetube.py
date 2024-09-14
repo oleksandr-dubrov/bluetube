@@ -328,7 +328,7 @@ class Bluetube(EventPublisher):
         except aiohttp.ClientConnectorError as e:
             self.notify(Warn(e))  # notify the error immediately
             self.notify(Error('no internet'))
-            os.exit()
+            os._exit(1)
 
         pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
         return pls
