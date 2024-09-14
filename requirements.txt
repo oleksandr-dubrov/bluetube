@@ -1,4 +1,4 @@
-setuptools==66.1.1
+setuptools==70.0.0
 pip==23.3.1
 build==1.0.3
 tox==4.11.3
