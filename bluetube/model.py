@@ -18,6 +18,32 @@
 '''
 
 from enum import Enum, unique
+from pathlib import Path
+from sqlalchemy import ForeignKey, TypeDecorator, UniqueConstraint, create_engine
+from sqlalchemy.orm import DeclarativeBase
+from typing import List
+from typing import Optional
+from sqlalchemy.orm import Mapped   # TODO: isort it properly   
+from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import relationship, registry
+from sqlalchemy import Table, Column, Integer, String
+from sqlalchemy.schema import MetaData
+
+mapper_registry = registry()
+
+
+class PathType(TypeDecorator):
+    impl = String
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, Path):
+            return str(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return Path(value)
+        return value
 
 
 @unique
@@ -54,21 +80,85 @@ class OutputFormatType(Enum):
             assert 0, 'unknown type'
 
 
-class Playlist(object):
-    '''
-    Represents a playlist or channel.
-    '''
+@unique
+class PublicationStatus(str, Enum):
+    remote = "remote"  # a remote item
+    chosen = "chosen"  # an item is selected to download
+    downloaded = "downloaded"  # an item successfully downloaded
+    converted = "converted"  # an item successfully converted
+    failed = "failed"  # failed to downdload or converted
+    sent = "sent"  # an item has been sent
 
-    def __init__(self, title, url):
-        self.author = None
-        self._title = title
-        self._url = url
-        self._last_update = 0
-        self._output_format = OutputFormatType.audio
-        self._profiles = []
-        self._feedparser_data = None
-        self._failed_entities = {}
-        self._entities = []
+
+@mapper_registry.mapped
+class Author:
+    """
+    An author of the channel of playlist.
+    """
+
+    __tablename__ = "author"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    playlists: Mapped[List["Playlist"]] = relationship(back_populates="author", cascade="all, delete-orphan")
+
+
+
+@mapper_registry.mapped
+class Profile:
+    """
+    Profile is a name of downloading and converting configurations.
+    """
+    
+    __tablename__ = "profile"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), unique=True)
+
+
+@mapper_registry.mapped
+class Publication:
+    """
+    Represent a single entity in the feed either an audio or video file.
+    It corresponds with the RSS feed common Elements.
+    See https://feedparser.readthedocs.io/en/latest/common-rss-elements.html#accessing-common-channel-elements
+    """
+
+    __tablename__ = "publication"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    playlist_id: Mapped[int] = mapped_column(ForeignKey("playlist.id"))
+
+    title: Mapped[str] = mapped_column(String(255))
+    link: Mapped[str] = mapped_column(String(2048))  # TODO: validate URL
+    remove_id: Mapped[str] = mapped_column(String(255))  # an item id e.g. a Youtube video ID
+    local_path: Mapped[Optional[Path]] = mapped_column(PathType(2048))  # TODO: validate local path
+    description: Mapped[str] = mapped_column(String(2048))  # TODO: change to some text field not to limit the length
+    published: Mapped[int]
+    entry_id: Mapped[str] = mapped_column(String(2048))  # e.g. 'http://example.org/guid/1'
+    playlist: Mapped["Playlist"] = relationship()
+    status: Mapped[PublicationStatus]
+
+
+@mapper_registry.mapped
+class Playlist:
+    """
+    Represents a playlist or channel.
+    """
+
+    __tablename__ = 'playlist'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    author_id: Mapped[int] = mapped_column(ForeignKey("author.id"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profile.id"))
+
+    author: Mapped["Author"] = relationship(back_populates="playlists")
+    title: Mapped[str] = mapped_column(String(128))
+    url: Mapped[str] = mapped_column(String(128), unique=True)
+    last_update: Mapped[int]
+    output_format: Mapped[OutputFormatType]
+    profile: Mapped[Profile] = relationship()
+    entities: Mapped[Optional[Publication]] = relationship()
 
     def set_output_format_type(self, output_format_type):
         if isinstance(output_format_type, str):
@@ -78,74 +168,8 @@ class Playlist(object):
             t = output_format_type
         self._output_format = t
 
-    @property
-    def feedparser_data(self):
-        return self._feedparser_data
-
-    @feedparser_data.setter
-    def feedparser_data(self, fd):
-        self._feedparser_data = fd
-
-    @feedparser_data.deleter
-    def feedparser_data(self):
-        self._feedparser_data = None
-
-    @property
-    def title(self):
-        return self._title
-
-    @property
-    def url(self):
-        return self._url
-
-    @property
-    def last_update(self):
-        return self._last_update
-
-    @last_update.setter
-    def last_update(self, lu):
-        self._last_update = lu
-
-    @property
-    def output_format(self):
-        return self._output_format
-
-    @output_format.setter
-    def output_format(self, output_format):
-        self._output_format = output_format
-
-    @property
-    def profiles(self):
-        return self._profiles
-
-    @profiles.setter
-    def profiles(self, p):
-        self._profiles = p
-
-    @property
-    def entities(self):
-        return self._entities
-
-    @entities.setter
-    def entities(self, ln):
-        self._entities = ln
-
-    @entities.deleter
-    def entities(self):
-        self._entities = []
-
-    @property
-    def failed_entities(self):
-        return self._failed_entities
-
-    def add_failed_entities(self, fl):
-        for p in fl:
-            if len(fl[p]):
-                self._failed_entities.setdefault(p, []).extend(fl[p])
-
-    @failed_entities.deleter
-    def failed_entities(self):
-        self._failed_entities.clear()
-
     def __str__(self):
-        return f'{type(self).__name__}: {self.author} - {self._title}'
+        return f'{type(self).__name__}: {self.author} - {self.title}'
+
+    def __repl__(self):
+        return f'{type(self).__name__}: {self.author} - {self.title}'

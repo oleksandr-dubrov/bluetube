@@ -30,6 +30,7 @@ dependencies = [
   "toml==0.10.1",
   "mutagen==1.45.1",
   "aiohttp==3.9.0",
+  "SQLAlchemy==2.0.34",
 ]
 
 # this section allows to install this package as editable with
@@ -38,6 +39,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "flake8",
+  "pip install Flake8-pyproject",
   "tox",
   "isort",
   "mypy",
@@ -54,3 +56,6 @@ packages = ["bluetube"]  # specify directly since there is a package for cgi in 
 
 [tool.setuptools.dynamic]
 version = {attr = "bluetube.version.__version__"}
+
+[tool.flake8]
+max-line-length = 120

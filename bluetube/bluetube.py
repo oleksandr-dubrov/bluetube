@@ -17,29 +17,27 @@
 
 
 import asyncio
-import copy
 import datetime
 import logging
 import os
 import re
-import shutil
 import signal
 import tempfile
 import time
-from typing import NoReturn
+from pathlib import Path
+from typing import NoReturn, Optional
 
 import aiohttp
 import feedparser
 
-from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli.events import Error, Event, Info, Success, Warn
 from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.eventpublisher import EventPublisher
-from bluetube.feeds import Feeds, SqlExporter
-from bluetube.model import OutputFormatType, Playlist
+from bluetube.model import OutputFormatType, Playlist, Publication
 from bluetube.profiles import Profiles, ProfilesException
+from bluetube.repository import DbConverter, Repository, RepositoryException
 from bluetube.utils import deemojify
 
 
@@ -62,103 +60,113 @@ class Bluetube(EventPublisher):
         self._config_logger(verbose)
         self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
-        self.senders = {}
         self.factory = ComponentFactory()
         self.executor = self.factory.get_command_executor()
         self.inputer = self.factory.get_inputer(yes)
         self.temp_dir = None
-        self.bt_dir = self._get_bt_dir(home_dir)
+        self.bt_dir = self._get_bt_dir(Path(home_dir) if home_dir else None)
 
         self.subscribe(self.factory.get_outputer())
 
-    def add_playlist(self, url, out_format, profiles):
+    def add_playlist(self, url, out_format, profile) -> Optional[Playlist]:
         ''' add a new playlists to RSS feeds '''
         feed_url = self._get_feed_url(url)
         if not feed_url:
-            return
+            self.notify(Error("bad feed URL"))
+            return None
+
+        if (of := OutputFormatType.from_char(out_format)) is None:
+            self.notify(Error("unexpected output format"))
+            return None
+
+        profiles = self._get_profiles(self.bt_dir)
+        if profile not in profiles.get_profiles():
+            self.notify(Error("unknown profile"))  # TODO: does the user know what to do next?
+            return None
+
         f = feedparser.parse(feed_url)
         title = deemojify(f.feed.title)
         author = deemojify(f.feed.author)
-        feeds = Feeds(self.bt_dir)
-        if feeds.has_playlist(author, title):
-            event = Error('playlist exists', title, author)
-        else:
-            feeds.add_playlist(author, title, feed_url, out_format, profiles)
-            event = Success('added', title, author)
-        self.notify(event)
+        playlist = None
+        try:
+            with Repository(self.bt_dir) as repo:
+                db_profile = repo.upsert_profile(profile)
+                db_author = repo.upsert_author(author)
+                playlist = repo.add_playlist(db_author, title, feed_url, of, db_profile)
+                event = Success('added', title, author)
+        except RepositoryException:
+            event = Error("playlist exists", title, author)
+        finally:
+            self.notify(event)
+        return playlist
 
     def list_playlists(self):
         ''' list all playlists in RSS feeds '''
-        feeds = Feeds(self.bt_dir)
-        all_playlists = feeds.get_all_playlists()
-        if len(all_playlists):
-            for a in all_playlists:
-                print(a['author'])
-                for c in a['playlists']:
-                    out_type = OutputFormatType.to_char(c.output_format)
-                    profiles = ', '.join(c.profiles)
-                    o = f"{' ' * 10}{c.title} |{out_type}, {profiles}|"
-                    t = time.strftime('%Y-%m-%d %H:%M:%S',
-                                      time.localtime(c.last_update))
-                    o = f'{o} ({t})'
-                    print(o)
-        else:
-            self.notify(Info('empty database'))
+        with Repository(self.bt_dir) as repo:
+            all_playlists = repo.get_all_playlists()
+            author_playlists = {}
+            for p in all_playlists:
+                author_playlists.setdefault(p.author.name, []).append(p)
 
-    def remove_playlist(self, author, title):
+            if len(author_playlists):
+                for a, p in author_playlists.items():
+                    print(a)
+                    for c in p:
+                        out_type = OutputFormatType.to_char(c.output_format)
+                        o = f"{' ' * 10}{c.title} |{out_type}, {c.profile.name}|"
+                        t = time.strftime('%Y-%m-%d %H:%M:%S',
+                                        time.localtime(c.last_update))
+                        o = f'{o} ({t})'
+                        print(o)
+            else:
+                self.notify(Info('empty database'))
+
+    def remove_playlist(self, author: str, title: str) -> None:
         ''' remove the playlist of the given author'''
-        feeds = Feeds(self.bt_dir)
-        if feeds.has_playlist(author, title):
-            feeds.remove_playlist(author, title)
-        else:
-            self.notify('playlist not found', title, author)
+        with Repository(self.bt_dir) as repo:
+            author = repo.get_author(author)
+            if author:
+                playlist = repo.get_playlist(author, title)
+                if playlist:
+                    repo.remove_playlist(playlist)
+                    return
+        self.notify('playlist not found', title, author)
 
     def run(self):
         ''' The main method. It does everything.'''
 
         self._debug(f'Bluetube home directory: {self.bt_dir}.')
 
-        # self._check_media_player()
+        self.migrate_to_db()
 
-        feed = Feeds(self.bt_dir)
-        pls = self._get_list(feed)
+        self._check_media_player()
 
-        if len(pls):
-            self.notify(Success('feeds updated'))
-        else:
-            self.notify(Info('empty database'))
-            return
+        with Repository(self.bt_dir) as repo:
+            pubs = self.update(repo)
 
-        profiles = self._get_profiles(self.bt_dir)
+            if len(pubs):
+                self.notify(Success('feeds updated'))
+            else:
+                self.notify(Info('empty database'))
+                return
 
-        self._fetch_temp_dir()
+            profiles = self._get_profiles(self.bt_dir)
 
-        pls = self._process_playlists(pls)
+            self._fetch_temp_dir()
 
-        for pl in pls:
-            if not self._check_profiles(pl, profiles):
-                continue
+            self.choose_publications(pubs)
 
-            # combine entities (links with metadata to download) with profiles
-            pl.entities = {profile: copy.deepcopy(pl.entities)
-                           for profile in pl.profiles}
+        with Repository(self.bt_dir) as repo:
 
-            # prepend previously failed entities
-            for pr in pl.entities:
-                if pr in pl.failed_entities:
-                    pl.entities[pr] = pl.failed_entities[pr] + pl.entities[pr]
-                    del pl.failed_entities[pr]
 
-            self._debug(f"process {pl}")
+            self._download_list(pubs[0], profiles)
 
-            self._download_list(pl, profiles)
+            # self._convert_list(pl, profiles)
 
-            self._convert_list(pl, profiles)
+            # self._send_list(pl, profiles)
 
-            self._send_list(pl, profiles)
-
-        feed.set_all_playlists(self._prepare_list(pls))
-        feed.sync()
+            # repo.set_all_playlists(self._prepare_list(pubs))
+            # repo.sync()
         self._return_temp_dir()
 
     def send(self):
@@ -220,7 +228,7 @@ class Bluetube(EventPublisher):
                   ' -d N (to set last updated date to N days before)'
             self.notify(Warn(msg))
 
-        feed = Feeds(self.bt_dir)
+        feed = Repository(self.bt_dir)
         if feed.has_playlist(author, title):
             pl = feed.get_playlist(author, title)
             assert pl, 'no playlist'
@@ -252,13 +260,6 @@ class Bluetube(EventPublisher):
                 '/bluetube/blob/master/README.md']
         self.executor.open_url(''.join(link))
 
-    def export_db(self):
-        '''export DB into the bluetube.sql file for SQLite3'''
-        feed = Feeds(self.bt_dir)
-        exporter = SqlExporter(feed.get_all_playlists())
-        with open('bluetube.sql', 'w') as f:
-            exporter.export(f)
-
     def _send_all_in_dir(self, sender):
         '''send all files in the given directory'''
         sent = []
@@ -275,7 +276,7 @@ class Bluetube(EventPublisher):
             sender.disconnect()
         return sent
 
-    def _get_profiles(self, bt_dir):
+    def _get_profiles(self, bt_dir: Path) -> Profiles:
         def get_instance():
             try:
                 return Profiles(bt_dir)
@@ -296,26 +297,42 @@ class Bluetube(EventPublisher):
                     return profiles
             raise ProfilesException('invalid profile')
 
-    def _get_list(self, feed: Feeds) -> list[Playlist]:
+    def migrate_to_db(self):
+        """
+        Migrate all data from JSON to DB tables
+        if not DB exists.
+        """
+        sqlite_file = self.bt_dir / Repository.SQLITE_FILE
+        if not sqlite_file.exists():
+            exporter = DbConverter(self.bt_dir)
+            exporter.migrate()
+
+    def update(self, repo: Repository) -> list[Playlist]:
         '''Fetch and parse RSS data for all lists.'''
-        pls = feed.get_all_playlists()
+        authors = repo.get_all_authors()
+        publications = []
 
         async def task(session, author):
             '''task that fetches RSS for the author'''
-            events: list[Event] = [Info(author['author'], capture='RSS')]
-            for pl in author['playlists']:
+            events: list[Event] = [Info(author.name, capture='RSS')]
+            nonlocal publications
+            for pl in author.playlists:
                 events.append(Info('feed is fetching',
                                    pl.title, capture='RSS'))
                 response = await self._fetch_rss(session, pl)
-                pl.feedparser_data = feedparser.parse(response)
-                pl.author = author['author']
+                rss_response = feedparser.parse(response)
+                new_entries = [e for e in rss_response.entries
+                               if pl.last_update < int(time.mktime(e['published_parsed']))]
+                added = repo.add_publications(pl, new_entries)
+                publications += added
+
             return events
 
         async def process_tasks():
             '''process all async tasks'''
             timeout = aiohttp.ClientTimeout(total=60)
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                return await asyncio.gather(*[task(session, a) for a in pls],
+                return await asyncio.gather(*[task(session, a) for a in authors],
                                             return_exceptions=False)
 
         self.notify(Info('Updating feeds...'))
@@ -330,8 +347,7 @@ class Bluetube(EventPublisher):
             self.notify(Error('no internet'))
             os._exit(1)
 
-        pls = [pl for a in pls for pl in a['playlists']]  # make the list flat
-        return pls
+        return publications
 
     async def _fetch_rss(self, session, pl):
         '''get URLs from the RSS
@@ -343,35 +359,28 @@ class Bluetube(EventPublisher):
 
         return response
 
-    def _process_playlists(self, pls):
-        '''ask the user what to do with the entities'''
-        ret = []
-        for pl in pls:
-            ret.append(self._process_playlist(pl))
-        return ret
-
-    def _download_list(self, pl, profiles):
+    def _download_list(self, pub, profiles):
         # keep path to successfully downloaded files for all profiles here
         downloader = self.factory.get_downloader(self, self.temp_dir)
 
-        for profile, entities in pl.entities.items():
-            if pl.output_format is OutputFormatType.audio:
-                dl_op = profiles.get_audio_options(profile)
-            elif pl.output_format is OutputFormatType.video:
-                dl_op = profiles.get_video_options(profile)
-            else:
-                assert 0, 'unexpected output format type'
 
-            s, f = downloader.download(entities,
-                                       pl.output_format,
-                                       dl_op)
-            pl.entities[profile] = s
-            if f:
-                ens = [e.title for e in f]
-                ens = ', '.join(ens)
-                event = Error('failed to download', ens, profile)
-                self.notify(event)
-            pl.add_failed_entities({profile: f})
+        if pub.playlist.output_format is OutputFormatType.audio:
+            dl_op = profiles.get_audio_options(pub.playlist.profile)
+        elif pub.playlist.output_format is OutputFormatType.video:
+            dl_op = profiles.get_video_options(pub.playlist.profile)
+        else:
+            assert 0, 'unexpected output format type'
+
+        downloader.download(pub,
+                             pub.playlist.output_format,
+                            dl_op)
+        # pub.entities[profile] = s
+        # if f:
+        #     ens = [e.title for e in f]
+        #     ens = ', '.join(ens)
+        #     event = Error('failed to download', ens, profile)
+        #     self.notify(event)
+        # pub.add_failed_entities({profile: f})
 
     def _convert_list(self, pl, profiles):
         # convert video, audio has been converted by the downloader
@@ -389,79 +398,6 @@ class Bluetube(EventPublisher):
                     pl.entities[profile] = s
                     if f and Inputer.do_continue():
                         return
-
-    def _send_list(self, pl, profiles):
-        for profile, entities in pl.entities.items():
-            s_op = profiles.get_send_options(profile)
-            links = [e['link'] for e in entities]
-            if not s_op or not links:
-                continue
-            processed = []
-
-            # send via bluetooth
-            device_id = s_op.get('bluetooth_device_id')
-            if device_id:
-                sent = self._send_bt(device_id, links)
-                processed.append(sent)
-
-            # move to local directory
-            local_path = s_op.get('local_path')
-            if local_path:
-                try:
-                    os.makedirs(local_path,
-                                Bluetube.ACCESS_MODE,
-                                exist_ok=True)
-                except PermissionError as e:
-                    self.notify(Error(e))
-                    continue
-                copied = self._copy_to_local_path(local_path, links)
-                processed.append(copied)
-
-            for en in entities:
-                lnk = en['link']
-                if all([lnk in pr for pr in processed]):
-                    try:
-                        os.remove(os.path.join(self.temp_dir, lnk))
-                    except FileNotFoundError:
-                        pass  # ignore this exception
-                else:
-                    self._debug(f'{lnk} has not been sent')
-
-    def _send_bt(self, device_id, links):
-        '''sent all files defined by the links
-        to the device defined by device_id'''
-        sent = []
-        sender = self._get_sender(device_id)
-        if sender and sender.found and sender.connect():
-            sent += sender.send(links)
-            sender.disconnect()
-        return sent
-
-    def _copy_to_local_path(self, local_path, links):
-        '''copy files defined by links to the local path'''
-        copied = []
-        for ln in links:
-            self._debug(f'copying {ln} to {local_path}')
-            try:
-                shutil.copy2(os.path.join(self.temp_dir, ln), local_path)
-                copied.append(ln)
-            except shutil.SameFileError as e:
-                self.notify(Error(e))
-        return copied
-
-    def _get_sender(self, device_id):
-        '''return a sender from the cache for a device ID if possible
-        or create a new one'''
-        if device_id in self.senders:
-            return self.senders[device_id]
-        else:
-            sender = BluetoothClient(device_id, self.temp_dir)
-            if not sender.found:
-                self.notify(Error('device not found'))
-                return None
-            else:
-                self.senders[device_id] = sender
-                return sender
 
     def _check_profiles(self, pl, profiles):
         '''check if profiles of the playlist do exist'''
@@ -565,25 +501,18 @@ class Bluetube(EventPublisher):
             del pl.author
         return [{'author': a, 'playlists': ret[a]} for a in ret]
 
-    def _process_playlist(self, pl):
-        '''process the playlist'''
-        entities = []
-        channel_has_update = False
-        new_last_update = last_update = pl.last_update
-        assert pl.feedparser_data is not None, 'fetch RSS first'
-        for e in pl.feedparser_data.entries:
-            e_update = time.mktime(e['published_parsed'])
-            if last_update < e_update:
-                if not channel_has_update:
-                    self.notify(Info(pl.author))
-                    channel_has_update = True
-                if self.inputer.ask(e):
-                    entities.append(e)
-                if new_last_update < e_update:
-                    new_last_update = e_update
-        pl.last_update = new_last_update
-        pl.entities = entities
-        return pl
+    def choose_publications(self, pubs: list[Publication]):
+        '''ask the user what to do with the publications'''
+        chosen_pubs = []
+        for p in pubs:
+            # copy some fields for backward compatibility with the inputer
+            entry = {"link": p.link,
+                     "summary": p.description,
+                     "published_parsed": p.published,
+                     "title": p.title}
+            if self.inputer.ask(entry):
+                chosen_pubs.append(p)
+        return chosen_pubs
 
     def _fetch_temp_dir(self):
         '''fetch a temporal directory;
@@ -609,10 +538,12 @@ class Bluetube(EventPublisher):
                 event = Warn('\n  '.join(os.listdir(self.temp_dir)))
                 self.notify(event)
 
-    def _get_bt_dir(self, home_dir):
-        bt_dir = home_dir if home_dir else Bluetube.HOME_DIR
-        if not os.path.exists(bt_dir) or not os.path.isdir(bt_dir):
-            os.makedirs(bt_dir, Bluetube.ACCESS_MODE)
+    def _get_bt_dir(self, home_dir: Optional[Path]):
+        bt_dir = home_dir if home_dir else Path(Bluetube.HOME_DIR)
+        if bt_dir.is_dir():
+            bt_dir.mkdir(mode=Bluetube.ACCESS_MODE, exist_ok=True)
+        else:
+            self.notify(Error(f"{bt_dir} is not a directory"))
         return bt_dir
 
     def _config_logger(self, verbose: bool) -> None:

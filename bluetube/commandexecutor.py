@@ -30,7 +30,7 @@ class CommandExecutor(object):
 
     @cache
     def call(self, args, cwd=None,
-             suppress_stdout=False, suppress_stderr=False):
+             suppress_stdout=False, suppress_stderr=False) -> int:
         if cwd is None:
             cwd = os.getcwd()
         call_env = os.environ

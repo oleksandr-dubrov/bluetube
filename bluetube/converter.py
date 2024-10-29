@@ -1,23 +1,21 @@
-'''
+"""
 A video converter.
-'''
-
-
-import os
+"""
 
 from bluetube.cli.events import Error, Info, Warn
 from bluetube.cli.inputer import Inputer
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.eventpublisher import EventPublisher
+from bluetube.model import Publication, PublicationStatus
 
 
 class FfmpegConverter(object):
-    '''
+    """
     This class converts media by ffmpeg installed in the system.
-    '''
-    NAME = 'ffmpeg'
+    """
+    NAME = "ffmpeg"
     # keep files that failed to be converted here
-    NOT_CONV_DIR = '[not yet converted files]'
+    NOT_CONV_DIR = "[not yet converted files]"
 
     def __init__(self, executor: CommandExecutor,
                  publisher: EventPublisher,
@@ -26,51 +24,33 @@ class FfmpegConverter(object):
         self._executor = executor
         self._temp_dir = temp_dir
 
-    def convert(self, entities, configs):
-        '''convert all videos in the playlist,
-        return a list of succeeded an and a list of failed links'''
+    def convert(self, pub: Publication, configs) -> Publication:
+        """Convert publication to disired format."""
 
-        success, failure = [], []
-        if not self._check_video_converter():
-            self._publisher.notify(Error('converter not found',
-                                   FfmpegConverter.NAME))
-            failure = [en for en in entities]
-            return success, failure
-
-        options = ('-y',  # overwrite output files
-                   '-hide_banner',)
-        codecs_options = configs.get('codecs_options', '')
+        options = ("-y",  # overwrite output files
+                   "-hide_banner",)
+        codecs_options = configs.get("codecs_options", "")
         codecs_options = tuple(codecs_options.split())
-        output_format = configs['output_format']
-        for en in entities:
-            orig = en['link']
-            new = os.path.splitext(orig)[0] + '.' + output_format
-            if orig == new:
-                self._publisher.notify(Warn('conversion is not needed'))
-                success.append(en)
-                continue
-            args = (FfmpegConverter.NAME,) + ('-i', orig) + options + \
-                codecs_options + (new,)
-            if not 1 == self._executor.call(args, cwd=self._temp_dir):
-                os.remove(os.path.join(self._temp_dir, orig))
-                en['link'] = new
-                success.append(en)
-            else:
-                failure.append(en)
-                d = os.path.join(self._temp_dir, FfmpegConverter.NOT_CONV_DIR)
-                os.makedirs(d, FfmpegConverter.ACCESS_MODE, exist_ok=True)
-                os.rename(orig, os.path.join(d, os.path.basename(orig)))
-                self._publisher.notify(Error(os.path.basename(orig)))
-                self._publisher.notify(
-                    Info(f'Command: \n{" ".join(args)}'))
-                self._publisher.notify(Info(f'Check {d} after '
-                                            f'the script is done.'))
-        return success, failure
+        output_format = configs["output_format"]
 
-    def _check_video_converter(self):
-        if not self._executor.does_command_exist(FfmpegConverter.NAME,
-                                                 dashes=1):
-            self._publisher.notify(Error('converter not found',
-                                         FfmpegConverter.NAME))
-            return Inputer.do_continue()
-        return True
+        if not (pub.local_path and pub.local_path.is_file()):
+            self._publisher(Error(f"file not found for {pub.title}; nothing to convert"))
+            pub.status = PublicationStatus.failed
+        else:
+            new_name = pub.local_path.name.split(".")[0] + "." + output_format
+            new_local_path = pub.local_path.with_name(new_name)
+            args = (FfmpegConverter.NAME,) + ("-i", pub.local_path) + options + codecs_options + (new_local_path,)
+            err = self._executor.call(args, cwd=self._temp_dir)
+            if err:
+                pub.status = PublicationStatus.failed
+            else:
+                pub.local_path = new_local_path
+                pub.status = PublicationStatus.converted
+        return pub
+
+    def is_ready(self) -> bool:
+        """Check if the converter exists."""
+        err = self._executor.does_command_exist(FfmpegConverter.NAME, dashes=1)
+        if err:
+            self._publisher.notify(Error("converter not found", FfmpegConverter.NAME))
+        return not bool(err)

@@ -2,6 +2,7 @@ from bluetube.cli.cli import CLI
 from bluetube.cli.events import Event, Success
 
 
+# TODO: make ABC
 class EventListener(object):
     '''An event listener interface.'''
 

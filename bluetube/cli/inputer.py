@@ -1,3 +1,4 @@
+import datetime
 from bluetube.cli.bcolors import Bcolors
 from bluetube.cli.cli import CLI
 from bluetube.cli.events import INDENTATION, Event
@@ -61,12 +62,13 @@ class Inputer(CLI):
 
     def _make_question_to_ask(self, feed_entry):
         pub = feed_entry['published_parsed']
+        dt = datetime.datetime.fromtimestamp(feed_entry['published_parsed'])
         params = {'ind': 2 * INDENTATION * ' ',
                   'tit': feed_entry['title'],
-                  'h': pub.tm_hour,
-                  'min': pub.tm_min,
-                  'd': pub.tm_mday,
-                  'mon': pub.tm_mon}
+                  'h': dt.hour,
+                  'min': dt.min,
+                  'd': dt.day,
+                  'mon': dt.month}
         msg = '{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params)
         question = '{}\n'.format(msg)
         question += ('{b}d{e}ownload | '

@@ -18,9 +18,13 @@
 import copy
 import importlib.resources as pkg_resources
 import os
+from pathlib import Path
 import re
+from typing import Any, Optional
 
 import toml
+
+from bluetube.model import Profile
 
 
 class Profiles(object):
@@ -32,7 +36,7 @@ class Profiles(object):
     BASE_PROFILE = '__download__'
     BT_DEVICE_ID = re.compile('^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$')
 
-    def __init__(self, bt_dir):
+    def __init__(self, bt_dir: Path):
         path = Profiles.create_profiles_if_not_exist(bt_dir)
         configs = self._read_file(path)
         base = configs[Profiles.BASE_PROFILE]
@@ -44,12 +48,12 @@ class Profiles(object):
             self._profiles[c] = b
 
     @staticmethod
-    def create_profiles_if_not_exist(bt_dir):
+    def create_profiles_if_not_exist(bt_dir: Path) -> Path:
         '''create a profiles file
         from the provided template - profiles.toml
         if it does not exist'''
-        path = os.path.join(bt_dir, Profiles.PROFILES_NAME)
-        if not os.path.exists(path):
+        path = bt_dir / Profiles.PROFILES_NAME
+        if not path.exists():
             # probably the script has just been installed
             # create the file from the template
             template = pkg_resources.read_text(__package__,
@@ -68,16 +72,16 @@ class Profiles(object):
         except toml.TomlDecodeError:
             raise ProfilesException('Error while decoding TOML')
 
-    def get_audio_options(self, profile):
+    def get_audio_options(self, profile: Profile) -> Optional[dict[Any, Any]]:
         '''get options for audio'''
-        if profile in self._profiles:
-            return self._profiles[profile].get('audio', {})
+        if profile.name in self._profiles:
+            return self._profiles[profile.name].get('audio', {})
         return None
 
-    def get_video_options(self, profile):
+    def get_video_options(self, profile: Profile) -> Optional[dict[Any, Any]]:
         '''get options for video'''
-        if profile in self._profiles:
-            return self._profiles[profile].get('video', {})
+        if profile.name in self._profiles:
+            return self._profiles[profile.name].get('video', {})
         return None
 
     def get_convert_options(self, profile):
