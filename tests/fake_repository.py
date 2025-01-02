@@ -82,3 +82,13 @@ class FakeRepository:
     def get_all_publications(self):
         self.publications.sort(key=lambda x: x.published, reverse=True)
         return self.publications
+
+    def is_empty(self) -> bool:
+        return len(self.authors) == 0
+
+
+class EmptyFakeRepository(FakeRepository):
+
+    def __init__(self):
+        self.authors = {}
+        self.publications = []

@@ -159,6 +159,10 @@ class Repository(object):
         else:
             return self.add_profile(name)
 
+    def is_empty(self) -> bool:
+        stmt = select(Author).options(joinedload("*"))
+        return self._session.scalars(stmt).all().count() == 0
+
     def create_schema(self) -> None:
         """Create a DB schema if it does not exist."""
         mapper_registry.metadata.create_all(self._engine)

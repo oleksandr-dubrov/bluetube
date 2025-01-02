@@ -20,7 +20,7 @@ from bluetube.commandexecutor import cache
 from bluetube.model import OutputFormatType, Playlist, PublicationStatus
 from bluetube.repository import Repository
 from tests.fake_db import FAKE_DB, NEW_LINKS
-from tests.fake_repository import FakeRepository
+from tests.fake_repository import EmptyFakeRepository, FakeRepository
 
 
 def read_mocked_data():
@@ -216,14 +216,12 @@ class TestBluetube(unittest.TestCase):
         # check all DB statuses
         self.assertTrue(all(p.status is PublicationStatus.sent for p in self.fake_repo.publications))
 
-    @unittest.skip
     def test_run_download_failed(self):
         '''failed all downloads'''
-        self.mock_repo(FAKE_DB)
+        self.mock_repo()
         self.mock_cli()
         self.sut.factory._executor = MagicMock()
-        self.sut.factory._executor.call.side_effect = \
-            lambda *args, **kwargs: 1  # @UnusedVariable
+        self.sut.factory._executor.call.side_effect = lambda *args, **kwargs: 1
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
         self.mock_remote_data()
@@ -232,7 +230,7 @@ class TestBluetube(unittest.TestCase):
         self.sut.run()
 
         self.assertEqual(0, self.nbr_downloaded)
-        self.assertEqual(NEW_LINKS + 2,
+        self.assertEqual(NEW_LINKS,
                          self.sut.factory._executor.call.call_count,
                          'download does not cache failed attempts,'
                          'so it should called for every link in every profile')
@@ -241,7 +239,9 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(0, self.nbr_sent)
         self.assertEqual(0, mock_copy.call_count)
 
-    @unittest.skip
+        # check all DB statuses
+        self.assertTrue(all(p.status is PublicationStatus.failed for p in self.fake_repo.publications))
+
     @patch('bluetube.componentfactory.Inputer')
     def test_run_nothing_selected(self, cli):
         '''no selected videos to process'''
@@ -249,7 +249,7 @@ class TestBluetube(unittest.TestCase):
         self.sut.inputer = cli
         self.sut.outputer = MagicMock()
 
-        mdb = self.mock_repo(FAKE_DB)
+        mdb = self.mock_repo()
         self.mock_executor()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -265,16 +265,18 @@ class TestBluetube(unittest.TestCase):
         bt.assert_not_called()
         self.assertEqual(mock_send.call_count, 0)
 
-    @unittest.skip
+        # check all DB statuses
+        self.assertTrue(all(p.status is PublicationStatus.remote for p in self.fake_repo.publications))
+
     def test_empty_DB(self):
         '''inform about the empty DB and do nothing'''
-        mdb = self.mock_repo({})
         self.mock_executor()
         _, out = self.mock_cli()
 
-        self.sut.run()
+        empty_repo = EmptyFakeRepository()
+        with patch('bluetube.bluetube.Repository', return_value=empty_repo):
+            self.sut.run()
 
-        mdb.assert_called_once()
         self.assertEqual(2, out.update.call_count)  # 1st is 'Updating feeds.'
         self.assertEquals('empty database', out.update.call_args[0][0].msg)
         out.feeds_updated.assert_not_called()
@@ -282,12 +284,11 @@ class TestBluetube(unittest.TestCase):
     @unittest.skip
     def test_add_playlist(self):
         self.mock_cli()
-        d = {'feeds': []}
-        self.mock_repo(FAKE_DB, d)
+        self.mock_repo()
 
         url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
         out_format = 'video'
-        profiles = ['profile_1', ]
+        profiles = 'local'
 
         a = t = 'ТаТоТаке'
         em = "\U0001F612"
@@ -301,7 +302,7 @@ class TestBluetube(unittest.TestCase):
                                          'title': t+em})})
             with patch('feedparser.parse', return_value=parsed):
                 self.sut.add_playlist(url, out_format, profiles)
-                self.assertTrue(self.check_author_title(d['feeds'],
+                self.assertTrue(self.check_author_title(self.fake_repo,
                                                         a+"□",
                                                         t+"□"))
 

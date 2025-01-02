@@ -126,13 +126,15 @@ class Bluetube(EventPublisher):
         self._check_media_player()
 
         with Repository(self.bt_dir) as repo:
+
+            if repo.is_empty():
+                self.notify(Info('empty database'))
+                return
+
             pubs = self.update(repo)
 
             if len(pubs):
                 self.notify(Success('feeds updated'))
-            # else:
-            #     self.notify(Info('empty database'))
-            #     return
 
             profiles = self._get_profiles(self.bt_dir)
 
