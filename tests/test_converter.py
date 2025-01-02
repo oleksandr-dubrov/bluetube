@@ -1,4 +1,3 @@
-import os
 import shutil
 import tempfile
 import time
@@ -45,7 +44,12 @@ class TestConverter(TestCase):
 
     def make_publications(self):
         pl = self.repo.get_all_playlists()[0]
-        pub = FeedParserDict({"title": "title", "link": "link", "description": "description", "published_parsed": time.gmtime(1), "id": "id", "yt_videoid": 123})
+        pub = FeedParserDict({"title": "title",
+                              "link": "link",
+                              "description": "description",
+                              "published_parsed": time.gmtime(1),
+                              "id": "id",
+                              "yt_videoid": 123})
         return self.repo.add_publications(pl, [pub])
 
     def test_no_local_path_faled(self):

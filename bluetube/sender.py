@@ -32,7 +32,7 @@ def send(pub: Publication, configs) -> Publication:
             os.makedirs(local_path,
                         ACCESS_MODE,
                         exist_ok=True)
-        except PermissionError as e:
+        except PermissionError:
             # notify(Error(e))  #TODO fix
             pass
         _move_to_local_path(local_path, pub.local_path)
@@ -42,6 +42,7 @@ def send(pub: Publication, configs) -> Publication:
         return pub
 
     return pub
+
 
 def _send_bt(device_id, links):
     '''sent all files defined by the links
@@ -76,6 +77,6 @@ def _move_to_local_path(local_path, pub_local_path):
     # self._debug(f'copying {pub_local_path} to {local_path}')
     try:
         shutil.move(pub_local_path, local_path)
-    except shutil.SameFileError as e:
+    except shutil.SameFileError:
         # self.notify(Error(e))  # TODO: fix
         pass

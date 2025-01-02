@@ -4,7 +4,6 @@ import time
 import unittest
 from pathlib import Path
 
-import sqlalchemy
 from feedparser.util import FeedParserDict
 
 from bluetube.model import OutputFormatType
@@ -38,9 +37,14 @@ class TestPlaylist(unittest.TestCase):
         return author, self.add_playlist(url, author, profile)
 
     def build_publication(self, published):
-        return FeedParserDict({"title": "title", "link": "link", "description": "description", "published_parsed": time.gmtime(published), "id": "id", "yt_videoid": "123"})
+        return FeedParserDict({"title": "title",
+                               "link": "link",
+                               "description": "description",
+                               "published_parsed": time.gmtime(published),
+                               "id": "id",
+                               "yt_videoid": "123"})
 
-    def test_unique_by_url(self): 
+    def test_unique_by_url(self):
         author = self.sut.add_author(name="author_1")
         profile = self.sut.add_profile("profile_1")
         url = "http://example.com/rss"
@@ -71,7 +75,6 @@ class TestPlaylist(unittest.TestCase):
         authors = self.sut.get_all_authors()
         self.assertFalse(len(authors))
 
-
     def test_get_publication_sorted(self):
         _, pl1 = self.make_author_playlist(author="author_1")
         _, pl2 = self.make_author_playlist(author="author_2")
@@ -96,4 +99,3 @@ class TestPlaylist(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

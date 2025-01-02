@@ -12,6 +12,7 @@ from tests.fake_db import FAKE_DB
 def get_id():
     return random.randrange(1, 9999)
 
+
 class FakeRepository:
 
     def __init__(self):
@@ -55,7 +56,7 @@ class FakeRepository:
         pass
 
     def get_all_authors(self) -> list[Author]:
-      return list(self.authors.values())
+        return list(self.authors.values())
 
     def add_publications(self, playlist: Playlist, publications: list[FeedParserDict]) -> list[Publication]:
         """Add publications to the playlist."""

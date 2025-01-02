@@ -123,9 +123,6 @@ class TestBluetube(unittest.TestCase):
         self.args.append(str_args)
 
         if args[0][0] in ['youtube-dl', 'yt-dlp']:
-            fake_name = args[0][-1].split('=')[1]
-            # open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
-            #                   fake_name), 'w').close()
             self.nbr_downloaded += 1
         elif args[0][0] == 'ffmpeg':
             open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
@@ -350,11 +347,12 @@ class TestBluetube(unittest.TestCase):
 
     class TestEventListener(EventListener):
         events = []
+
         def update(self, event):
             self.events.append(event)
+
         def reset(self):
             self.events.clear()
-
 
     @patch("feedparser.parse")
     def test_add_remove_playlist(self, mocked_feed):
@@ -389,7 +387,7 @@ class TestBluetube(unittest.TestCase):
 
 class TestBluetubeUnit(unittest.TestCase):
 
-    tmp_dir: Path |None = None
+    tmp_dir: Path | None = None
 
     def mock_remote_data(self):
         '''mock remote data returned'''
@@ -424,7 +422,11 @@ class TestBluetubeUnit(unittest.TestCase):
 
     def make_publications(self):
         pl = self.repo.get_all_playlists()[0]
-        pub = FeedParserDict({"title": "title", "link": "link", "description": "description", "published_parsed": time.gmtime(1), "id": "id", "yt_videoid": 123})
+        pub = FeedParserDict({"title": "title",
+                              "link": "link",
+                              "description": "description",
+                              "published_parsed": time.gmtime(1),
+                              "id": "id", "yt_videoid": 123})
         return self.repo.add_publications(pl, [pub])
 
     def test_update(self):
@@ -438,7 +440,7 @@ class TestBluetubeUnit(unittest.TestCase):
         self.assertTrue(all(p.playlist_id == 1 for p in pubs))
 
     def test_choose_publications(self):
-        self.sut.inputer._yes = True # set yes to all
+        self.sut.inputer._yes = True  # set yes to all
         pubs = self.make_publications()
         pubs = self.sut.choose_publications(pubs)
         self.assertEqual(1, len(pubs))
@@ -458,8 +460,6 @@ class TestBluetubeUnit(unittest.TestCase):
         for u in urls:
             feed = self.sut._get_feed_url(u)
             self.assertTrue(exp_id in feed, f"unexpected feed for {u}")
-
-
 
 
 if __name__ == "__main__":

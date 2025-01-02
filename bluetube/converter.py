@@ -2,8 +2,7 @@
 A video converter.
 """
 
-from bluetube.cli.events import Error, Info, Warn
-from bluetube.cli.inputer import Inputer
+from bluetube.cli.events import Error
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.eventpublisher import EventPublisher
 from bluetube.model import Publication, PublicationStatus

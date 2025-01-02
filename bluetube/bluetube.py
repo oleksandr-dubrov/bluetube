@@ -1,21 +1,3 @@
-'''
-    This file is part of Bluetube.
-
-    Bluetube is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Bluetube is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
-'''
-
-
 import asyncio
 import datetime
 import logging
@@ -31,7 +13,6 @@ from typing import NoReturn, Optional
 import aiohttp
 import feedparser
 
-from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli.events import Error, Event, Info, Success, Warn
 from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
@@ -119,9 +100,9 @@ class Bluetube(EventPublisher):
                     for c in p:
                         out_type = OutputFormatType.to_char(c.output_format)
                         o = f"{' ' * 10}{c.title} |{out_type}, {c.profile.name}|"
-                        last_update = c.publications[0].published if c.publications else 0 # add pubs after the last one
-                        t = time.strftime('%Y-%m-%d %H:%M:%S',
-                                        time.localtime(last_update))
+                        # add pubs after the last one
+                        last_update = c.publications[0].published if c.publications else 0
+                        t = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(last_update))
                         o = f'{o} ({t})'
                         print(o)
             else:
@@ -312,7 +293,8 @@ class Bluetube(EventPublisher):
                 events.append(Info('feed is fetching', pl.title, capture='RSS'))
                 response = await self._fetch_rss(session, pl)
                 rss_response = feedparser.parse(response)
-                last_update = pl.publications[0].published if pl.publications else 0 # add pubs after the last one
+                # add pubs after the last one
+                last_update = pl.publications[0].published if pl.publications else 0
                 new_entries = [e for e in rss_response.entries
                                if last_update < int(time.mktime(e['published_parsed']))]
                 added = repo.add_publications(pl, new_entries)
@@ -408,7 +390,7 @@ class Bluetube(EventPublisher):
                 pass  # ignore this exception
 
             pub.status = PublicationStatus.sent
-            pub.local_path = None # TODO or set the destination path
+            pub.local_path = None  # TODO or set the destination path
 
     def _copy_to_local_path(self, dest, src) -> bool:
         '''copy files defined by links to the local path'''

@@ -1,32 +1,10 @@
-'''
-
-    This file is part of Bluetube.
-
-    Bluetube is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Bluetube is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
-
-'''
-
 from enum import Enum, unique
 from pathlib import Path
 from typing import List, Optional
 
-from sqlalchemy import (Column, ForeignKey, Integer, String, Table,
-                        TypeDecorator)
+from sqlalchemy import ForeignKey, String, TypeDecorator
 from sqlalchemy.orm import Mapped  # TODO: isort it properly
-from sqlalchemy.orm import (DeclarativeBase, mapped_column, registry,
-                            relationship)
-from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import mapped_column, registry, relationship
 
 mapper_registry = registry()
 
@@ -102,13 +80,12 @@ class Author:
     playlists: Mapped[List["Playlist"]] = relationship(back_populates="author", cascade="all, delete-orphan")
 
 
-
 @mapper_registry.mapped
 class Profile:
     """
     Profile is a name of downloading and converting configurations.
     """
-    
+
     __tablename__ = "profile"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -157,7 +134,8 @@ class Playlist:
     url: Mapped[str] = mapped_column(String(128), unique=True)
     output_format: Mapped[OutputFormatType]
     profile: Mapped[Profile] = relationship()
-    publications: Mapped[List[Publication]] = relationship(back_populates="playlist", order_by="desc(Publication.published)")
+    publications: Mapped[List[Publication]] = relationship(back_populates="playlist",
+                                                           order_by="desc(Publication.published)")
 
     def set_output_format_type(self, output_format_type):
         if isinstance(output_format_type, str):

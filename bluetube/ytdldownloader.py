@@ -84,7 +84,7 @@ class YoutubeDlDownloader(object):
         try:
             if ext == ".mp3":
                 audio = mp3.MP3(pub.local_path)
-                audio["TPE1"] = id3.TPE1(text=pub.playlist.author.name) # not bounded
+                audio["TPE1"] = id3.TPE1(text=pub.playlist.author.name)
                 audio["TIT2"] = id3.TIT2(text=pub.title)
                 audio["COMM"] = id3.COMM(text=pub.description[:256])
                 audio.save()

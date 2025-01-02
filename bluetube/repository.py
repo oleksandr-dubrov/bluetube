@@ -1,40 +1,21 @@
 import dbm
 import functools
 import logging
-import os
 import shelve
 import time
 from pathlib import Path
-from typing import Any, Optional, final
+from typing import Optional, final
 
 import sqlalchemy
 from feedparser.util import FeedParserDict
-from sqlalchemy import asc, create_engine, desc, select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import asc, create_engine, select
+from sqlalchemy.orm import Session, joinedload
 
 from bluetube.model import (Author, OutputFormatType, Playlist, Profile,
                             Publication, PublicationStatus, mapper_registry)
-from bluetube.version import __version__
-
-'''
-    This file is part of Bluetube.
-
-    Bluetube is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Bluetube is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Bluetube.  If not, see <https://www.gnu.org/licenses/>.
-'''
-
 
 logger = logging.getLogger(__name__)
+
 
 class RepositoryException(Exception):
     """Repository exception"""
@@ -78,12 +59,18 @@ class Repository(object):
         self._session = None
 
     @catch_db_exception
-    def add_playlist(self, author: Author, title: str, url: str, output_format: OutputFormatType, profile: Profile) -> Playlist:
-        pl = Playlist(author=author,
-                        title=title,
-                        url=url,
-                        output_format=output_format,
-                        profile=profile)
+    def add_playlist(self,
+                     author: Author,
+                     title: str,
+                     url: str,
+                     output_format: OutputFormatType,
+                     profile: Profile) -> Playlist:
+        pl = Playlist(
+            author=author,
+            title=title,
+            url=url,
+            output_format=output_format,
+            profile=profile)
         self._session.add(pl)
         self._session.commit()
         return pl
@@ -150,7 +137,10 @@ class Repository(object):
         self._session.commit()
 
     def get_all_publications(self):
-        stmt = select(Publication).join(Publication.playlist).join(Playlist.author).order_by(Author.name).order_by(asc(Publication.published))
+        stmt = select(Publication).join(Publication.playlist
+                                        ).join(Playlist.author
+                                               ).order_by(Author.name
+                                                          ).order_by(asc(Publication.published))
         return self._session.scalars(stmt).all()
 
     def get_all_playlists(self) -> list[Playlist]:

@@ -38,13 +38,15 @@ class TestProfile(unittest.TestCase):
             with self.assertRaises(ProfilesException) as e:
                 Profiles(Path(""))
                 exp_msg = f"ProfilesException: the " \
-                            f"{Profiles.BASE_PROFILE} profile not found"
+                          f"{Profiles.BASE_PROFILE} profile not found"
                 self.assertTrue(exp_msg == str(e.exception))
 
-        no_base = {Profiles.BASE_PROFILE:
-                    {"audio": {"output_format": "mp3"},
-                    "video": {"output_format": ""}},
-                    "profile": {"convert": {}}}
+        no_base = {
+            Profiles.BASE_PROFILE: {
+                "audio": {"output_format": "mp3"},
+                "video": {"output_format": ""}
+                },
+            "profile": {"convert": {}}}
         with patch(TestProfile.TOML, return_value=no_base):
             with self.assertRaises(ProfilesException) as e:
                 sut = Profiles(Path(""))

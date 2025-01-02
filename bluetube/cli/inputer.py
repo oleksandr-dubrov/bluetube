@@ -62,7 +62,6 @@ class Inputer(CLI):
                 Bcolors.error(msg.format(*params))
 
     def _make_question_to_ask(self, feed_entry):
-        pub = feed_entry['published_parsed']
         dt = datetime.datetime.fromtimestamp(feed_entry['published_parsed'])
         params = {'ind': 2 * INDENTATION * ' ',
                   'tit': feed_entry['title'],

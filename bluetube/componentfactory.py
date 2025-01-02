@@ -43,6 +43,7 @@ class ComponentFactory(object):
             self._outputer = Outputer()
         return self._outputer
 
-    def get_bluetooth_client(self, bluetooth_device_id: str, publisher: EventPublisher, temp_dir: Path) -> BluetoothClient:
+    def get_bluetooth_client(self, bluetooth_device_id: str,
+                             publisher: EventPublisher, temp_dir: Path) -> BluetoothClient:
         """Get new Bluetooth client"""
         return BluetoothClient(bluetooth_device_id, publisher, temp_dir)
