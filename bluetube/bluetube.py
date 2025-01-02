@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import os
 import re
@@ -51,6 +50,7 @@ class Bluetube(EventPublisher):
         self.inputer = self.factory.get_inputer(yes)
         self.temp_dir: Optional[Path] = None
         self.bt_dir = self._get_bt_dir(Path(home_dir) if home_dir else None)
+        self.repository = self.factory.get_repository(self.bt_dir)
 
         self.subscribe(self.factory.get_outputer())
 
@@ -75,7 +75,7 @@ class Bluetube(EventPublisher):
         author = deemojify(f.feed.author)
         playlist = None
         try:
-            with Repository(self.bt_dir) as repo:
+            with self.repository as repo:
                 db_profile = repo.upsert_profile(profile)
                 db_author = repo.upsert_author(author)
                 playlist = repo.add_playlist(db_author, title, feed_url, of, db_profile)
@@ -88,7 +88,7 @@ class Bluetube(EventPublisher):
 
     def list_playlists(self):
         ''' list all playlists in RSS feeds '''
-        with Repository(self.bt_dir) as repo:
+        with self.repository as repo:
             all_playlists = repo.get_all_playlists()
             author_playlists = {}
             for p in all_playlists:
@@ -110,7 +110,7 @@ class Bluetube(EventPublisher):
 
     def remove_playlist(self, author_name: str, title: str) -> None:
         ''' remove the playlist of the given author'''
-        with Repository(self.bt_dir) as repo:
+        with self.repository as repo:
             if (author := repo.get_author(author_name)):
                 playlist = repo.get_playlist(author, title)
                 if playlist:
@@ -125,7 +125,7 @@ class Bluetube(EventPublisher):
 
         self._check_media_player()
 
-        with Repository(self.bt_dir) as repo:
+        with self.repository as repo:
 
             if repo.is_empty():
                 self.notify(Info('empty database'))
@@ -149,7 +149,7 @@ class Bluetube(EventPublisher):
 
         self._fetch_temp_dir()
 
-        with Repository(self.bt_dir) as repo:
+        with self.repository as repo:
 
             pubs = repo.get_all_publications()
             for p in pubs:
@@ -190,44 +190,48 @@ class Bluetube(EventPublisher):
                 msg = f'Profile "{pr}" are not configured properly. Try again.'
                 self.notify(Warn(msg))
 
-    def edit_playlist(self, author, title, output_type=None,
-                      profiles=None, reset_failed=None, days_back=None):
-        '''edit a playlist'''
+    def edit_playlist(self, author: str, title: str, output_type: Optional[str] = None,
+                      profile: Optional[str] = None, reset_failed: bool = False) -> None:
+        '''Edit a playlist.'''
+
         def print_help():
             prs = ' | '.join(Profiles(self.bt_dir).get_profiles())
             msg = 'Run this command with one or all options below:\n' \
                   f'-t (a or v) -pr ({prs})\n' \
-                  '-r (to reset previously failed videos)' \
-                  ' -d N (to set last updated date to N days before)'
+                  '-r (to reset previously failed videos)'
             self.notify(Warn(msg))
 
-        self.notify(Info("Under construction"))
-        return
-        feed = Repository(self.bt_dir)
-        if feed.has_playlist(author, title):
-            pl = feed.get_playlist(author, title)
-            assert pl, 'no playlist'
-            if not any((output_type, profiles, reset_failed, days_back)):
-                print_help()
-            elif profiles \
-                and not all([p in Profiles(self.bt_dir).get_profiles()
-                             for p in profiles]):
-                print_help()
-            else:
+        if not any((output_type, profile, reset_failed)):
+            print_help()
+            return None
+
+        with self.repository as repo:
+            if (author := repo.get_author(author)):
+                playlist = repo.get_playlist(author, title)
+                if not playlist:
+                    event = Error('playlist not found', title, author)
+                    self.notify(event)
+                    return None
+
                 if isinstance(output_type, OutputFormatType):
-                    pl.output_format = output_type
-                if profiles:
-                    pl.profiles = profiles
+                    playlist.output_format = output_type
+                if profile:
+                    if profile not in Profiles(self.bt_dir).get_profiles():
+                        event = Error(
+                            'profile not found',
+                            profile,
+                            playlist.title,
+                            playlist.author.name)
+                        self.notify(event)
+                    else:
+                        db_profile = repo.upsert_profile(profile)
+                        playlist.profile = db_profile
                 if reset_failed:
-                    del pl.failed_entities
-                if days_back:
-                    delta = datetime.timedelta(days=int(days_back))
-                    pl.last_update -= delta.total_seconds()
-                feed.sync()
+                    for pub in playlist.publications:
+                        if pub.status is PublicationStatus.failed:
+                            pub.status = PublicationStatus.remote
+                repo.update_playlist(playlist)
                 self._debug('Done.')
-        else:
-            event = Error('playlist not found', title, author)
-            self.notify(event)
 
     def open_more_help(self):
         '''open more help information'''

@@ -31,7 +31,7 @@ def catch_db_exception(target):
             return target(*args, **kwargs)
         except sqlalchemy.exc.IntegrityError as e:
             logging.error(str(e))
-            raise RepositoryException(e.args[0])  # TODO: convert to user-readble
+            raise RepositoryException(e.args[0])
     return _catch
 
 
@@ -84,6 +84,11 @@ class Repository(object):
         if not len(playlist.author.playlists):
             # remove author without playlists
             self.remove_author(playlist.author)
+        self._session.commit()
+
+    def update_playlist(self, playlist: Playlist) -> Playlist:
+        """Update a playlist"""
+        self._session.add(playlist)
         self._session.commit()
 
     def add_author(self, name: str) -> Author:
@@ -161,7 +166,7 @@ class Repository(object):
 
     def is_empty(self) -> bool:
         stmt = select(Author).options(joinedload("*"))
-        return self._session.scalars(stmt).all().count() == 0
+        return len(self._session.scalars(stmt).unique().all()) == 0
 
     def create_schema(self) -> None:
         """Create a DB schema if it does not exist."""

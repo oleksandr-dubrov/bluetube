@@ -30,4 +30,4 @@ FAKE_DB = '''
     "title": "Чесна політика",
     "profiles": ["mobile"]}],
 "author": "24 Канал"}]
-''' # noqa E501
+'''

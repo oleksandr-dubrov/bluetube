@@ -74,24 +74,18 @@ def main():
                              choices=['a', 'v'],
                              help='a type of a file you want to get;'
                                   '(a)udio or (v)ideo')
-    parser_edit.add_argument('--profiles', '-pr',
-                             nargs='*',
+    parser_edit.add_argument('--profile', '-pr',
                              help='a list of profiles for this playlist')
     parser_edit.add_argument('--reset-failed', '-r',
                              action='store_true',
                              help='discard previously failed videos')
-    parser_edit.add_argument('--days-back', '-d',
-                             type=int,
-                             metavar='N',
-                             help='move last update date to N days back')
     parser_edit.set_defaults(func=lambda bt, args:
                              bt.edit_playlist(args.author.strip(),
                                               args.playlist.strip(),
                                               OutputFormatType
                                               .from_char(args.output_type),
-                                              args.profiles,
-                                              args.reset_failed,
-                                              args.days_back))
+                                              args.profile,
+                                              args.reset_failed))
 
     me_group = parser.add_mutually_exclusive_group()
 

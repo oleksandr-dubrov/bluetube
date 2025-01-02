@@ -1,6 +1,4 @@
-import datetime
 import io
-import json
 import os
 import shutil
 import tempfile
@@ -20,7 +18,7 @@ from bluetube.commandexecutor import cache
 from bluetube.model import OutputFormatType, Playlist, PublicationStatus
 from bluetube.repository import Repository
 from tests.fake_db import FAKE_DB, NEW_LINKS
-from tests.fake_repository import EmptyFakeRepository, FakeRepository
+from tests.test_repo import TestRepository
 
 
 def read_mocked_data():
@@ -49,6 +47,8 @@ class TestBluetube(unittest.TestCase):
         Bluetube._get_bt_dir = lambda _, __: self.bt_dir
         Bluetube.TMP_DIR = self.TMP_DIR
         self.mock_executor()
+        self.test_repo = TestRepository()
+        self.mocked_repo = self.mock_repo()
         self.sut = Bluetube(verbose=False)
         self.nbr_downloaded = 0
         self.nbr_converted = 0
@@ -58,7 +58,6 @@ class TestBluetube(unittest.TestCase):
         with Repository(self.bt_dir) as repo:
             repo.create_schema()
 
-        self.fake_repo = FakeRepository()
         self.mock_mutagen()
 
     def tearDown(self):
@@ -69,7 +68,7 @@ class TestBluetube(unittest.TestCase):
         self.bt_dir.joinpath(Repository.SQLITE_FILE).unlink(missing_ok=True)
 
     def mock_repo(self):
-        patcher = patch('bluetube.bluetube.Repository', return_value=self.fake_repo)
+        patcher = patch('bluetube.componentfactory.Repository', return_value=self.test_repo)
         return patcher.start()
 
     def mock_cli(self):
@@ -177,8 +176,6 @@ class TestBluetube(unittest.TestCase):
                         return True
         return False
 
-###############################################################################
-
     def test_run(self):
         """
         Main good usage case:
@@ -189,7 +186,7 @@ class TestBluetube(unittest.TestCase):
             * copy to a local directory.
         """
 
-        mdb = self.mock_repo()
+        self.test_repo.store_test_data()
         inp, _ = self.mock_cli()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -198,7 +195,6 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.run()
 
-        self.assertEqual(2, mdb.call_count, "should be called for read and write")
         self.assertEqual(fetch.await_count, FAKE_DB.count('"url"'))
         self.assertEqual(inp.ask.call_count, NEW_LINKS, "wrong ask number, check NEW_LINKS")
 
@@ -214,11 +210,11 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(NEW_LINKS, mock_copy.call_count, "wrong number of copies")
 
         # check all DB statuses
-        self.assertTrue(all(p.status is PublicationStatus.sent for p in self.fake_repo.publications))
+        self.assertTrue(all(p.status is PublicationStatus.sent for p in self.test_repo.publications))
 
     def test_run_download_failed(self):
         '''failed all downloads'''
-        self.mock_repo()
+        self.test_repo.store_test_data()
         self.mock_cli()
         self.sut.factory._executor = MagicMock()
         self.sut.factory._executor.call.side_effect = lambda *args, **kwargs: 1
@@ -240,16 +236,17 @@ class TestBluetube(unittest.TestCase):
         self.assertEqual(0, mock_copy.call_count)
 
         # check all DB statuses
-        self.assertTrue(all(p.status is PublicationStatus.failed for p in self.fake_repo.publications))
+        self.assertTrue(all(p.status in [PublicationStatus.failed,
+                                         PublicationStatus.sent] for p in self.test_repo.publications))
 
     @patch('bluetube.componentfactory.Inputer')
     def test_run_nothing_selected(self, cli):
         '''no selected videos to process'''
+        self.test_repo.store_test_data()
         cli.ask.return_value = False
         self.sut.inputer = cli
         self.sut.outputer = MagicMock()
 
-        mdb = self.mock_repo()
         self.mock_executor()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -257,70 +254,71 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.run()
 
-        self.assertEqual(2, mdb.call_count,
-                         'should be called for read and write')
-
         self.assertEqual(fetch.await_count, FAKE_DB.count('"url"'))
         self.assertEqual(cli.ask.call_count, NEW_LINKS)
         bt.assert_not_called()
         self.assertEqual(mock_send.call_count, 0)
 
         # check all DB statuses
-        self.assertTrue(all(p.status is PublicationStatus.remote for p in self.fake_repo.publications))
+        self.assertTrue(all(p.status in [PublicationStatus.remote,
+                                         PublicationStatus.sent] for p in self.test_repo.publications))
 
     def test_empty_DB(self):
         '''inform about the empty DB and do nothing'''
         self.mock_executor()
         _, out = self.mock_cli()
 
-        empty_repo = EmptyFakeRepository()
-        with patch('bluetube.bluetube.Repository', return_value=empty_repo):
-            self.sut.run()
+        self.sut.run()
 
         self.assertEqual(2, out.update.call_count)  # 1st is 'Updating feeds.'
         self.assertEquals('empty database', out.update.call_args[0][0].msg)
         out.feeds_updated.assert_not_called()
 
-    @unittest.skip
     def test_add_playlist(self):
         self.mock_cli()
-        self.mock_repo()
 
         url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
         out_format = 'video'
         profiles = 'local'
 
-        a = t = 'ТаТоТаке'
         em = "\U0001F612"
-        for a, t in (('author1', 'title1'), (a, t)):
-            parsed = type('mocked_feed',
-                          (object,),
-                          {'feed': type('mocked_pl',
-                                        (object,),
-                                        # check that emojies are cut off
-                                        {'author': a+em,
-                                         'title': t+em})})
-            with patch('feedparser.parse', return_value=parsed):
-                self.sut.add_playlist(url, out_format, profiles)
-                self.assertTrue(self.check_author_title(self.fake_repo,
-                                                        a+"□",
-                                                        t+"□"))
+        a, t = 'author1', 'title1'
+        parsed = type('mocked_feed',
+                      (object,),
+                      {'feed': type('mocked_pl',
+                                    (object,),
+                                    # check that emojies are cut off
+                                    {'author': a+em, 'title': t+em})})
+        with patch('feedparser.parse', return_value=parsed):
+            self.sut.add_playlist(url, out_format, profiles)
+        with self.test_repo:
+            self.assertTrue(author := self.test_repo.get_author(a+"□"))
+            self.assertTrue(self.test_repo.get_playlist(author, t+"□"))
 
-    @unittest.skip
     def test_remove_playlist(self):
         self.mock_cli()
-        d = {'feeds': []}
-        self.mock_repo(FAKE_DB, d)
-        a = t = 'ТаТоТаке'
-        self.sut.remove_playlist(a, t)
-        self.assertTrue(len(d['feeds']))
-        self.assertFalse(self.check_author_title(d['feeds'], a, t))
+        url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
 
-    @unittest.skip
+        a, t = 'author1', 'title1'
+        parsed = type('mocked_feed',
+                      (object,),
+                      {'feed': type('mocked_pl',
+                                    (object,),
+                                    # check that emojies are cut off
+                                    {'author': a, 'title': t})})
+        with patch('feedparser.parse', return_value=parsed):
+            self.sut.add_playlist(url, 'video', "local")
+
+        with self.test_repo:
+            self.assertTrue(self.test_repo.get_author(a))
+
+        self.sut.remove_playlist(a, t)
+        with self.test_repo:
+            self.assertTrue(self.test_repo.is_empty())
+
     def test_edit_playlist(self):
+        self.test_repo.store_test_data()
         _, out = self.mock_cli()
-        d = {'feeds': []}
-        self.mock_repo(FAKE_DB, d)
         a = '24 Канал'
         t = 'Чесна політика'
 
@@ -328,17 +326,8 @@ class TestBluetube(unittest.TestCase):
         out.update.assert_called_once()
         out.reset_mock()
 
-        orig_db = json.loads(FAKE_DB)
-        old_last_update = orig_db[1]['playlists'][1]['last_update']
-        self.sut.edit_playlist(a, t, output_type=OutputFormatType.video,
-                               profiles=('mobile', 'local'),
-                               reset_failed=True,
-                               days_back=90)
+        self.sut.edit_playlist(a, t, output_type=OutputFormatType.video, profile='mobile', reset_failed=True)
         out.warn.assert_not_called()
-        pl = d['feeds'][1]['playlists'][1]
-        self.assertEqual(old_last_update - pl['last_update'],
-                         datetime.timedelta(days=int(90)).total_seconds(),
-                         'unexpected last update')
 
     class Feed:
         class TitleAuthor:

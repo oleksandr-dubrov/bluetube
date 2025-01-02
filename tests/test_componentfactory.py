@@ -1,10 +1,12 @@
 
 import unittest
+from pathlib import Path
 from unittest.mock import Mock
 
 from bluetube.cli import Inputer, Outputer
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.componentfactory import ComponentFactory
+from bluetube.repository import Repository
 from bluetube.ytdldownloader import YoutubeDlDownloader
 
 
@@ -30,6 +32,12 @@ class TestComponentFactory(unittest.TestCase):
     def test_get_outputer(self):
         outputer = self.sut.get_outputer()
         self.assertIsInstance(outputer, Outputer)
+
+    def test_get_repository(self):
+        bt_dir = Path("/some/path")
+        repository = self.sut.get_repository(bt_dir)
+        self.assertIsInstance(repository, Repository)
+        self.assertEqual(repository, self.sut._repository)
 
 
 if __name__ == "__main__":

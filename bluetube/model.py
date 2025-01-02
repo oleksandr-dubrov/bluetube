@@ -3,8 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from sqlalchemy import ForeignKey, String, TypeDecorator
-from sqlalchemy.orm import Mapped  # TODO: isort it properly
-from sqlalchemy.orm import mapped_column, registry, relationship
+from sqlalchemy.orm import Mapped, mapped_column, registry, relationship
 
 mapper_registry = registry()
 
@@ -77,7 +76,9 @@ class Author:
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(128))
-    playlists: Mapped[List["Playlist"]] = relationship(back_populates="author", cascade="all, delete-orphan")
+    playlists: Mapped[List["Playlist"]] = relationship(back_populates="author",
+                                                       cascade="all, delete-orphan",
+                                                       order_by="desc(Playlist.title)")
 
 
 @mapper_registry.mapped
