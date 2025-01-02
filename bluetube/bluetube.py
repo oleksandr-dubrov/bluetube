@@ -186,34 +186,6 @@ class Bluetube(EventPublisher):
 
         self._return_temp_dir()
 
-    def send(self):
-        '''send files from the bluetube download directory
-        to all bluetooth devices'''
-        profiles = self._get_profiles(self.bt_dir)
-        self._fetch_temp_dir()
-        if os.listdir(self.temp_dir):
-            sent = []
-            nbr_divices = 0
-            for profile in profiles.get_profiles():
-                s_op = profiles.get_send_options(profile)
-                if s_op and 'bluetooth_device_id' in s_op:
-                    sender = self._get_sender(s_op['bluetooth_device_id'])
-                    if sender and sender.found:
-                        nbr_divices += 1
-                        sent += self._send_all_in_dir(sender)
-                    else:
-                        msg = 'Your bluetooth device is not accessible.'
-                        self.notify(Error(msg))
-
-            # remove the files that have been sent to all devices
-            counts = {x: sent.count(x) for x in sent}
-            for f, n in counts.items():
-                if n == nbr_divices:
-                    os.remove(f)
-        else:
-            self.notify(Warn('Nothing to send.'))
-        self._return_temp_dir()
-
     def edit_profiles(self):
         '''open a profiles file and check after edit'''
         bt_dir = self.bt_dir

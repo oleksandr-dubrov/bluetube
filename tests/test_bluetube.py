@@ -318,15 +318,6 @@ class TestBluetube(unittest.TestCase):
         self.assertTrue(len(d['feeds']))
         self.assertFalse(self.check_author_title(d['feeds'], a, t))
 
-    def test_send(self):
-        self.mock_repo()
-        _, out = self.mock_cli()
-        self.mock_listdir([])
-
-        self.sut.send()
-        out.update.assert_called_once()
-        self.assertEquals('Nothing to send.', out.update.call_args[0][0].msg)
-
     @unittest.skip
     def test_edit_playlist(self):
         _, out = self.mock_cli()

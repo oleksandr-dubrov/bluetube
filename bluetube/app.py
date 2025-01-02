@@ -112,10 +112,6 @@ def main():
 
     me_group = parser.add_mutually_exclusive_group()
 
-    me_group.add_argument('--send', '-s',
-                          help='send already downloaded files' +
-                          ' to all bluetooth devices',
-                          action='store_true')
     me_group.add_argument('--edit_profiles', '-p',
                           action='store_true',
                           help='edit profiles in a text editor')
@@ -144,9 +140,7 @@ def main():
     if hasattr(args, 'func'):
         args.func(bluetube, args)
     else:
-        if args.send:
-            bluetube.send()
-        elif args.edit_profiles:
+        if args.edit_profiles:
             bluetube.edit_profiles()
         elif args.online_help:
             bluetube.open_more_help()
