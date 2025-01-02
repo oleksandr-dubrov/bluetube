@@ -26,9 +26,9 @@ from bluetube.model import OutputFormatType
 def main():
 
     def add(bluetube, args):
-        profiles = args.profiles if args.profiles else ['default']
+        profiles = args.profile if args.profile else 'default'
         bluetube.add_playlist(args.url,
-                              OutputFormatType.from_char(args.type),
+                              args.type,
                               profiles)
 
     description = 'The script downloads youtube video as video or audio, ' \
@@ -52,9 +52,9 @@ def main():
                             default='v',
                             help='a type of a file you want to get; '
                                  '(a)udio or (v)ideo')
-    parser_add.add_argument('-p', nargs='*',
-                            dest='profiles',
-                            help='one or multiple profiles')
+    parser_add.add_argument('-p',
+                            dest='profile',
+                            help='a profile')
     parser_add.set_defaults(func=add)
 
     parser_list = subparsers.add_parser('list',
@@ -140,6 +140,7 @@ def main():
     bluetube = Bluetube(home_dir=args.home,
                         verbose=args.verbose,
                         yes=args.yes)
+    bluetube.migrate_to_db()
     if hasattr(args, 'func'):
         args.func(bluetube, args)
     else:

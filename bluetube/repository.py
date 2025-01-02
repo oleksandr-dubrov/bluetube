@@ -60,10 +60,12 @@ class Repository(object):
     DBFILENAME = "bluetube.db"
     SQLITE_FILE = "bluetube.sqlite.db"
 
+    verbose = False
+
     def __init__(self, db_dir: Path):
         self.db_file = db_dir / Repository.DBFILENAME
         sqlite_file = db_dir / Repository.SQLITE_FILE
-        self._engine = create_engine(f"sqlite+pysqlite:///{sqlite_file}", echo=True)  # TODO: echo for verbose
+        self._engine = create_engine(f"sqlite+pysqlite:///{sqlite_file}", echo=Repository.verbose)
         self._session = None
 
     def __enter__(self):
@@ -80,7 +82,6 @@ class Repository(object):
         pl = Playlist(author=author,
                         title=title,
                         url=url,
-                        last_update=0,
                         output_format=output_format,
                         profile=profile)
         self._session.add(pl)
@@ -133,7 +134,7 @@ class Repository(object):
             p = Publication(playlist=playlist,
                             title=pub.title,
                             link=pub.link,
-                            remove_id=pub['yt_videoid'],
+                            remote_id=pub['yt_videoid'],
                             description=pub.description,
                             published=time.mktime(pub.published_parsed),
                             entry_id=pub.id,
@@ -142,6 +143,11 @@ class Repository(object):
         self._session.add_all(added)
         self._session.commit()
         return added
+
+    def update_publication(self, publication: Publication) -> Publication:
+        """Update a publication"""
+        self._session.add(publication)
+        self._session.commit()
 
     def get_all_publications(self):
         stmt = select(Publication).join(Publication.playlist).join(Playlist.author).order_by(Author.name).order_by(asc(Publication.published))
@@ -180,14 +186,18 @@ class DbConverter(object):
 
     def migrate(self):
         '''migrate DB'''
-        print('exporting db...')
+        logger.info('exporting db...')
         repo = Repository(self.bt_dir)
         repo.create_schema()
 
         pls = []
         profiles = {}
         authors = {}
-        for x in self._pull():
+        entities = self._pull()
+        if not entities:
+            logger.info("nothing to convert")
+            return
+        for x in entities:
             author = authors.setdefault(x['author'], Author(name=x["author"]))
             for y in x['playlists']:
                 profile = ",".join(y["profiles"])
@@ -195,14 +205,13 @@ class DbConverter(object):
                 p = Playlist(author=author,
                              title=y["title"],
                              url=y["url"],
-                             last_update=y["last_update"],
                              output_format=y["out_format"],
                              profile=profile)
                 pls.append(p)
-        print("Migrated:")
-        print(f" - {len(profiles)} profiles,")
-        print(f" - {len(authors)} authors")
-        print(f" - {len(pls)} playlists")
+        logger.info("Migrated:")
+        logger.info(f" - {len(profiles)} profiles,")
+        logger.info(f" - {len(authors)} authors")
+        logger.info(f" - {len(pls)} playlists")
 
         with Session(repo._engine) as session:
             session.add_all(pls)
@@ -227,5 +236,5 @@ class DbConverter(object):
         try:
             db.close()
         except ValueError as e:
-            print('Probably your changes were lost. Try again')
+            logger.info('Probably your changes were lost. Try again')
             raise e

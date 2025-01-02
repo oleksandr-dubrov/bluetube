@@ -16,9 +16,11 @@ from bluetube import Bluetube
 from bluetube.cli.events import Info
 from bluetube.cli.outputer import EventListener
 from bluetube.commandexecutor import cache
-from bluetube.model import OutputFormatType, Playlist
+from bluetube.model import OutputFormatType, Playlist, PublicationStatus
 from bluetube.repository import Repository
 from tests.fake_db import FAKE_DB, NEW_LINKS
+from tests.fake_repository import FakeRepository
+from mutagen import mp3, mp4
 
 
 def read_mocked_data():
@@ -45,6 +47,7 @@ class TestBluetube(unittest.TestCase):
         self.args = []
         self.bt_dir = Path(__file__).parent
         Bluetube._get_bt_dir = lambda _, __: self.bt_dir
+        Bluetube.TMP_DIR = self.TMP_DIR
         self.mock_executor()
         self.sut = Bluetube(verbose=False)
         self.nbr_downloaded = 0
@@ -55,6 +58,9 @@ class TestBluetube(unittest.TestCase):
         with Repository(self.bt_dir) as repo:
             repo.create_schema()
 
+        self.fake_repo = FakeRepository()
+        self.mock_mutagen()
+
     def tearDown(self):
         patch.stopall()  # @UndefinedVariable
         if os.path.exists(TestBluetube.TMP_DIR) \
@@ -62,18 +68,8 @@ class TestBluetube(unittest.TestCase):
             shutil.rmtree(TestBluetube.TMP_DIR)
         self.bt_dir.joinpath(Repository.SQLITE_FILE).unlink(missing_ok=True)
 
-    def mock_db(self, fake_db, dct=None):
-        '''mock shelve DB with the fake DB'''
-        mock_db = MagicMock()
-        if dct:
-            mock_db.__setitem__.side_effect = dct.__setitem__
-        if isinstance(fake_db, dict):
-            mock_db.get.return_value = fake_db
-        elif isinstance(fake_db, str):
-            mock_db.get.return_value = json.loads(fake_db)
-        else:
-            assert 0, 'string or dictionary expected'
-        patcher = patch('shelve.open', return_value=mock_db)
+    def mock_repo(self):
+        patcher = patch('bluetube.bluetube.Repository', return_value=self.fake_repo)
         return patcher.start()
 
     def mock_cli(self):
@@ -96,6 +92,11 @@ class TestBluetube(unittest.TestCase):
         osls.return_value = ret
         return osls
 
+    def mock_os_remove(self):
+        '''mock os.remove'''
+        patcher = patch('os.remove')
+        return patcher.start()
+
     def mock_check_file(self):
         '''mock os.path.exists and os.path.isdir'''
         patcher1 = patch('os.path.exists')
@@ -105,6 +106,11 @@ class TestBluetube(unittest.TestCase):
         ex.return_value = True
         isdir.return_value = True
         return ex, isdir
+
+    def mock_mutagen(self):
+        p1 = patch.object(mp3, "MP3")
+        p2 = patch.object(mp4, "MP4")
+        return p1.start(), p2.start()
 
     @cache
     def call_side_effect(self, *args, **kwargs):
@@ -118,8 +124,8 @@ class TestBluetube(unittest.TestCase):
 
         if args[0][0] in ['youtube-dl', 'yt-dlp']:
             fake_name = args[0][-1].split('=')[1]
-            open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
-                              fake_name), 'w').close()
+            # open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
+            #                   fake_name), 'w').close()
             self.nbr_downloaded += 1
         elif args[0][0] == 'ffmpeg':
             open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
@@ -138,7 +144,7 @@ class TestBluetube(unittest.TestCase):
 
     def mock_sender(self, found, connect, send):
         '''mock the bluetooth client'''
-        patcher = patch('bluetube.bluetube.BluetoothClient')
+        patcher = patch('bluetube.componentfactory.BluetoothClient')
         bt = patcher.start()
         attrs = dict(found=found,
                      connect=lambda: connect,
@@ -176,10 +182,17 @@ class TestBluetube(unittest.TestCase):
 
 ###############################################################################
 
-    @unittest.skip
     def test_run(self):
-        '''an origin good usage'''
-        mdb = self.mock_db(FAKE_DB)
+        """
+        Main good usage case:
+            * update feeds
+            * download
+            * convert
+            * send to a bt device
+            * copy to a local directory.
+        """
+
+        mdb = self.mock_repo()
         inp, _ = self.mock_cli()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -188,28 +201,28 @@ class TestBluetube(unittest.TestCase):
 
         self.sut.run()
 
-        self.assertEqual(2, mdb.call_count,
-                         'should be called for read and write')
-
+        self.assertEqual(2, mdb.call_count, "should be called for read and write")
         self.assertEqual(fetch.await_count, FAKE_DB.count('"url"'))
+        self.assertEqual(inp.ask.call_count, NEW_LINKS, "wrong ask number, check NEW_LINKS")
 
-        self.assertEqual(inp.ask.call_count, NEW_LINKS)
+        self.assertEqual(NEW_LINKS, self.nbr_downloaded, "should be 'yes' to all new links")
 
-        self.assertEqual(NEW_LINKS, self.nbr_downloaded)
         self.assertEqual(self.nbr_downloaded + self.nbr_converted,
-                         self.sut.factory._executor.call.call_count)
+                         self.sut.factory._executor.call.call_count,
+                         "unexpected number of runs of external executable e.g. youtube-dl and ffmpeg")
 
+        # check senders
         bt.assert_called()
-        self.assertEqual(3, mock_send.call_count,
-                         'it should be called if one or more links chosen')
-        self.assertEqual(NEW_LINKS, self.nbr_sent)
-        self.assertEqual(NEW_LINKS+2, mock_copy.call_count,
-                         'wrong number of copies, see profiles.toml')
+        self.assertEqual(NEW_LINKS, self.nbr_sent, "unexpcted nbr sent via bluetooth")
+        self.assertEqual(NEW_LINKS, mock_copy.call_count, "wrong number of copies")
+
+        # check all DB statuses
+        self.assertTrue(all(p.status is PublicationStatus.sent for p in self.fake_repo.publications))
 
     @unittest.skip
     def test_run_download_failed(self):
         '''failed all downloads'''
-        self.mock_db(FAKE_DB)
+        self.mock_repo(FAKE_DB)
         self.mock_cli()
         self.sut.factory._executor = MagicMock()
         self.sut.factory._executor.call.side_effect = \
@@ -239,7 +252,7 @@ class TestBluetube(unittest.TestCase):
         self.sut.inputer = cli
         self.sut.outputer = MagicMock()
 
-        mdb = self.mock_db(FAKE_DB)
+        mdb = self.mock_repo(FAKE_DB)
         self.mock_executor()
         mock_send = MagicMock(side_effect=self.bt_side_effect)
         bt = self.mock_sender(found=True, connect=True, send=mock_send)
@@ -258,7 +271,7 @@ class TestBluetube(unittest.TestCase):
     @unittest.skip
     def test_empty_DB(self):
         '''inform about the empty DB and do nothing'''
-        mdb = self.mock_db({})
+        mdb = self.mock_repo({})
         self.mock_executor()
         _, out = self.mock_cli()
 
@@ -273,7 +286,7 @@ class TestBluetube(unittest.TestCase):
     def test_add_playlist(self):
         self.mock_cli()
         d = {'feeds': []}
-        self.mock_db(FAKE_DB, d)
+        self.mock_repo(FAKE_DB, d)
 
         url = 'https://www.youtube.com/channel/UCSHZKyawb77ixDdsGog4iWA'
         out_format = 'video'
@@ -299,15 +312,14 @@ class TestBluetube(unittest.TestCase):
     def test_remove_playlist(self):
         self.mock_cli()
         d = {'feeds': []}
-        self.mock_db(FAKE_DB, d)
+        self.mock_repo(FAKE_DB, d)
         a = t = 'ТаТоТаке'
         self.sut.remove_playlist(a, t)
         self.assertTrue(len(d['feeds']))
         self.assertFalse(self.check_author_title(d['feeds'], a, t))
 
-    @unittest.skip
     def test_send(self):
-        self.mock_db(FAKE_DB)
+        self.mock_repo()
         _, out = self.mock_cli()
         self.mock_listdir([])
 
@@ -319,7 +331,7 @@ class TestBluetube(unittest.TestCase):
     def test_edit_playlist(self):
         _, out = self.mock_cli()
         d = {'feeds': []}
-        self.mock_db(FAKE_DB, d)
+        self.mock_repo(FAKE_DB, d)
         a = '24 Канал'
         t = 'Чесна політика'
 

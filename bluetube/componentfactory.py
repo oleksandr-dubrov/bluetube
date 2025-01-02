@@ -2,6 +2,8 @@
 The factory.
 '''
 
+from pathlib import Path
+from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import Inputer, Outputer
 from bluetube.commandexecutor import CommandExecutor
 from bluetube.converter import FfmpegConverter
@@ -20,7 +22,7 @@ class ComponentFactory(object):
             self._executor = CommandExecutor()
         return self._executor
 
-    def get_downloader(self, publisher: EventPublisher, temp_dir: str):
+    def get_downloader(self, publisher: EventPublisher, temp_dir: Path):
         '''Get a downloader.'''
         ex = self.get_command_executor()
         return YoutubeDlDownloader(ex, publisher, temp_dir)
@@ -39,3 +41,7 @@ class ComponentFactory(object):
         if not hasattr(self, '_outputer'):
             self._outputer = Outputer()
         return self._outputer
+
+    def get_bluetooth_client(self, bluetooth_device_id: str, publisher: EventPublisher, temp_dir: Path) -> BluetoothClient:
+        """Get new Bluetooth client"""
+        return BluetoothClient(bluetooth_device_id, publisher, temp_dir)

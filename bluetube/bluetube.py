@@ -21,6 +21,7 @@ import datetime
 import logging
 import os
 import re
+import shutil
 import signal
 import tempfile
 import time
@@ -30,12 +31,13 @@ from typing import NoReturn, Optional
 import aiohttp
 import feedparser
 
+from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli.events import Error, Event, Info, Success, Warn
 from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.eventpublisher import EventPublisher
-from bluetube.model import OutputFormatType, Playlist, Publication
+from bluetube.model import OutputFormatType, Playlist, Publication, PublicationStatus
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.repository import DbConverter, Repository, RepositoryException
 from bluetube.utils import deemojify
@@ -44,6 +46,7 @@ from bluetube.utils import deemojify
 class Bluetube(EventPublisher):
     ''' The main class of the script. '''
 
+    TMP_DIR = "bluetube"
     CONFIG_FILE_NAME = 'bluetube.cfg'
     HOME_DIR = os.path.expanduser(os.path.join('~', '.bluetube'))
     ACCESS_MODE = 0o744
@@ -58,12 +61,13 @@ class Bluetube(EventPublisher):
         super().__init__()
 
         self._config_logger(verbose)
+        Repository.verbose = verbose
         self._debug = logging.getLogger(__name__).debug
         signal.signal(signal.SIGINT, self.signal_handler)
         self.factory = ComponentFactory()
         self.executor = self.factory.get_command_executor()
         self.inputer = self.factory.get_inputer(yes)
-        self.temp_dir = None
+        self.temp_dir: Optional[Path] = None
         self.bt_dir = self._get_bt_dir(Path(home_dir) if home_dir else None)
 
         self.subscribe(self.factory.get_outputer())
@@ -114,30 +118,28 @@ class Bluetube(EventPublisher):
                     for c in p:
                         out_type = OutputFormatType.to_char(c.output_format)
                         o = f"{' ' * 10}{c.title} |{out_type}, {c.profile.name}|"
+                        last_update = c.publications[0].published if c.publications else 0 # add pubs after the last one
                         t = time.strftime('%Y-%m-%d %H:%M:%S',
-                                        time.localtime(c.last_update))
+                                        time.localtime(last_update))
                         o = f'{o} ({t})'
                         print(o)
             else:
                 self.notify(Info('empty database'))
 
-    def remove_playlist(self, author: str, title: str) -> None:
+    def remove_playlist(self, author_name: str, title: str) -> None:
         ''' remove the playlist of the given author'''
         with Repository(self.bt_dir) as repo:
-            author = repo.get_author(author)
-            if author:
+            if (author := repo.get_author(author_name)):
                 playlist = repo.get_playlist(author, title)
                 if playlist:
                     repo.remove_playlist(playlist)
                     return
-        self.notify('playlist not found', title, author)
+        self.notify(Error('playlist not found', title, author_name))
 
     def run(self):
         ''' The main method. It does everything.'''
 
         self._debug(f'Bluetube home directory: {self.bt_dir}.')
-
-        self.migrate_to_db()
 
         self._check_media_player()
 
@@ -146,27 +148,42 @@ class Bluetube(EventPublisher):
 
             if len(pubs):
                 self.notify(Success('feeds updated'))
-            else:
-                self.notify(Info('empty database'))
-                return
+            # else:
+            #     self.notify(Info('empty database'))
+            #     return
 
             profiles = self._get_profiles(self.bt_dir)
 
-            self._fetch_temp_dir()
+            chosen = self.choose_publications(pubs)
 
-            self.choose_publications(pubs)
+            # TODO: combine this update with `choose_pubs`
+            for p in chosen:
+                p.status = PublicationStatus.chosen
+                repo.update_publication(p)
+
+        # ----
+
+        self._fetch_temp_dir()
 
         with Repository(self.bt_dir) as repo:
 
+            pubs = repo.get_all_publications()
+            for p in pubs:
+                if p.status in [PublicationStatus.chosen, PublicationStatus.failed]:
+                    self._download_publication(p, profiles)
+                    repo.update_publication(p)
 
-            self._download_list(pubs[0], profiles)
+            pubs = repo.get_all_publications()
+            for p in pubs:
+                self._convert_publication(p, profiles)
+                repo.update_publication(p)
 
-            # self._convert_list(pl, profiles)
+            pubs = repo.get_all_publications()
+            for p in pubs:
+                if p.status in [PublicationStatus.downloaded, PublicationStatus.converted]:
+                    self._send_publication(p, profiles)
+                    repo.update_publication(p)
 
-            # self._send_list(pl, profiles)
-
-            # repo.set_all_playlists(self._prepare_list(pubs))
-            # repo.sync()
         self._return_temp_dir()
 
     def send(self):
@@ -228,6 +245,8 @@ class Bluetube(EventPublisher):
                   ' -d N (to set last updated date to N days before)'
             self.notify(Warn(msg))
 
+        self.notify(Info("Under construction"))
+        return
         feed = Repository(self.bt_dir)
         if feed.has_playlist(author, title):
             pl = feed.get_playlist(author, title)
@@ -317,12 +336,12 @@ class Bluetube(EventPublisher):
             events: list[Event] = [Info(author.name, capture='RSS')]
             nonlocal publications
             for pl in author.playlists:
-                events.append(Info('feed is fetching',
-                                   pl.title, capture='RSS'))
+                events.append(Info('feed is fetching', pl.title, capture='RSS'))
                 response = await self._fetch_rss(session, pl)
                 rss_response = feedparser.parse(response)
+                last_update = pl.publications[0].published if pl.publications else 0 # add pubs after the last one
                 new_entries = [e for e in rss_response.entries
-                               if pl.last_update < int(time.mktime(e['published_parsed']))]
+                               if last_update < int(time.mktime(e['published_parsed']))]
                 added = repo.add_publications(pl, new_entries)
                 publications += added
 
@@ -359,10 +378,8 @@ class Bluetube(EventPublisher):
 
         return response
 
-    def _download_list(self, pub, profiles):
-        # keep path to successfully downloaded files for all profiles here
+    def _download_publication(self, pub, profiles):
         downloader = self.factory.get_downloader(self, self.temp_dir)
-
 
         if pub.playlist.output_format is OutputFormatType.audio:
             dl_op = profiles.get_audio_options(pub.playlist.profile)
@@ -372,32 +389,63 @@ class Bluetube(EventPublisher):
             assert 0, 'unexpected output format type'
 
         downloader.download(pub,
-                             pub.playlist.output_format,
+                            pub.playlist.output_format,
                             dl_op)
-        # pub.entities[profile] = s
-        # if f:
-        #     ens = [e.title for e in f]
-        #     ens = ', '.join(ens)
-        #     event = Error('failed to download', ens, profile)
-        #     self.notify(event)
-        # pub.add_failed_entities({profile: f})
 
-    def _convert_list(self, pl, profiles):
+    def _convert_publication(self, pub: Publication, profiles: Profiles) -> None:
         # convert video, audio has been converted by the downloader
         converter = self.factory.get_converter(self, self.temp_dir)
-        if pl.output_format is OutputFormatType.video:
-            for profile, entities in pl.entities.items():
-                c_op = profiles.get_convert_options(profile)
-                if not c_op:
-                    return
-                v_op = profiles.get_video_options(profile)
-                # convert unless the video has not been downloaded in
-                # proper format
-                if not c_op['output_format'] == v_op['output_format']:
-                    s, f = converter.convert(entities, c_op)
-                    pl.entities[profile] = s
-                    if f and Inputer.do_continue():
-                        return
+        if pub.playlist.output_format is OutputFormatType.video:
+            c_op = profiles.get_convert_options(pub.playlist.profile)
+            if not c_op:
+                return
+            v_op = profiles.get_video_options(pub.playlist.profile)
+            # convert unless the video has not been downloaded in
+            # proper format
+            if not c_op['output_format'] == v_op['output_format']:
+                converter.convert(pub, c_op)
+
+    def _send_publication(self, pub: Publication, profiles: Profiles) -> None:
+        s_op = profiles.get_send_options(pub.playlist.profile.name)
+
+        if "local_path" not in s_op and "bluetooth_device_id" not in s_op:
+            # early return
+            return None
+
+        moved, sent = True, True
+
+        # move to local directory
+        if (local_path := s_op.get("local_path")):
+            local_path = Path(local_path)
+            try:
+                local_path.mkdir(mode=Bluetube.ACCESS_MODE, parents=False, exist_ok=True)
+            except PermissionError as e:
+                self.notify(Error(e))
+            moved = self._copy_to_local_path(local_path, pub.local_path)
+
+        if (bt_id := s_op.get("bluetooth_device_id")):
+            client = self.factory.get_bluetooth_client(bt_id, self, self.temp_dir)
+            res = client.send([pub.local_path])
+            sent = bool(res)
+
+        if moved and sent:
+            try:
+                os.remove(self.temp_dir / pub.local_path)
+            except FileNotFoundError:
+                pass  # ignore this exception
+
+            pub.status = PublicationStatus.sent
+            pub.local_path = None # TODO or set the destination path
+
+    def _copy_to_local_path(self, dest, src) -> bool:
+        '''copy files defined by links to the local path'''
+        self._debug(f'copying {src} to {dest}')
+        try:
+            shutil.copy2(src, dest)
+            return True
+        except shutil.SameFileError as e:
+            self.notify(Error(e))
+            return False
 
     def _check_profiles(self, pl, profiles):
         '''check if profiles of the playlist do exist'''
@@ -517,19 +565,17 @@ class Bluetube(EventPublisher):
     def _fetch_temp_dir(self):
         '''fetch a temporal directory;
         don't forget to return'''
-        temp_dir = os.path.join(tempfile.gettempdir(), 'bluetube')
-        if not os.path.isdir(temp_dir):
-            os.mkdir(temp_dir)
-        else:
-            fs = os.listdir(temp_dir)
-            if len(fs):
-                msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
-                self.notify(Warn(msg))
+        temp_dir = Path(tempfile.gettempdir()) / self.TMP_DIR
+        temp_dir.mkdir(exist_ok=True)
+        fs = os.listdir(temp_dir)
+        if len(fs):
+            msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
+            self.notify(Warn(msg))
         self.temp_dir = temp_dir
 
     def _return_temp_dir(self):
         assert self.temp_dir, 'nothing to return, call fetch'
-        if os.path.isdir(self.temp_dir):
+        if self.temp_dir.exists():
             try:
                 os.rmdir(self.temp_dir)
             except OSError:
@@ -540,11 +586,11 @@ class Bluetube(EventPublisher):
 
     def _get_bt_dir(self, home_dir: Optional[Path]):
         bt_dir = home_dir if home_dir else Path(Bluetube.HOME_DIR)
-        if bt_dir.is_dir():
-            bt_dir.mkdir(mode=Bluetube.ACCESS_MODE, exist_ok=True)
+        if not bt_dir.is_dir():
+            bt_dir.expanduser().mkdir(mode=Bluetube.ACCESS_MODE, exist_ok=True)
         else:
             self.notify(Error(f"{bt_dir} is not a directory"))
-        return bt_dir
+        return bt_dir.expanduser()
 
     def _config_logger(self, verbose: bool) -> None:
         level = logging.DEBUG if verbose else logging.WARNING

@@ -19,7 +19,7 @@
 
 from enum import Enum, unique
 from pathlib import Path
-from sqlalchemy import ForeignKey, TypeDecorator, UniqueConstraint, create_engine
+from sqlalchemy import ForeignKey, TypeDecorator
 from sqlalchemy.orm import DeclarativeBase
 from typing import List
 from typing import Optional
@@ -129,9 +129,10 @@ class Publication:
     id: Mapped[int] = mapped_column(primary_key=True)
     playlist_id: Mapped[int] = mapped_column(ForeignKey("playlist.id"))
 
+    playlist: Mapped["Playlist"] = relationship(back_populates="publications")
     title: Mapped[str] = mapped_column(String(255))
     link: Mapped[str] = mapped_column(String(2048))  # TODO: validate URL
-    remove_id: Mapped[str] = mapped_column(String(255))  # an item id e.g. a Youtube video ID
+    remote_id: Mapped[str] = mapped_column(String(255))  # an item id e.g. a Youtube video ID
     local_path: Mapped[Optional[Path]] = mapped_column(PathType(2048))  # TODO: validate local path
     description: Mapped[str] = mapped_column(String(2048))  # TODO: change to some text field not to limit the length
     published: Mapped[int]
@@ -155,10 +156,9 @@ class Playlist:
     author: Mapped["Author"] = relationship(back_populates="playlists")
     title: Mapped[str] = mapped_column(String(128))
     url: Mapped[str] = mapped_column(String(128), unique=True)
-    last_update: Mapped[int]
     output_format: Mapped[OutputFormatType]
     profile: Mapped[Profile] = relationship()
-    entities: Mapped[Optional[Publication]] = relationship()
+    publications: Mapped[List[Publication]] = relationship(back_populates="playlist", order_by="desc(Publication.published)")
 
     def set_output_format_type(self, output_format_type):
         if isinstance(output_format_type, str):

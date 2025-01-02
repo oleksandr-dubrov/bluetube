@@ -30,7 +30,7 @@ class YoutubeDlDownloader(object):
 
     def download(self, pub: Publication, output_format, configs) -> Publication:
         options = self._build_converter_options(output_format, configs)
-        local_name = f"{deemojify(pub.title)} [{pub.remove_id}].{configs['output_format']}"
+        local_name = f"{deemojify(pub.title)} [{pub.remote_id}].{configs['output_format']}"
         all_options = options + ("-o", local_name) + (pub.link,)
         self._debug(f"downloading {pub.title} to {local_name}")
         status = self._executor.call(all_options, cwd=self._temp_dir)
