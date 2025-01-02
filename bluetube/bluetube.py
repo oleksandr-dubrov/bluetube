@@ -37,7 +37,8 @@ from bluetube.cli.inputer import Inputer
 from bluetube.componentfactory import ComponentFactory
 from bluetube.configs import Configs
 from bluetube.eventpublisher import EventPublisher
-from bluetube.model import OutputFormatType, Playlist, Publication, PublicationStatus
+from bluetube.model import (OutputFormatType, Playlist, Publication,
+                            PublicationStatus)
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.repository import DbConverter, Repository, RepositoryException
 from bluetube.utils import deemojify

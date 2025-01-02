@@ -39,7 +39,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "flake8",
-  "pip install Flake8-pyproject",
+  "Flake8-pyproject",
   "tox",
   "isort",
   "mypy",

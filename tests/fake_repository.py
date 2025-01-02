@@ -1,9 +1,12 @@
 import json
 import random
 import time
-from bluetube.model import Author, OutputFormatType, Playlist, Profile, Publication, PublicationStatus
-from tests.fake_db import FAKE_DB
+
 from feedparser.util import FeedParserDict
+
+from bluetube.model import (Author, OutputFormatType, Playlist, Profile,
+                            Publication, PublicationStatus)
+from tests.fake_db import FAKE_DB
 
 
 def get_id():

@@ -3,6 +3,7 @@ The factory.
 '''
 
 from pathlib import Path
+
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli import Inputer, Outputer
 from bluetube.commandexecutor import CommandExecutor

@@ -19,14 +19,13 @@
 
 from enum import Enum, unique
 from pathlib import Path
-from sqlalchemy import ForeignKey, TypeDecorator
-from sqlalchemy.orm import DeclarativeBase
-from typing import List
-from typing import Optional
-from sqlalchemy.orm import Mapped   # TODO: isort it properly   
-from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import relationship, registry
-from sqlalchemy import Table, Column, Integer, String
+from typing import List, Optional
+
+from sqlalchemy import (Column, ForeignKey, Integer, String, Table,
+                        TypeDecorator)
+from sqlalchemy.orm import Mapped  # TODO: isort it properly
+from sqlalchemy.orm import (DeclarativeBase, mapped_column, registry,
+                            relationship)
 from sqlalchemy.schema import MetaData
 
 mapper_registry = registry()

@@ -1,17 +1,18 @@
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
-from unittest import TestCase
 import unittest
+from pathlib import Path
+from unittest import TestCase
 from unittest.mock import MagicMock
+
+from feedparser.util import FeedParserDict
 
 from bluetube.converter import FfmpegConverter
 from bluetube.model import OutputFormatType, PublicationStatus
 from bluetube.profiles import Profiles
 from bluetube.repository import Repository
-from feedparser.util import FeedParserDict
 
 
 class TestConverter(TestCase):

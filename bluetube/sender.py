@@ -3,6 +3,7 @@
 
 import os
 import shutil
+
 from bluetube.bluetoothclient import BluetoothClient
 from bluetube.cli.events import Error
 from bluetube.model import Publication, PublicationStatus

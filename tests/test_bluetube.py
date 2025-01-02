@@ -2,15 +2,16 @@ import datetime
 import io
 import json
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
 import unittest
-
-from feedparser.util import FeedParserDict
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from zipfile import ZipFile
+
+from feedparser.util import FeedParserDict
+from mutagen import mp3, mp4
 
 from bluetube import Bluetube
 from bluetube.cli.events import Info
@@ -20,7 +21,6 @@ from bluetube.model import OutputFormatType, Playlist, PublicationStatus
 from bluetube.repository import Repository
 from tests.fake_db import FAKE_DB, NEW_LINKS
 from tests.fake_repository import FakeRepository
-from mutagen import mp3, mp4
 
 
 def read_mocked_data():

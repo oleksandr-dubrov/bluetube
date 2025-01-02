@@ -1,17 +1,18 @@
 import os
-from pathlib import Path
 import shutil
 import tempfile
 import time
-from unittest import TestCase
 import unittest
+from pathlib import Path
+from unittest import TestCase
 from unittest.mock import MagicMock
+
+from feedparser.util import FeedParserDict
 
 from bluetube.model import OutputFormatType, PublicationStatus
 from bluetube.profiles import Profiles
 from bluetube.repository import Repository
 from bluetube.ytdldownloader import YoutubeDlDownloader
-from feedparser.util import FeedParserDict
 
 
 class TestDownloader(TestCase):

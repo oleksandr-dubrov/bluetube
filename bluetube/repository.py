@@ -2,18 +2,18 @@ import dbm
 import functools
 import logging
 import os
-from pathlib import Path
 import shelve
 import time
+from pathlib import Path
 from typing import Any, Optional, final
 
 import sqlalchemy
-from sqlalchemy.orm import Session
-from sqlalchemy import asc, create_engine, desc, select
 from feedparser.util import FeedParserDict
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import asc, create_engine, desc, select
+from sqlalchemy.orm import Session, joinedload, selectinload
 
-from bluetube.model import Author, OutputFormatType, Playlist, Profile, Publication, PublicationStatus, mapper_registry, Author
+from bluetube.model import (Author, OutputFormatType, Playlist, Profile,
+                            Publication, PublicationStatus, mapper_registry)
 from bluetube.version import __version__
 
 '''

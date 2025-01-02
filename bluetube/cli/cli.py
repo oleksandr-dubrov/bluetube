@@ -1,5 +1,6 @@
 from bluetube.cli.bcolors import Bcolors
 from bluetube.cli.events import Error, Info, Success, Warn
+
 # TODO from rich import Rich - use this for nice print
 # @sa https://typer.tiangolo.com/tutorial/printing/
 

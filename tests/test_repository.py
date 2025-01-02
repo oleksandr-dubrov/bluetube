@@ -1,11 +1,10 @@
-from pathlib import Path
 import shutil
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 import sqlalchemy
-
 from feedparser.util import FeedParserDict
 
 from bluetube.model import OutputFormatType
