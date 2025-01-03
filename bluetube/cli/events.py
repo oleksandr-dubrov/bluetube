@@ -72,7 +72,7 @@ class Info(Event):
 class Warn(Event):
     '''A warning event.'''
     MSGS = {
-        'device not found': 'Your bluetooth device is not accessible.\n'
+        'device not found': 'Your bluetooth device {} is not accessible.\n'
                             'The script will download files to {} directory.',
         'download directory not empty': 'The download directory {} '
                                         'is not empty. Run "bluetube -s" '

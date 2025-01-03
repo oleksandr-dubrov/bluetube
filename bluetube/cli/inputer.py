@@ -12,7 +12,7 @@ class Inputer(CLI):
     def __init__(self, executor: CommandExecutor, yes: bool = False) -> None:
         self._executor = executor
         self._yes = yes
-        self._player = None
+        self._player: str | None = None
 
     def set_media_player(self, mp: str):
         self._player = mp

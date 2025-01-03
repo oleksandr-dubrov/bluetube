@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import re
-import shutil
 import signal
 import tempfile
 import time
@@ -21,6 +20,7 @@ from bluetube.model import (OutputFormatType, Playlist, Publication,
                             PublicationStatus)
 from bluetube.profiles import Profiles, ProfilesException
 from bluetube.repository import DbConverter, Repository, RepositoryException
+from bluetube.sender import SenderException
 from bluetube.utils import deemojify
 
 
@@ -48,7 +48,7 @@ class Bluetube(EventPublisher):
         self.factory = ComponentFactory()
         self.executor = self.factory.get_command_executor()
         self.inputer = self.factory.get_inputer(yes)
-        self.temp_dir: Optional[Path] = None
+        self.temp_dir: Path = self._fetch_temp_dir()
         self.bt_dir = self._get_bt_dir(Path(home_dir) if home_dir else None)
         self.repository = self.factory.get_repository(self.bt_dir)
 
@@ -147,8 +147,6 @@ class Bluetube(EventPublisher):
 
         # ----
 
-        self._fetch_temp_dir()
-
         with self.repository as repo:
 
             pubs = repo.get_all_publications()
@@ -167,8 +165,6 @@ class Bluetube(EventPublisher):
                 if p.status in [PublicationStatus.downloaded, PublicationStatus.converted]:
                     self._send_publication(p, profiles)
                     repo.update_publication(p)
-
-        self._return_temp_dir()
 
     def edit_profiles(self):
         '''open a profiles file and check after edit'''
@@ -369,44 +365,27 @@ class Bluetube(EventPublisher):
     def _send_publication(self, pub: Publication, profiles: Profiles) -> None:
         s_op = profiles.get_send_options(pub.playlist.profile.name)
 
-        if "local_path" not in s_op and "bluetooth_device_id" not in s_op:
-            # early return
-            return None
+        local_path = s_op.get("local_path")
+        bt_id = s_op.get("bluetooth_device_id")
 
-        moved, sent = True, True
+        senders = self.factory.get_senders(self, self.temp_dir, local_path=local_path, device_id=bt_id)
 
-        # move to local directory
-        if (local_path := s_op.get("local_path")):
-            local_path = Path(local_path)
-            try:
-                local_path.mkdir(mode=Bluetube.ACCESS_MODE, parents=False, exist_ok=True)
-            except PermissionError as e:
-                self.notify(Error(e))
-            moved = self._copy_to_local_path(local_path, pub.local_path)
-
-        if (bt_id := s_op.get("bluetooth_device_id")):
-            client = self.factory.get_bluetooth_client(bt_id, self, self.temp_dir)
-            res = client.send([pub.local_path])
-            sent = bool(res)
-
-        if moved and sent:
-            try:
-                os.remove(self.temp_dir / pub.local_path)
-            except FileNotFoundError:
-                pass  # ignore this exception
-
-            pub.status = PublicationStatus.sent
-            pub.local_path = None  # TODO or set the destination path
-
-    def _copy_to_local_path(self, dest, src) -> bool:
-        '''copy files defined by links to the local path'''
-        self._debug(f'copying {src} to {dest}')
+        assert pub.local_path, "no local path"
         try:
-            shutil.copy2(src, dest)
-            return True
-        except shutil.SameFileError as e:
-            self.notify(Error(e))
-            return False
+            if local_path in senders:
+                senders[local_path].send(pub.local_path, local_path)
+            if bt_id in senders:
+                senders[bt_id].send(pub.local_path, bt_id)
+        except SenderException as e:
+            self.notify(Error(str(e)))
+
+        try:
+            os.remove(self.temp_dir / pub.local_path)
+        except FileNotFoundError:
+            pass  # ignore this exception
+
+        pub.status = PublicationStatus.sent
+        pub.local_path = None  # TODO or set the destination path
 
     def _check_profiles(self, pl, profiles):
         '''check if profiles of the playlist do exist'''
@@ -523,27 +502,16 @@ class Bluetube(EventPublisher):
                 chosen_pubs.append(p)
         return chosen_pubs
 
-    def _fetch_temp_dir(self):
-        '''fetch a temporal directory;
-        don't forget to return'''
+    def _fetch_temp_dir(self) -> Path:
+        '''fetch a temporal directory'''
         temp_dir = Path(tempfile.gettempdir()) / self.TMP_DIR
         temp_dir.mkdir(exist_ok=True)
         fs = os.listdir(temp_dir)
         if len(fs):
+            # TODO: no need
             msg = 'Ready to be sent:\n{}'.format('\n'.join(fs))
             self.notify(Warn(msg))
-        self.temp_dir = temp_dir
-
-    def _return_temp_dir(self):
-        assert self.temp_dir, 'nothing to return, call fetch'
-        if self.temp_dir.exists():
-            try:
-                os.rmdir(self.temp_dir)
-            except OSError:
-                event = Warn('download directory not empty', self.temp_dir)
-                self.notify(event)
-                event = Warn('\n  '.join(os.listdir(self.temp_dir)))
-                self.notify(event)
+        return temp_dir
 
     def _get_bt_dir(self, home_dir: Optional[Path]):
         bt_dir = home_dir if home_dir else Path(Bluetube.HOME_DIR)
