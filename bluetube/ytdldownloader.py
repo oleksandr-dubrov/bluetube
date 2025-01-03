@@ -2,7 +2,7 @@
 The youtube-dl downloader.
 """
 import logging
-import os
+from pathlib import Path
 
 from mutagen import MutagenError, id3, mp3, mp4
 
@@ -22,7 +22,7 @@ class YoutubeDlDownloader(object):
 
     def __init__(self, executor: CommandExecutor,
                  publisher: EventPublisher,
-                 temp_dir: str) -> None:
+                 temp_dir: Path) -> None:
         self._executor = executor
         self._publisher = publisher
         self._temp_dir = temp_dir
@@ -80,7 +80,7 @@ class YoutubeDlDownloader(object):
 
     def _add_metadata(self, pub: Publication):
         """add metadata to a downloaded file"""
-        ext = os.path.splitext(pub.local_path)[1]
+        ext = pub.local_path.suffix
         try:
             if ext == ".mp3":
                 audio = mp3.MP3(pub.local_path)

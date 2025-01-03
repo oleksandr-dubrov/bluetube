@@ -33,7 +33,7 @@ class FfmpegConverter(object):
         output_format = configs["output_format"]
 
         if not (pub.local_path and pub.local_path.is_file()):
-            self._publisher(Error(f"file not found for {pub.title}; nothing to convert"))
+            self._publisher.notify(Error(f"file not found for {pub.title}; nothing to convert"))
             pub.status = PublicationStatus.failed
         else:
             new_name = pub.local_path.name.split(".")[0] + "." + output_format

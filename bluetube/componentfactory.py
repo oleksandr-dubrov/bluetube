@@ -50,7 +50,7 @@ class ComponentFactory(object):
         return self._outputer
 
     def get_bluetooth_client(self, device_id: str,
-                             publisher: EventPublisher, temp_dir: Path) -> Optional[BluetoothClient]:
+                             publisher: EventPublisher, temp_dir: Path) -> BluetoothClient:
         '''Return a sender from the cache for a device ID if possible
         or create a new one.'''
 
@@ -59,7 +59,7 @@ class ComponentFactory(object):
         else:
             sender = BluetoothClient(publisher, device_id, temp_dir)
             if not sender.found:
-                self.notify(Error('device not found', device_id, str(temp_dir)))
+                publisher.notify(Error('device not found', device_id, str(temp_dir)))
             else:
                 self._bt_senders[device_id] = sender
             return sender
@@ -67,7 +67,7 @@ class ComponentFactory(object):
     def get_senders(self, publisher: EventPublisher, temp_dir: Path,
                     /, local_path: Optional[Path], device_id: Optional[str]) -> dict[str, Sender]:
         """Get senders based on input parameters."""
-        senders = {}
+        senders: dict[str, Sender] = {}
 
         if local_path:
             senders[str(local_path)] = LocalSender()

@@ -1,3 +1,5 @@
+# type: ignore
+
 import dbm
 import functools
 import logging
@@ -47,7 +49,6 @@ class Repository(object):
         self.db_file = db_dir / Repository.DBFILENAME
         sqlite_file = db_dir / Repository.SQLITE_FILE
         self._engine = create_engine(f"sqlite+pysqlite:///{sqlite_file}", echo=Repository.verbose)
-        self._session = None
 
     def __enter__(self):
         # add this contex manager to avoid all troubles with closed sessions
@@ -56,7 +57,6 @@ class Repository(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._session.close()
-        self._session = None
 
     @catch_db_exception
     def add_playlist(self,
@@ -90,6 +90,7 @@ class Repository(object):
         """Update a playlist"""
         self._session.add(playlist)
         self._session.commit()
+        return playlist
 
     def add_author(self, name: str) -> Author:
         author = Author(name=name)

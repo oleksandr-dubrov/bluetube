@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import ForeignKey, String, TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column, registry, relationship
 
-mapper_registry = registry()
+mapper_registry: registry = registry()
 
 
 class PathType(TypeDecorator):
@@ -114,7 +114,6 @@ class Publication:
     description: Mapped[str] = mapped_column(String(2048))  # TODO: change to some text field not to limit the length
     published: Mapped[int]
     entry_id: Mapped[str] = mapped_column(String(2048))  # e.g. 'http://example.org/guid/1'
-    playlist: Mapped["Playlist"] = relationship()
     status: Mapped[PublicationStatus]
 
 

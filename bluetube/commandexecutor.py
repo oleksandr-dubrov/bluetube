@@ -34,7 +34,7 @@ class CommandExecutor(object):
         if cwd is None:
             cwd = os.getcwd()
         call_env = os.environ
-        return_code = 0
+        return_code: int | None = 0
         stdout, stderr = None, None
         try:
             self._debug('RUN: {}'.format(' '.join([a for a in args])))
@@ -51,7 +51,7 @@ class CommandExecutor(object):
             return_code = e.errno
             self._debug(e.strerror)
         self._debug(f'Return code: {return_code}')
-        return return_code
+        return return_code or 0
 
     def does_command_exist(self, name, dashes=2):
         '''call a command with the given name

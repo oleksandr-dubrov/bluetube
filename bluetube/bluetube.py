@@ -79,11 +79,12 @@ class Bluetube(EventPublisher):
                 db_profile = repo.upsert_profile(profile)
                 db_author = repo.upsert_author(author)
                 playlist = repo.add_playlist(db_author, title, feed_url, of, db_profile)
-                event = Success('added', title, author)
+                success = Success('added', title, author)
+                self.notify(success)
         except RepositoryException:
-            event = Error("playlist exists", title, author)
-        finally:
-            self.notify(event)
+            error = Error("playlist exists", title, author)
+            self.notify(error)
+
         return playlist
 
     def list_playlists(self):
@@ -319,7 +320,7 @@ class Bluetube(EventPublisher):
                 for e in event:
                     self.notify(e)
         except aiohttp.ClientConnectorError as e:
-            self.notify(Warn(e))  # notify the error immediately
+            self.notify(Warn(str(e)))  # notify the error immediately
             self.notify(Error('no internet'))
             os._exit(1)
 
@@ -354,9 +355,9 @@ class Bluetube(EventPublisher):
         converter = self.factory.get_converter(self, self.temp_dir)
         if pub.playlist.output_format is OutputFormatType.video:
             c_op = profiles.get_convert_options(pub.playlist.profile)
-            if not c_op:
-                return
             v_op = profiles.get_video_options(pub.playlist.profile)
+            if not c_op or not v_op:
+                return
             # convert unless the video has not been downloaded in
             # proper format
             if not c_op['output_format'] == v_op['output_format']:
