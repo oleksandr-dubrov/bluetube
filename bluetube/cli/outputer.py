@@ -1,13 +1,15 @@
+from abc import ABC, abstractmethod
+
 from bluetube.cli.cli import CLI
 from bluetube.cli.events import Event, Success
 
 
-# TODO: make ABC
-class EventListener(object):
+class EventListener(ABC):
     '''An event listener interface.'''
 
+    @abstractmethod
     def update(self, event: Event) -> None:
-        raise NotImplementedError()
+        ...
 
 
 class Outputer(CLI, EventListener):

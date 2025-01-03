@@ -236,22 +236,6 @@ class Bluetube(EventPublisher):
                 '/bluetube/blob/master/README.md']
         self.executor.open_url(''.join(link))
 
-    def _send_all_in_dir(self, sender):
-        '''send all files in the given directory'''
-        sent = []
-        files = os.listdir(self.temp_dir)
-        for fl in files:
-            if fl.endswith('.part') or fl.endswith('.ytdl'):
-                # remove:
-                #        partially downloaded files
-                #        youtube-dl service files
-                os.remove(os.path.join(self.temp_dir, fl))
-        files = os.listdir(self.temp_dir)  # update the list of files
-        if sender.found and sender.connect():
-            sent += sender.send(files)
-            sender.disconnect()
-        return sent
-
     def _get_profiles(self, bt_dir: Path) -> Profiles:
         def get_instance():
             try:

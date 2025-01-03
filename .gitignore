@@ -16,3 +16,6 @@ bluetube_cli.egg-info
 
 # VS code
 .vscode/*
+
+.coverage
+

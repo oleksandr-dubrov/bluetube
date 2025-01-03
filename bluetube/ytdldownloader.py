@@ -80,6 +80,7 @@ class YoutubeDlDownloader(object):
 
     def _add_metadata(self, pub: Publication):
         """add metadata to a downloaded file"""
+        assert pub.local_path, "local path not found"
         ext = pub.local_path.suffix
         try:
             if ext == ".mp3":
