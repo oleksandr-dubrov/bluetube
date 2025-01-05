@@ -53,10 +53,13 @@ bluetube = "bluetube.app:main"
 Repository = "https://github.com/oleksandr-dubrov/bluetube"
 
 [tool.setuptools]
-packages = ["bluetube"]  # specify directly since there is a package for cgi in the project
+packages = ["bluetube", "bluetube.cli"]  # specify directly since there is a package for cgi in the project
 
 [tool.setuptools.dynamic]
 version = {attr = "bluetube.version.__version__"}
+
+[tool.setuptools.package-data]
+mypkg = ["*.toml"]
 
 [tool.flake8]
 max-line-length = 120
