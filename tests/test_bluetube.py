@@ -116,13 +116,16 @@ class TestBluetube(unittest.TestCase):
         ''' create a files from the URL as the youtube-dl does
             or
             create a file with the extension as ffmpeg does'''
-        str_args = ' '.join(args[0])
+        str_args = ' '.join([str(a) for a in args[0]])
         if str_args in self.args:
             self.fail(f'called twice: {str_args}')
         self.args.append(str_args)
 
         if args[0][0] in ['youtube-dl', 'yt-dlp']:
             self.nbr_downloaded += 1
+            idx = args[0].index('-o')
+            file_name = args[0][idx+1]
+            open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR), file_name), 'w').close()
         elif args[0][0] == 'ffmpeg':
             open(os.path.join(kwargs.get('cwd', TestBluetube.TMP_DIR),
                               args[0][-1]), 'w').close()
@@ -159,7 +162,7 @@ class TestBluetube(unittest.TestCase):
         '''mock remote data returned'''
         mocked_fetch = AsyncMock()
         md = read_mocked_data()
-        mocked_fetch.side_effect = [ln.encode() for ln in md]
+        mocked_fetch.side_effect = lambda _, pub: next(ln.encode() for ln in md if pub.title in ln)
         self.sut._fetch_rss = mocked_fetch
         return mocked_fetch
 

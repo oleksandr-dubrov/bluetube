@@ -69,7 +69,7 @@ class Inputer(CLI):
                   'min': dt.min,
                   'd': dt.day,
                   'mon': dt.month}
-        msg = '{ind}{tit} ({h}:{min:0>2} {d}.{mon:0>2})'.format(**params)
+        msg = '{ind}{tit} ({h}:{min} {d}.{mon:0>2})'.format(**params)
         question = '{}\n'.format(msg)
         question += ('{b}d{e}ownload | '
                      '{b}r{e}eject | '

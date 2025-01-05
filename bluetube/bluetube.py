@@ -158,8 +158,9 @@ class Bluetube(EventPublisher):
 
             pubs = repo.get_all_publications()
             for p in pubs:
-                self._convert_publication(p, profiles)
-                repo.update_publication(p)
+                if p.status in [PublicationStatus.downloaded]:
+                    self._convert_publication(p, profiles)
+                    repo.update_publication(p)
 
             pubs = repo.get_all_publications()
             for p in pubs:
@@ -338,7 +339,7 @@ class Bluetube(EventPublisher):
         # convert video, audio has been converted by the downloader
         converter = self.factory.get_converter(self, self.temp_dir)
         if pub.playlist.output_format is OutputFormatType.video:
-            c_op = profiles.get_convert_options(pub.playlist.profile)
+            c_op = profiles.get_convert_options(pub.playlist.profile.name)
             v_op = profiles.get_video_options(pub.playlist.profile)
             if not c_op or not v_op:
                 return

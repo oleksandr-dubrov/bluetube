@@ -11,7 +11,7 @@ def cache(func):
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        str_args = ' '.join(args[0])
+        str_args = ' '.join([str(a) for a in args[0]])
         if str_args in cache.cache:
             return cache.cache[str_args]
         else:
